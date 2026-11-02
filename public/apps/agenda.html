@@ -1,0 +1,1467 @@
+<div id="app"></div>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --ink:#1B2B3A;
+    --steel:#3C5266;
+    --paper:#EEF1F4;
+    --card:#FFFFFF;
+    --line:#D7DCE1;
+    --amber:#B5651D;
+    --amber-bg:#FBEEE1;
+    --green:#2F7A4F;
+    --green-bg:#E7F3EC;
+    --red:#B23A2E;
+    --red-bg:#FBEAE8;
+    --slate:#6B7A88;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  #app{
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:0 0 60px 0;
+  }
+  .topbar{
+    background:var(--ink);
+    color:#fff;
+    padding:22px 28px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .topbar h1{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    font-size:22px;
+    margin:0;
+  }
+  .topbar .sub{
+    font-size:12.5px;
+    color:#AEB9C4;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .tabs{
+    display:flex;
+    gap:2px;
+    background:var(--ink);
+    padding:0 28px;
+  }
+  .tab{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    color:#AEB9C4;
+    background:transparent;
+    border:none;
+    padding:11px 18px;
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+  }
+  .tab.active{
+    color:#fff;
+    border-bottom:3px solid var(--amber);
+  }
+  .tab .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    background:#2A3D4E;
+    color:#CBD5DD;
+    padding:1px 6px;
+    border-radius:8px;
+    margin-left:6px;
+  }
+  main{
+    max-width:1080px;
+    margin:0 auto;
+    padding:26px 20px 0;
+  }
+  .panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .panel-head h2{
+    font-family:'Oswald', sans-serif;
+    font-size:19px;
+    margin:0 0 2px;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+  .panel-head p{
+    margin:0;
+    font-size:13px;
+    color:var(--slate);
+  }
+  button.primary{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:9px 16px;
+    border-radius:5px;
+    cursor:pointer;
+  }
+  button.primary:hover{background:var(--steel);}
+  button.ghost{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:500;
+    font-size:13px;
+    background:transparent;
+    color:var(--steel);
+    border:1px solid var(--line);
+    padding:8px 14px;
+    border-radius:5px;
+    cursor:pointer;
+  }
+  button.ghost:hover{background:#fff;border-color:var(--steel);}
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:1px;
+  }
+
+  /* ticket card, used for requirement + followup rows */
+  .ticket{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    margin-bottom:10px;
+    padding:14px 16px;
+    position:relative;
+    display:grid;
+    grid-template-columns:64px 1fr auto;
+    gap:14px;
+    align-items:start;
+  }
+  .ticket .id-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    font-weight:600;
+    color:var(--slate);
+    background:var(--paper);
+    border:1px dashed var(--line);
+    border-radius:6px;
+    padding:5px 6px;
+    text-align:center;
+    line-height:1.3;
+  }
+  .ticket .body h3{
+    margin:0 0 4px;
+    font-size:15px;
+    font-weight:600;
+  }
+  .ticket .meta{
+    font-size:12px;
+    color:var(--slate);
+    margin-bottom:6px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .ticket .meta span.dept{
+    font-weight:600;
+    color:var(--ink);
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    font-size:11px;
+  }
+  .ticket .field{font-size:13px;margin:3px 0;color:#334;}
+  .ticket .field b{color:var(--ink);font-weight:600;}
+  .ticket .actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .pill{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    font-weight:600;
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .pill.solved{background:var(--green-bg);color:var(--green);}
+  .pill.pending{background:var(--amber-bg);color:var(--amber);}
+  .pill.overdue{background:var(--red-bg);color:var(--red);}
+  .pill.escalate{background:var(--red-bg);color:var(--red);}
+
+  .steps{display:flex;align-items:center;gap:5px;margin-top:8px;}
+  .steps .step{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono', monospace;font-size:10.5px;font-weight:600;
+    border:1.5px solid var(--line);color:var(--slate);background:#fff;
+    cursor:default;
+  }
+  .steps .step.solved{background:var(--green);border-color:var(--green);color:#fff;}
+  .steps .step.pending{background:var(--amber);border-color:var(--amber);color:#fff;}
+  .steps .step.overdue{background:var(--red);border-color:var(--red);color:#fff;}
+  .steps .step.empty{color:#C3CBD2;}
+  .steps .step-label{font-size:11px;color:var(--slate);margin-left:4px;}
+  .steps .more{font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--red);font-weight:600;margin-left:4px;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:8px;
+    margin-bottom:22px;overflow:hidden;
+  }
+  .card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 14px;background:#F7F8FA;border-bottom:1px solid var(--line);
+  }
+  .card-head .title{font-size:13.5px;color:var(--slate);}
+  .card-head .title b{color:var(--ink);}
+  table.register{
+    width:100%;border-collapse:collapse;font-size:13px;
+  }
+  table.register th, table.register td{
+    border:1px solid var(--line);
+    padding:8px 10px;
+    vertical-align:top;
+    text-align:left;
+  }
+  table.register th{
+    background:#EDEFF2;font-family:'Oswald', sans-serif;font-weight:600;
+    text-transform:uppercase;font-size:11.5px;letter-spacing:0.02em;color:var(--slate);
+  }
+  table.register td.anchor{
+    background:#F7F8FA;font-family:'IBM Plex Mono', monospace;font-weight:600;
+    color:var(--ink);white-space:nowrap;
+  }
+  table.register td.action-label{
+    font-size:11px;font-weight:600;color:var(--slate);text-transform:uppercase;
+    letter-spacing:0.02em;width:90px;
+  }
+  table.register tr.action-row td{background:#FBFBFC;}
+  table.register .row-actions{white-space:nowrap;text-align:right;}
+  table.register .row-actions button{margin-left:6px;}
+  .add-round{padding:10px 14px;border-top:1px dashed var(--line);}
+
+  .backup-controls{display:flex;gap:8px;align-self:flex-start;margin-top:2px;}
+  button.ghost.small, label.ghost.small{
+    font-size:11.5px;padding:6px 10px;color:#CBD5DD;border-color:#3C5266;
+    display:inline-flex;align-items:center;cursor:pointer;
+  }
+  button.ghost.small:hover, label.ghost.small:hover{background:#2A3D4E;}
+  .storage-warning{
+    background:var(--amber-bg);color:var(--amber);font-size:13px;
+    padding:10px 20px;border-bottom:1px solid #E8D2B8;
+  }
+  .storage-ok{
+    background:var(--green-bg);color:var(--green);font-size:12.5px;
+    padding:7px 20px;border-bottom:1px solid #CFE7D9;
+  }
+  .save-status{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;color:#9BB0C0;
+    margin-right:4px;align-self:center;
+  }
+  .steps-row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
+
+  .attachments{margin-top:8px;}
+  .attach-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
+  .attach-thumb{
+    position:relative;width:74px;height:74px;border-radius:6px;overflow:hidden;
+    border:1px solid var(--line);background:#F0F1F3;flex:0 0 auto;
+  }
+  .attach-thumb img, .attach-thumb video{width:100%;height:100%;object-fit:cover;display:block;}
+  .attach-thumb .remove-x{
+    position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;
+    background:rgba(0,0,0,0.65);color:#fff;border:none;font-size:11px;line-height:18px;
+    text-align:center;cursor:pointer;padding:0;
+  }
+  .attach-thumb .vid-badge{
+    position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.6);color:#fff;
+    font-size:9px;padding:1px 4px;border-radius:3px;font-family:'IBM Plex Mono', monospace;
+  }
+  .attach-add-label{
+    display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--steel);
+    border:1px dashed var(--line);border-radius:5px;padding:5px 10px;cursor:pointer;
+  }
+  .attach-add-label:hover{background:#F7F8FA;}
+  .attach-lightbox{
+    position:fixed;inset:0;background:rgba(20,28,36,0.85);z-index:60;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .attach-lightbox img, .attach-lightbox video{max-width:100%;max-height:100%;border-radius:6px;}
+  .history-panel{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;}
+  .next-due{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;font-weight:600;
+    padding:3px 9px;border-radius:20px;white-space:nowrap;text-align:right;
+  }
+  .next-due.upcoming{background:#EAF0F6;color:var(--steel);}
+  .next-due.today{background:var(--amber-bg);color:var(--amber);}
+  .next-due.overdue{background:var(--red-bg);color:var(--red);}
+  .next-due.unset{background:#F0F1F3;color:var(--slate);}
+
+  .pager{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    margin:18px 0 8px;padding:12px;
+  }
+  .pager-count{font-size:12px;color:var(--slate);font-family:'IBM Plex Mono', monospace;}
+  .pager-page{font-size:13px;color:var(--ink);font-weight:600;}
+  .pager button:disabled{opacity:0.4;cursor:not-allowed;}
+  .linklike{
+    font-size:12px;
+    color:var(--steel);
+    background:none;
+    border:none;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .type-tag{
+    font-family:'IBM Plex Mono', monospace;font-size:10.5px;font-weight:600;
+    background:#EAF0F6;color:var(--steel);padding:2px 8px;border-radius:10px;
+  }
+  .rca-btn{
+    font-family:'IBM Plex Sans', sans-serif;font-size:12px;font-weight:600;
+    background:#fff;color:var(--slate);border:1px solid var(--line);
+    border-radius:5px;padding:5px 10px;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .rca-btn:hover{border-color:var(--steel);}
+  .rca-btn .box{
+    width:14px;height:14px;border:1.5px solid var(--slate);border-radius:3px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;
+  }
+  .rca-btn.on{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+  .capa-btn{font-family:'IBM Plex Sans', sans-serif;font-size:12px;font-weight:600;background:#fff;color:#1f3a5f;border:1px solid #1f3a5f;border-radius:5px;padding:5px 10px;cursor:pointer;white-space:nowrap;}
+  .capa-btn:hover{background:#1f3a5f;color:#fff;}
+  .field.plan{background:#F4F7FB;border-left:3px solid #1f3a5f;padding:6px 10px;border-radius:0 5px 5px 0;}
+  .rca-btn.on .box{background:var(--red);border-color:var(--red);color:#fff;}
+  .empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--slate);
+    border:1px dashed var(--line);
+    border-radius:8px;
+    font-size:14px;
+  }
+
+  /* modal form */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,28,36,0.5);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:50;
+  }
+  .modal{
+    background:#fff;border-radius:10px;max-width:560px;width:100%;
+    max-height:88vh;overflow-y:auto;padding:22px 24px 24px;
+  }
+  .modal h3{
+    font-family:'Oswald', sans-serif;text-transform:uppercase;font-size:17px;margin:0 0 14px;
+  }
+  .form-row{margin-bottom:12px;}
+  .form-row label{
+    display:block;font-size:12px;font-weight:600;color:var(--slate);
+    text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px;
+  }
+  .form-row input, .form-row select, .form-row textarea{
+    width:100%;font-family:'IBM Plex Sans', sans-serif;font-size:14px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:#fcfdfe;
+  }
+  .form-row textarea{resize:vertical;min-height:52px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  /* agenda */
+  .agenda-controls{
+    display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:16px;margin-bottom:20px;
+  }
+  .agenda-controls .form-row{margin-bottom:0;flex:0 0 200px;}
+  .section-title{
+    font-family:'Oswald', sans-serif;
+    text-transform:uppercase;font-size:15px;letter-spacing:0.03em;
+    margin:22px 0 10px;color:var(--ink);
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title .n{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;background:var(--ink);color:#fff;
+    padding:2px 7px;border-radius:10px;
+  }
+  .print-btn{margin-left:auto;}
+  @media print{
+    .topbar,.tabs,.agenda-controls,.actions,button{display:none !important;}
+    #app{background:#fff;}
+    main{max-width:100%;padding:0;}
+    .ticket{break-inside:avoid;border:1px solid #999;}
+  }
+  @media (max-width:640px){
+    .ticket{grid-template-columns:1fr;}
+    .ticket .id-tag{width:fit-content;}
+    .ticket .actions{flex-direction:row;}
+    .form-grid{grid-template-columns:1fr;}
+  }
+</style>
+<script>
+(function(){
+  const SEED = {"requirements": [{"issueId": 6, "department": "MAINTENANCE", "topicCategory": "OTHER", "issueDescription": "No dedicated forlklift operators for the Factory", "impact": "High breakdown presentage. Resent Repair. Safety concerns", "actionRequired": "Issue inhouse license, allow only authorized person. Add control through Shift operation executive specially in night shift operation.", "name": "Prabath", "responsibility": "Production"}, {"issueId": 7, "department": "MAINTENANCE", "topicCategory": "RESOURCE REQUIREMENT", "issueDescription": "Scarcity of the skilled labor for maintenance activities", "impact": null, "actionRequired": "Recruit skilled labor, Scandalized salary scales of the maintenance members", "name": "Prabath Wijesinghe", "responsibility": null}, {"issueId": 10, "department": "HR & ADMIN.", "topicCategory": "WASTE MANAGEMENT", "issueDescription": "No reputed buyers for Sand blasting dust and waste glass", "impact": null, "actionRequired": "need a solution for sand blast and waste glass", "name": "Malith", "responsibility": null}, {"issueId": 12, "department": "PROCESS", "topicCategory": "OTHER", "issueDescription": "Press issue,Mill issue", "impact": null, "actionRequired": null, "name": "Rajith Ruveshana", "responsibility": null}, {"issueId": 13, "department": "PRODUCTION", "topicCategory": "RESOURCE REQUIREMENT", "issueDescription": "need to fabricate new green tyre carts", "impact": "Production delay, quality issues", "actionRequired": "Manufacturing new carts and repairing currently damaged carts.", "name": "Sanka", "responsibility": "Engineering"}, {"issueId": 15, "department": "Technical", "topicCategory": "DEFECTS", "issueDescription": "Compound hold due to s.g off spec", "impact": "Energy wastetage", "actionRequired": "Correct the carbon weighing system", "name": "Dinesh", "responsibility": "Engineering"}, {"issueId": 16, "department": "HR & ADMIN", "topicCategory": "OTHER", "issueDescription": "high water bill from february 2026", "impact": null, "actionRequired": "Need to find leakages", "name": "Malith", "responsibility": null}, {"issueId": 18, "department": "PROCESS", "topicCategory": "OTHER", "issueDescription": "FIP Document/ Mill issue/Press issue", "impact": null, "actionRequired": null, "name": "Rajith Ruveshana", "responsibility": null}, {"issueId": 19, "department": "QUALITY", "topicCategory": "OTHER", "issueDescription": "Production related documents are incomplete", "impact": "Difficult to maintain management system", "actionRequired": "need to advise supervisors an operators", "name": "Ishanka Thennakoon", "responsibility": "Production / Process"}, {"issueId": 20, "department": "HR & ADMIN", "topicCategory": "OTHER", "issueDescription": "Meal supplier issue", "impact": "Taste issue-Dinner and Lunch", "actionRequired": "Finded another supplier", "name": null, "responsibility": null}, {"issueId": 22, "department": "QUALITY", "topicCategory": "AUDIT FINDINGS", "issueDescription": "NCRs and Observations are still pending in last ISO 9001 Internal Audit", "impact": "Next ISO 9001 Internal Audit has to be done before end of august.", "actionRequired": "Need to close NCs", "name": "Ishanka Thennakoon", "responsibility": "All Departments"}, {"issueId": 24, "department": "QUALITY", "topicCategory": "AUDIT FINDINGS", "issueDescription": "Internal audit on ISO 9001 need to be scheduled", "impact": "SGS audit on ISO 9001 will be on Oct 2026, Before the SGS Audit internal audits need to be done and actions should taken to NCR", "actionRequired": "Need to fix dates for internal audit", "name": "Ishanka Thennakoon", "responsibility": null}, {"issueId": 25, "department": "PRODUCTION", "topicCategory": "OTHER", "issueDescription": "sensor, oil leak, alarm, malfunction in presses.", "impact": "The number of scrap tires is increasing.", "actionRequired": "During preventive maintenance, resolve and complete the above issues at each press.", "name": "Sanka", "responsibility": "Engineering."}], "followups": [{"followupId": "F/000126", "issueId": 6, "department": "PRODUCTION", "issue": "less operators in shifts.", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}, {"followupId": "F/000226", "issueId": 7, "department": "MAINTENANCE", "issue": "Scarcity of the skilled labor for maintenance activities", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "NEED TO FOLLOW UP", "followUpDate": "2026-07-24", "followUpDateRaw": "2026-07-24"}, {"followupId": "F/000326", "issueId": 10, "department": "HR & ADMIN", "issue": "No reputed buyers for Sand blasting dust and waste glass", "discussedDate": "2026-07-14", "status": "SOLVED", "actionRequired": "NO ACTION REQUIRED", "followUpDate": null, "followUpDateRaw": null}, {"followupId": "F/000426", "issueId": 12, "department": "PROCESS", "issue": "Press issue,Mill issue", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2M1,4M4,4M1,4M3 -2026.07.28 7M1,7M2,7M3 - 2026.08.31"}, {"followupId": "F/000526", "issueId": 13, "department": "PRODUCTION", "issue": "need to fabricate new green tyre carts", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-08-04", "followUpDateRaw": "2026.08.04"}, {"followupId": "F/000626", "issueId": 15, "department": "Technical", "issue": "Compound hold due to s.g off spec", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "NEED TO FOLLOW UP", "followUpDate": "2026-08-04", "followUpDateRaw": "2026.08.04"}, {"followupId": "F/000726", "issueId": 16, "department": "HR & ADMIN", "issue": "high water bill from february 2026", "discussedDate": "2026-07-14", "status": "NOT SOLVED", "actionRequired": "NEED TO FOLLOW UP", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}, {"followupId": "F/00826", "issueId": 18, "department": "Process", "issue": "FIP Document/ Mill issue/Press issue", "discussedDate": "2026-07-21", "status": "NOT SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}, {"followupId": "F/00926", "issueId": 19, "department": "Quality", "issue": "Production related documents are incomplete", "discussedDate": "2026-07-21", "status": "SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}, {"followupId": "F/01026", "issueId": 20, "department": "HR & ADMIN", "issue": "Meal supplier issue", "discussedDate": "2026-07-21", "status": "SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}, {"followupId": "F/01126", "issueId": 22, "department": "Quality", "issue": "NCRs and Observations are still pending in last ISO 9001 Internal Audit", "discussedDate": "2026-07-21", "status": "SOLVED", "actionRequired": "PRESENT THE PROGRESS", "followUpDate": "2026-07-28", "followUpDateRaw": "2026.07.28"}], "projects": []};
+
+  const state = {
+    tab: 'requirements',
+    requirements: [],
+    followups: [],
+    projects: [],
+    autoSeen: [],   // keys of requirements already raised automatically, so none is raised twice
+    modal: null, // {type:'requirement'|'followup'|'project'|'projectFollowup', editing: obj|null}
+    expandedIssues: new Set(), // issue ids whose full follow-up history is expanded
+    expandedProjects: new Set(), // project ids whose follow-up history is expanded
+    lightbox: null, // {dataUrl, type} currently shown full-size, or null
+  };
+
+  const STORAGE_KEY = 'wmm-followup-tracker-v1';
+
+  function todayStr(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function nextIssueId(){
+    const ids = state.requirements.map(r=>r.issueId||0);
+    return (ids.length ? Math.max(...ids) : 0) + 1;
+  }
+  function nextFollowupId(){
+    const n = state.followups.length + 1;
+    return 'F/' + String(n).padStart(4,'0') + '26';
+  }
+  function nextProjectId(){
+    const ids = state.projects.map(p=>p.id||0);
+    return (ids.length ? Math.max(...ids) : 0) + 1;
+  }
+
+  // Storage: this file runs as a standalone page (opened directly in a browser),
+  // not inside Claude's artifact sandbox, so we persist with localStorage —
+  // it's tied to this exact file's location in the browser that opened it
+  // (a fresh download to a new filename/location starts empty, since the
+  // browser treats it as a different origin). A "Download backup" / "Load
+  // backup" pair (in the UI) covers that, and browsers/situations where
+  // localStorage isn't available at all.
+  let storageOK = true;
+  state.loadedFromStorage = false;
+  state.lastSavedAt = null;
+
+  // Upgrades projects saved in the old single-status format (before the
+  // follow-up log existed) into the new followupLog[] shape, non-destructively.
+  function migrateProjects(projects){
+    return (projects || []).map(p=>{
+      if(Array.isArray(p.followupLog)) return p;
+      const log = [];
+      if(p.followupStatus || p.nextFollowupDate){
+        log.push({date: p.startDate || todayStr(), status: p.followupStatus || '', nextFollowupDate: p.nextFollowupDate || '', loggedAt: 'legacy-'+p.id});
+      }
+      const {followupStatus, nextFollowupDate, ...rest} = p;
+      return {...rest, followupLog: log};
+    });
+  }
+
+  async function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state.requirements = parsed.requirements || SEED.requirements;
+        state.followups = parsed.followups || SEED.followups;
+        state.projects = migrateProjects(parsed.projects || SEED.projects || []);
+        state.autoSeen = parsed.autoSeen || [];
+        state.loadedFromStorage = true;
+        return;
+      }
+    }catch(e){
+      storageOK = false;
+      console.error('localStorage unavailable', e);
+    }
+    state.requirements = JSON.parse(JSON.stringify(SEED.requirements));
+    state.followups = JSON.parse(JSON.stringify(SEED.followups));
+    state.projects = migrateProjects(JSON.parse(JSON.stringify(SEED.projects || [])));
+  }
+
+  async function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        requirements: state.requirements,
+        followups: state.followups,
+        projects: state.projects,
+        autoSeen: state.autoSeen
+      }));
+      storageOK = true;
+      state.lastSavedAt = new Date();
+      publishRca();
+      syncCapa();
+      publishStatus();
+    }catch(e){
+      storageOK = false;
+      console.error('save failed', e);
+    }
+  }
+
+  function downloadBackup(){
+    const blob = new Blob([JSON.stringify({requirements: state.requirements, followups: state.followups, projects: state.projects, autoSeen: state.autoSeen}, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `followup-backup-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function loadBackupFile(file){
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const parsed = JSON.parse(e.target.result);
+        if(!parsed.requirements || !parsed.followups) throw new Error('missing keys');
+        state.requirements = parsed.requirements;
+        state.followups = parsed.followups;
+        state.projects = migrateProjects(parsed.projects || []);
+        state.autoSeen = parsed.autoSeen || [];
+        saveState();
+        render();
+      }catch(err){
+        alert('That file doesn\'t look like a valid backup.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function esc(s){
+    if(s===null||s===undefined) return '';
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- photo/video attachments (requirements + follow-up steps) ----------
+  const ATTACH_WARN_BYTES = 2 * 1024 * 1024; // 2MB — past this, warn it may not persist reliably
+
+  function findOwnerRecord(ownerType, ownerId){
+    if(ownerType==='requirement') return state.requirements.find(r=>String(r.issueId)===String(ownerId));
+    if(ownerType==='followup') return state.followups.find(f=>String(f.followupId)===String(ownerId));
+    if(ownerType==='project') return state.projects.find(p=>String(p.id)===String(ownerId));
+    if(ownerType==='projectFollowup'){
+      const sep = String(ownerId).indexOf('::');
+      const pid = String(ownerId).slice(0, sep);
+      const loggedAt = String(ownerId).slice(sep+2);
+      const proj = state.projects.find(p=>String(p.id)===String(pid));
+      return proj ? (proj.followupLog||[]).find(e=>e.loggedAt===loggedAt) : null;
+    }
+    return null;
+  }
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function addAttachments(ownerType, ownerId, files){
+    const rec = findOwnerRecord(ownerType, ownerId);
+    if(!rec) return;
+    const tooBig = files.filter(f=>f.size > ATTACH_WARN_BYTES);
+    if(tooBig.length){
+      const ok = confirm(`${tooBig.length} file(s) are over 2MB. Large photos/videos may not save reliably in browser storage. Add anyway?`);
+      if(!ok) return;
+    }
+    const newItems = [];
+    for(const file of files){
+      try{
+        const dataUrl = await readFileAsDataURL(file);
+        newItems.push({
+          id: 'A' + Date.now() + Math.random().toString(36).slice(2,7),
+          name: file.name,
+          type: file.type,
+          dataUrl,
+          addedAt: todayStr(),
+        });
+      }catch(e){ console.error('failed to read file', file.name, e); }
+    }
+    if(!newItems.length) return;
+    rec.attachments = (rec.attachments || []).concat(newItems);
+    saveState();
+    render();
+  }
+
+  function removeAttachment(ownerType, ownerId, attachmentId){
+    const rec = findOwnerRecord(ownerType, ownerId);
+    if(!rec || !rec.attachments) return;
+    rec.attachments = rec.attachments.filter(a=>a.id!==attachmentId);
+    saveState();
+    render();
+  }
+
+  function attachmentsSection(list, ownerType, ownerId){
+    const items = list || [];
+    const thumbs = items.map(a=>{
+      const isVideo = (a.type||'').startsWith('video/');
+      const media = isVideo
+        ? `<video src="${a.dataUrl}" muted></video><span class="vid-badge">▶</span>`
+        : `<img src="${a.dataUrl}" alt="${esc(a.name)}">`;
+      return `
+        <div class="attach-thumb" data-action="view-attachment" data-owner-type="${ownerType}" data-owner-id="${esc(ownerId)}" data-attachment-id="${a.id}">
+          ${media}
+          <button class="remove-x" data-action="remove-attachment" data-owner-type="${ownerType}" data-owner-id="${esc(ownerId)}" data-attachment-id="${a.id}" title="Remove">×</button>
+        </div>
+      `;
+    }).join('');
+    const inputId = `attach-${ownerType}-${ownerId}`;
+    return `
+      <div class="attachments">
+        ${thumbs ? `<div class="attach-grid">${thumbs}</div>` : ''}
+        <label class="attach-add-label" for="${inputId}">📎 Add photo/video</label>
+        <input type="file" id="${inputId}" class="attach-input" data-owner-type="${ownerType}" data-owner-id="${esc(ownerId)}" accept="image/*,video/*" multiple hidden>
+      </div>
+    `;
+  }
+
+  function renderLightbox(){
+    const item = state.lightbox;
+    const isVideo = (item.type||'').startsWith('video/');
+    const media = isVideo ? `<video src="${item.dataUrl}" controls autoplay></video>` : `<img src="${item.dataUrl}">`;
+    return `<div class="attach-lightbox" data-action="close-lightbox">${media}</div>`;
+  }
+
+  const MAX_STEPS = 5;
+
+  const ISSUE_TYPES = [
+    '01. Machine Breakdown, Machine Maintenance or Repair',
+    '02. Management Issue',
+    '03. New Development Proposal',
+    '04. New Management Decision, Policy or Suggestion',
+    '05. Other',
+  ];
+
+  function toggleRCA(issueId){
+    const r = state.requirements.find(x=>String(x.issueId)===String(issueId));
+    if(!r) return;
+    r.rcaRequired = !r.rcaRequired;
+    saveState();
+    render();
+  }
+
+  // All follow-up rounds logged for an issue, in the order they happened.
+  // excludeId lets a form-in-progress exclude the row currently being edited.
+  function stepsForIssue(issueId, excludeId){
+    return state.followups
+      .filter(f => String(f.issueId)===String(issueId) && f.followupId!==excludeId)
+      .sort((a,b)=> (a.discussedDate||'').localeCompare(b.discussedDate||'') || String(a.followupId||'').localeCompare(String(b.followupId||'')));
+  }
+
+  function followupsFor(issueId){
+    return state.followups.filter(f=>f.issueId===issueId);
+  }
+
+  // The step that currently represents the issue's state: the last one logged.
+  function latestFollowup(issueId){
+    const steps = stepsForIssue(issueId);
+    return steps.length ? steps[steps.length-1] : null;
+  }
+
+  function stepClass(f){
+    if(!f) return 'empty';
+    if(f.status && f.status.toUpperCase()==='SOLVED') return 'solved';
+    if(f.followUpDate && f.followUpDate < todayStr()) return 'overdue';
+    return 'pending';
+  }
+
+  function isEscalated(issueId){
+    const steps = stepsForIssue(issueId);
+    if(steps.length < MAX_STEPS) return false;
+    const last = steps[steps.length-1];
+    return !(last.status && last.status.toUpperCase()==='SOLVED');
+  }
+
+  function isSolved(issueId){
+    const f = latestFollowup(issueId);
+    return !!(f && f.status && f.status.toUpperCase()==='SOLVED');
+  }
+
+  function openRequirements(){
+    return state.requirements.filter(r=>!isSolved(r.issueId));
+  }
+
+  function solvedRequirements(){
+    return state.requirements.filter(r=>isSolved(r.issueId));
+  }
+
+  function activeProjects(){
+    return state.projects.filter(p=>p.status!=='FINISHED');
+  }
+  function finishedProjects(){
+    return state.projects.filter(p=>p.status==='FINISHED');
+  }
+  // Every follow-up status entry logged for a project, oldest first.
+  function projectFollowupLog(p){
+    return (p.followupLog || []).slice().sort((a,b)=>
+      (a.date||'').localeCompare(b.date||'') || (a.loggedAt||'').localeCompare(b.loggedAt||'')
+    );
+  }
+  function latestProjectFollowup(p){
+    const log = projectFollowupLog(p);
+    return log.length ? log[log.length-1] : null;
+  }
+  function projectDueSortValue(p){
+    const last = latestProjectFollowup(p);
+    return (last && last.nextFollowupDate) || '9999-99-99';
+  }
+  function projectDueClass(p){
+    const last = latestProjectFollowup(p);
+    const due = last && last.nextFollowupDate;
+    if(!due) return 'unset';
+    const today = todayStr();
+    if(due < today) return 'overdue';
+    if(due === today) return 'today';
+    return 'upcoming';
+  }
+
+  function statusPill(f, issueId){
+    if(issueId!==undefined && isEscalated(issueId)) return '<span class="pill escalate">ESCALATE — 5 STEPS, UNRESOLVED</span>';
+    if(!f) return '<span class="pill pending">NO FOLLOW-UP YET</span>';
+    if(f.status && f.status.toUpperCase()==='SOLVED') return `<span class="pill solved">SOLVED</span>`;
+    if(f.followUpDate && f.followUpDate < todayStr()) return `<span class="pill overdue">OVERDUE</span>`;
+    return `<span class="pill pending">${esc(f.status||'PENDING')}</span>`;
+  }
+
+  // A small "next follow-up due" readout shown on each requirement ticket.
+  function nextFollowupBadge(issueId){
+    const f = latestFollowup(issueId);
+    if(!f || (f.status && f.status.toUpperCase()==='SOLVED')) return '';
+    const date = f.followUpDate;
+    if(!date) return `<div class="next-due unset">Next follow-up: not scheduled</div>`;
+    const today = todayStr();
+    let cls = 'upcoming';
+    let label = `Next follow-up: ${date}`;
+    if(date < today){ cls = 'overdue'; label = `Next follow-up: ${date} (overdue)`; }
+    else if(date === today){ cls = 'today'; label = `Next follow-up: today (${date})`; }
+    return `<div class="next-due ${cls}">${esc(label)}</div>`;
+  }
+
+  // Renders the 1-5 step tracker used on requirement tickets.
+  function renderStepTracker(issueId){
+    const steps = stepsForIssue(issueId);
+    const dots = [];
+    for(let i=0;i<MAX_STEPS;i++){
+      const f = steps[i];
+      const cls = f ? stepClass(f) : 'empty';
+      const title = f
+        ? `Step ${i+1}: ${esc(f.discussedDate||'—')} — ${esc(f.status||'pending')}${f.followUpDate?` (next due ${esc(f.followUpDate)})`:''}`
+        : `Step ${i+1}: not yet reached`;
+      dots.push(`<span class="step ${cls}" title="${title}">${i+1}</span>`);
+    }
+    const overflow = steps.length > MAX_STEPS ? `<span class="more">+${steps.length-MAX_STEPS} over limit</span>` : '';
+    return `<div class="steps">${dots.join('')}<span class="step-label">${steps.length}/${MAX_STEPS} steps</span>${overflow}</div>`;
+  }
+
+  // The full cascading follow-up history for one issue, matching the
+  // Followup ID / Department / Issue / Status register format.
+  function renderRegisterTable(issueId){
+    const req = state.requirements.find(r=>String(r.issueId)===String(issueId));
+    const steps = stepsForIssue(issueId);
+    const anchorId = steps.length ? steps[0].followupId : '—';
+    const current = steps.length ? steps[steps.length-1] : null;
+    const anchorSpan = 1 + (steps.length ? steps.slice(0, MAX_STEPS).length * 4 : 1);
+
+    const bodyRows = steps.slice(0, MAX_STEPS).map((s)=>`
+      <tr>
+        <td>${esc(s.discussedDate||'—')}</td>
+        <td>${esc(s.status||'—')}</td>
+        <td>${esc(s.followUpDate||'—')}</td>
+        <td class="row-actions"><button class="linklike" data-action="edit-followup" data-id="${esc(s.followupId)}">Edit</button></td>
+      </tr>
+      <tr class="action-row">
+        <td colspan="3"><span class="action-label">Update</span> ${esc(s.issue||'—')}</td>
+        <td></td>
+      </tr>
+      <tr class="action-row">
+        <td colspan="3"><span class="action-label">Action</span> ${esc(s.actionRequired||'—')}</td>
+        <td></td>
+      </tr>
+      <tr class="action-row">
+        <td colspan="3"><span class="action-label">Media</span> ${attachmentsSection(s.attachments, 'followup', s.followupId)}</td>
+        <td></td>
+      </tr>
+    `).join('');
+
+    return `
+      <table class="register">
+        <thead>
+          <tr>
+            <th>Followup ID</th><th>Department</th><th>Issue</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="anchor" rowspan="${anchorSpan}">${esc(anchorId)}</td>
+            <td>${esc((req&&req.department)||'—')}</td>
+            <td>${esc((req&&req.issueDescription)||'—')}</td>
+            <td>${statusPill(current, issueId)}</td>
+            <td></td>
+          </tr>
+          ${bodyRows || `<tr><td colspan="4" style="color:var(--slate);">No follow-up rounds logged yet.</td></tr>`}
+        </tbody>
+      </table>
+      <div class="add-round">
+        <button class="linklike" data-action="add-followup-for" data-id="${esc(issueId)}">+ Log next round</button>
+      </div>
+    `;
+  }
+
+  // ---------- render ----------
+  function render(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAoAPEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5w8czPpPjTV7W1Zra2tr2aKKKI7EiRZGAVQOAAAAAKyv7Wuv+fmf/AL7NaXxJ/wCSh67/ANhC4/8ARrVi1+Gyk222f68UYRhTjGKsklp8ix/a11/z8z/99mj+1rr/AJ+Z/wDvs103wV+AvjL9o3xk3h7wL4dv/E2tR2zXj2tpsDRwqQGdmcqoGWA5PJIAr1j/AIdN/tIf9Ei8R/8AgRaf/Hq2p4WvUXNTg2vJNnlY7iLKMFV9hjcVSpzte06kIuz2dpNOx4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne/f8Omv2kf8AokXiP/wItP8A49XA/DT9kD4m/GX4h+IfCfhTwdqWveIfCjMmr2drJCTYMrmMq7lwhO8FcBjyp9DTlg8RFqMoSTe2j19DOjxPktanOrSxlKUYK8mqkGopuycmpWSb0u7a6Hn/APa11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIE/wDJI/EQ+txaf/Hqv6hi/wDn1L/wF/5HN/rnw7/0H0P/AAbT/wDkjwH+1rr/AJ+Z/wDvs0f2tdf8/M//AH2a9B+Cf7HvxP8A2kbjWo/AfgzVPFB8Ozi21J7N4hHayksAhd3VWJ2t90ngZ6EGu9/4dN/tIf8ARIvEf/gRaf8Ax6ohg8ROPNCEmvJNnTi+KMlwtV0MVjKUJreMqkItXV1dOSaundeWp4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne0+Nv+CaHx++HXhe81rWPhT4pttM0+MzXM0aw3JhQDLOUikZ9oAJJA4FcN8CP2avHv7T+tX+nfD7wtqPiq80uBbq7jtDGot42barMzsq8nOBnJweODSlhq8ZKEoNN7Kzu/ka0eIMqq4eeLpYqnKlD4pKcHGP+KSdl82cf/a11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIk/wDJIvEf/gRaf/Hq0+oYv/n1L/wF/wCRw/658O/9B9D/AMG0/wD5I8B/ta6/5+Z/++zR/a11/wA/M/8A32a9A+CX7IHxN/aSutbh8B+DdT8Ut4cmW31JrOSHy7WRiwCl2dVYnY33SeBnpiuw8R/8Evf2hvCmjz3978I/FgtbZS8hgWG5dVAyTsikZz+ANRDCYiUeeMJNd7Ox14jiXJ8PX+rYjF0oVFb3ZVIKWuq0bvqmmtNUzw/+1rr/AJ+Z/wDvs0f2tdf8/M//AH2as+FPCGqeOvF2naBo+n3Wo63q12lhZ2MSfvrid22rGFOMNu45xjBzjBr0b42fsMfF39nDwjHr3jrwLqnhrSJrqOyiuLme3YSzvnZGqpIzMxweAOxrONKpKLnGLaW7s7L1OzEZpgqFeGGr1oRqT+GLlFSl/hi3d/JM8w/ta6/5+Z/++zR/a11/z8z/APfZr3yD/glD+0fcQJIvwi8S7ZFDDdLaq2CM8gygg+xGRTv+HTf7SH/RIvEf/gRaf/Hq3+oYv/n1L/wF/wCR5P8Arnw7/wBB9D/wbT/+SPAf7Wuv+fmf/vs0f2tdf8/M/wD32a9L+Iv7EfxZ+Enjbwx4a8R+BtW0vxB40uDa6Hp7ywST6lICoIRUkbABZclsDnrwaPjn+xH8WP2ZfB8ev+P/AATqPhbR5bhbSO5u7i3ZZJWDMEVUkZicKx4HABzWUsNXSbcHpvo9PXsdtLiDKqkqUKeJpt1fgSnFuetvd197VNaX1TR5p/a11/z8z/8AfZo/ta6/5+Z/++zXuegf8EuP2hfFGhWWp2Hwo8R3FjqMCXNvL5tsnmRuoZW2tKGGQQcEA+1cR8cP2Sfid+zVDbTePfA3iDwvbXj+VBc3cANtK+M7BKhZN2P4c59qc8LiIR55wkl3adiMNxJk+JrLDYfF0p1H9mNSDlpvom3p6HB/2tdf8/M//fZo/ta6/wCfmf8A77Nd98Bv2Q/ib+1Ba6nP8PvBmq+KYNGkSK9ktWiRLd3BZVJkdQSQCcDOB1xkU6y/Y/8AibqXx1n+GNt4O1K58fWkJuJ9FhkheaCMIrlnYP5a4VlPLfxDuRUrD1nFSUXZ6LR6vsu5vPO8thVqUJ4imp01zTi5xTjHR80le8VZrV2Wq7nn/wDa11/z8z/99mj+1rr/AJ+Z/wDvs179/wAOm/2kP+iReI//AAItP/j1MuP+CUX7R9rbvK3wh8TFY1LEJLauxA9FEpJPsOa2+oYv/n1L/wABf+R5y4z4ef8AzH0P/BtP/wCSPBP7Wuv+fmf/AL7NH9rXX/PzP/32aXWtEvfDWs3enalZ3Wn6hYStb3NrcxNFNbyKcMjo2CrA9QarVyO60Z9HFxklKOqZY/ta6/5+Z/8Avs0VXopXKsbXxJ/5KHrv/YQuP/RrViMwRSzEBVGST2FbfxJ/5KHrv/YQuP8A0a1YyNsdWwpKsGAYAgkHPIPBHsetOW5MPhR+1f8AwRQ/Zh0/9j39jXVfix4xWPTNV8ZWZ1q7muBtbTdIhRnhQ56bl3TEf7ajtXyFfft9+GPjj8c9e8bePP2gPjh4Y0TVr0yWHhTwVZXFtDY2i/LFG07yBQ+0AsUi5ZmOa+ePiT/wUU+N3xf+HN94R8SfETV9S8M6lCtvdaf5FvDFNEpBEZMcasFyo4BwQMdK8Xr38TnMFSpYfCxtGC1v1ffR/wBXPxbIfCvEzzHH5zxBWUsRiZWi6dmoU1tFOrTdnoldJNKKs9Wfa37Wv7cPw/svhjGPgz8Vf2mbrxTLdoJpfEXia5S0tbUAmQhc/O7HaoGeMk9hn9CP+CWf7Nsf7Bv7Bdx4p1nTrzUPF3ie0bxVrcVnC1zeTkxl4LRAoLO6xkDABzJI571+EBAYEEAg9RXuXw8/4KWfHv4U+D7LQNB+KPiOz0fTYxDaW8ghufs8YGFRWlRm2gcAZwBwKrLs6hSxDxGIjraytsvOzf6mXG/hTisfklPJcmrqMHUU6rqt81RL4Y88I7J6pctr2e61+vvCGp+NfiB8RNW8WfFHxn+2LbHW72W8/wCEc8F+EtUsLHTkY/JAkrknai4X5I1zjOTmvOP+CgXxmn+Hvh7w3pHw38QftZadrPiS5kguE8danfWiXkO0IILeF9pld3kUEjhRgfxceRf8Pb/2kv8AorOu/wDgJZ//ABmuA8d/tj/E/wCKHxa0Dx34i8YahrPizwrt/sjULmGFjp5Vi6lI9nl5DHdkqTnB7DEV8zouk4U3K76ta+evM/67G+TeH+a0sxhisbGj7OCdoQm+W6i1BOKoQVk7Xbbdl9rY/V79l7/gnl4G/wCCcn7O1p4t+JvxM8T6G3lwXWq2ra9Np3h+zvpQqiMwW7IZyG2pl2bdt6AVwXwl/ZKvf2vvEevy+A/28vGniK+tpDdXtrpJkRbISsSu2L7SNsYPyjAwMAV+c/x2/bg+LX7Tnhe10Tx7451XxLpFndC9htJ44Y41mCsquRGi7iAzAZzjJrkPhB8ZvFXwB8eW3ifwXrt94c1+0jeKO8tCN3luMMjBgVZT6MCMgHqAa3nnOEUoUoUX7NebUvPZ2+/8Lnk4fwr4knQxOPxeZRePqttfu6c6KS1irVKTklvdxt0upcuv7Nft6/t++E/+Cdf7LF38MtN8Wan4k+K9poKWVl/aPnXN4xkQq2o3MrjaR99x8xywCgYBxt/8ErP2Yo/2AP2B5fEWr6Ze3/izxFZnxNrVvZwNcXkn7otBaRqgLOyxkDAH35H9a/Gj4+/tZfET9qU6a3xC8TT+KJNH3izlubW3jkgV8b1DRopKnAO0kjIzjNdZ8O/+Clfx6+FHg+y0DQPij4ks9H02MRWtvIIbn7PGOAitKjNtA4AzgDgV00+I6X1t16kXyxVoWtpfdtN6vpe+x4mL8Dcy/wBW45Tg68FWrVVUxLlKVqnLfljGUaacYpty5XB2k/idlf7A8Ian40+IHxF1bxb8UPGX7Ytt/bd7LeDw34L8JapYWOnI5ykCSuSdqLhfkjXOM5Oa83/4KB/Gab4f+HvDmj/DjX/2sdP1nxJcyQXEfjrU760S8h2hBBbwvtMrO8igkcKMDndx5F/w9v8A2kv+is67/wCAln/8Zrz/AMeftj/E/wCKHxb8P+O/EXjHUNY8W+Fdv9kahcxQsdPKsXUpHs8vIY7slScgHsMefiMzoypOFNyu+rWvnrzP+ux9lk3h/mtHMYYvGxo+zgnaEJvluotQTiqEFZO1223p9rY/Zr4AeB9B/wCCOn/BMi41PXkgbV9LsW1jWQmA2o6rOFCWynuAxjhX2XNeA/8ABCv/AIKLeLPjX8X/ABr4B+I3iK91vVNfMniTRJLuYyfZ23/6VaRZ6RqGR0TooV8V+d3x1/bk+Ln7TXhO30Lx7461bxJo1rdLex2c8cMcQmUMquRGi7iAzYzkDNcL8NPiZr/wb8eab4o8LardaJ4g0eQy2d9b48yBipQ4BBBBVmBBBBBNdM+IVCvReGTVOmrW797/AC28zwcL4JVMTk2ZQzypCrj8ZJz9oruMGneCi2lJLmvzWXwtRV7H7m/C3/glxpPgL/gpz4u+N7x2jaNfWa3ejWK4za6rOpS8nK4wPlXK/wC1O57V+en/AAW+/bZm+Pn7XMPhrw9qLjw78KJjb2s0EmBLquQZ51I7xlVjU9ijkda8ql/4K1/tIzRMjfFrXwrgqdttaKRn0IiyD7ivniaV7iZ5JHeSSV2kd2OWdmJLMSepJJJPvWeZ5zQqUHh8HFxUpOUr21e/Tz/JHfwF4W5tgc4jnXE2IhXqUaUaNFR5moxS5W3zRjry3XW7lJvWx+nf/BCmy+LP7THxu1bxx4u+Inj/AFbwV4JT7PHaXut3MttqeoyrwjKzYdYoyXI6bnjrJ/4Lgf8ABSDxOP2jbb4c/Dnxbrfh2x8DITrV1o989q95fyqD5LOhBKxR4yP77n+7Xxx8GP2/vjH+zt4Fh8M+CPHeoeG9BglknS0trW2ZfMkbc7lnjLMSe5J6AdAK8p13XLzxRrt9qeo3U17qOpXEl3d3MzbpLiaRi7ux7ksST9axnnHLgFhaLlzN3k3+S1v2+7zPTwnhe6vGFXiLM40nRhHko0ox0j05ppxUebWT05tZb+6j9Sf+CEnwH8T/ALQXxJ1L4+fEfWdd8USeHIpPD3ha41i7ku5BIcm5lRpCSFQMYxjjc8ncVo/Fp2/4K1/8FadO8F27fbfhF8CGNxqrKc2+oXauPMXPQ+ZKiwj/AGIZSOua+Bfhz/wUZ+N/wh+Hdh4S8L/ETVtD8OaVA1taWNrbWyrboxJIVjGWySzHdnOTnNYXwF/bL+KH7L2manZ/D/xhfeGYNauBdX/2eCCR7uUDAZ2kRmOATxnHJPUmt6eb4eNCnhnGTjfmnteT7b7X79Ejycb4Y55WzjHZ7Tq0o1pU/ZYVJyUaMHdOTtDSfK5Ncqa55yd9j9Mf+C83/BQXXPgePDHwx+HfiG98PeJ5mTXNWv8ATpjFPZW6Ei3gyvTzHBZh3SPHRq+gfDGo6R/wVr/4JebbgW4vvGOhtbXAOP8AiXaxBwW6fLsuEDDH8JHrX4PfE/4oeIfjT491HxR4r1a613xBq7K93fXJHmTFVCLwAAAFUAAAAAV2/wACP24fi1+zH4XutE8BeOdV8NaTeXRvZrSCOGSNpiqqzgSI2CQqg4xnaK2p8R3xVWddN05q3L2XTy739TzMd4FOlw9gMJlFSFPHYaaqe1d0pSestUnKyajyXW0dldn7KfCrwzof/BGv/gmLNeaz9luNa0WybUNTMbf8hfWbjAWJT1I8wpGvoiZ7VwP/AAQz/Z5v9J+Fvij4/eNnN741+LtzLf8A2lgXkisRIzcAZP72Tc23+6kQ7V+VHx3/AG3viz+074atdG8feOdW8S6VZXIvIbWdIoolmClQ5EaLuIDNjOcZOKtfBn9vv4z/ALPXg5PD3gz4i6/omhQsXhsV8qeG3JOT5YlRtgJJOFwMnOKuHEGGjiaclB+zpxtFaXv3evbTfzOTEeC2fVcjxtGWLpvG42qp1p+9yumm5KnF8vMvftJ+7ZpKOy1+gf2wfjn+1d8c/wBovxV4l8NaH8fPDHhea6MGjabpthqNrFFaRfLG5jRQPMkA3seuXx2Ffo1+x7Frn7C3/BO+48afGXxL4j1nxDHYS+I9bOsX8t3PZllBhsY95OGA2JtHWR29a/JH/h7h+0l/0VnXf/ASz/8AjNYHxG/4KO/HL4t6Pa6f4j+JGtapZWd5DqEULw28aieFt0bnZGN21sHByMgccVlhc6oUKk66c5Tadr2sm+trnocQeFWdZvgMLk8qeFw+GpSjzezc3UlGKty8zpL1bd7ys3tr518avi5q3x9+L/ibxvroVNW8U6jLqFxGowsBY/LGB6IgVf8AgNcxWl4x8Yan8QfFN/res3b3+q6nKZ7q4dVVpnPUkKAB+ArNr5icnKTk3e5/QGEoRo0IUYRUVFJKK2SStZaLRbLRadEFFFFSdBtfEn/koeu/9hC4/wDRrVi0UU3uTD4V6BRRRSKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//2Q==" alt="Ferentino" style="height:36px;width:auto;background:#fff;padding:3px 6px;border-radius:4px;flex-shrink:0;border:1px solid #D7DCE1">
+          <div>
+          <h1>Weekly Management Meeting</h1>
+          <div class="sub">requirement intake &amp; follow-up tracker &middot; ${esc(todayStr())}</div>
+          </div>
+        </div>
+        <div class="backup-controls">
+          <span class="save-status">${saveStatusLabel()}</span>
+          <button class="ghost small" data-action="download-backup">⭳ Download backup</button>
+          <label class="ghost small file-label">⭱ Load backup<input type="file" id="backup-file" accept="application/json" hidden></label>
+        </div>
+      </div>
+      ${!storageOK ? `<div class="storage-warning">This browser is blocking on-page storage, so changes won't survive a refresh automatically. Use <b>Download backup</b> before closing, and <b>Load backup</b> next time to pick up where you left off.</div>` : ''}
+      ${storageOK && state.loadedFromStorage ? `<div class="storage-ok">Showing your saved data from this browser — last change saved automatically.</div>` : ''}
+      <div class="tabs">
+        ${tabBtn('requirements','Requirements', openRequirements().length)}
+        ${tabBtn('projects','Projects', activeProjects().length)}
+        ${tabBtn('finishedProjects','Finished projects', finishedProjects().length)}
+        ${tabBtn('solved','Solved', solvedRequirements().length)}
+      </div>
+      <main>${state.tab==='requirements'?renderRequirements():state.tab==='solved'?renderSolved():state.tab==='finishedProjects'?renderFinishedProjects():renderProjects()}</main>
+      ${state.modal ? renderModal() : ''}
+      ${state.lightbox ? renderLightbox() : ''}
+    `;
+    bindEvents();
+  }
+
+  function saveStatusLabel(){
+    if(!storageOK) return '⚠ Not saving';
+    if(!state.lastSavedAt) return 'Autosave on';
+    const t = state.lastSavedAt;
+    const hh = String(t.getHours()).padStart(2,'0');
+    const mm = String(t.getMinutes()).padStart(2,'0');
+    return `✓ Saved ${hh}:${mm}`;
+  }
+
+  function tabBtn(id,label,count){
+    return `<button class="tab ${state.tab===id?'active':''}" data-tab="${id}">${label}${count!==undefined?`<span class="count">${count}</span>`:''}</button>`;
+  }
+
+  function nextDueSortValue(issueId){
+    const f = latestFollowup(issueId);
+    return (f && f.followUpDate) ? f.followUpDate : '9999-99-99';
+  }
+
+  function renderRequirements(){
+    const rows = openRequirements().sort((a,b)=>
+      nextDueSortValue(a.issueId).localeCompare(nextDueSortValue(b.issueId)) || ((b.issueId||0)-(a.issueId||0))
+    );
+    return `
+      <div class="panel-head">
+        <div>
+          <h2>Requirements</h2>
+          <p>Sorted by next follow-up due date — most urgent first. Marking the latest follow-up "Solved" moves an issue to the Solved tab.</p>
+        </div>
+        <button class="primary" data-action="new-requirement">+ New requirement</button>
+      </div>
+      ${rows.length===0 ? emptyState('Nothing open','Every requirement has been solved, or add a new one to get started.') : rows.map(renderRequirementTicket).join('')}
+    `;
+  }
+
+  function renderSolved(){
+    const rows = solvedRequirements().sort((a,b)=>(b.issueId||0)-(a.issueId||0));
+    return `
+      <div class="panel-head">
+        <div>
+          <h2>Solved</h2>
+          <p>Requirements whose most recent follow-up was marked Solved.</p>
+        </div>
+      </div>
+      ${rows.length===0 ? emptyState('Nothing here yet','Solved requirements will show up here automatically.') : rows.map(renderRequirementTicket).join('')}
+    `;
+  }
+
+  function renderProjects(){
+    const active = activeProjects().sort((a,b)=>projectDueSortValue(a).localeCompare(projectDueSortValue(b)) || ((b.id||0)-(a.id||0)));
+    return `
+      <div class="panel-head">
+        <div>
+          <h2>Projects</h2>
+          <p>Sorted by next follow-up due date — most urgent first. Marking a project finished moves it to the Finished projects tab.</p>
+        </div>
+        <button class="primary" data-action="new-project">+ New project</button>
+      </div>
+      ${active.length===0 ? emptyState('No active projects','Add a new project to get started.') : active.map(renderProjectTicket).join('')}
+    `;
+  }
+
+  function renderFinishedProjects(){
+    const rows = finishedProjects().sort((a,b)=>(b.id||0)-(a.id||0));
+    return `
+      <div class="panel-head">
+        <div>
+          <h2>Finished projects</h2>
+          <p>Projects marked finished. Reopen one to move it back to Projects.</p>
+        </div>
+      </div>
+      ${rows.length===0 ? emptyState('Nothing here yet','Finished projects will show up here automatically.') : rows.map(renderProjectTicket).join('')}
+    `;
+  }
+
+  function renderProjectTicket(p){
+    const isFinished = p.status === 'FINISHED';
+    const dueCls = projectDueClass(p);
+    const last = latestProjectFollowup(p);
+    const due = last && last.nextFollowupDate;
+    const dueLabel = !due ? 'Next follow-up: not scheduled'
+      : dueCls==='overdue' ? `Next follow-up: ${due} (overdue)`
+      : dueCls==='today' ? `Next follow-up: today (${due})`
+      : `Next follow-up: ${due}`;
+    const log = projectFollowupLog(p);
+    const expanded = state.expandedProjects.has(String(p.id));
+    return `
+      <div class="ticket">
+        <div class="id-tag">PROJ<br>#${p.id}</div>
+        <div class="body">
+          <div class="meta"><span class="dept">${esc(p.department||'—')}</span>${p.owner?` · Owner: ${esc(p.owner)}`:''}${p.startDate?` · Started ${esc(p.startDate)}`:''}</div>
+          <h3>${esc(p.name||'(untitled project)')}</h3>
+          ${p.description?`<div class="field"><b>Description:</b> ${esc(p.description)}</div>`:''}
+          ${last?`<div class="field"><b>Latest status</b> (${esc(last.date||'—')})<b>:</b> ${esc(last.status||'—')}</div>`:''}
+          ${attachmentsSection(p.attachments, 'project', p.id)}
+          ${log.length ? `<button class="linklike" data-action="toggle-project-history" data-id="${p.id}">${expanded?'Hide':'View'} follow-up history (${log.length})</button>` : ''}
+          ${expanded ? `<div class="history-panel">${renderProjectHistoryTable(p)}</div>` : ''}
+        </div>
+        <div class="actions">
+          ${isFinished ? '<span class="pill solved">FINISHED</span>' : `<div class="next-due ${dueCls}">${esc(dueLabel)}</div>`}
+          <button class="linklike" data-action="edit-project" data-id="${p.id}">Edit</button>
+          ${isFinished
+            ? `<button class="linklike" data-action="reopen-project" data-id="${p.id}">Reopen</button>`
+            : `<button class="linklike" data-action="log-project-followup" data-id="${p.id}">+ New follow-up status</button>
+               <button class="linklike" data-action="mark-project-finished" data-id="${p.id}">Mark finished</button>`}
+        </div>
+      </div>
+    `;
+  }
+
+  // Simple date / status / next-due table for a project's follow-up history.
+  function renderProjectHistoryTable(p){
+    const log = projectFollowupLog(p);
+    const rows = log.map(entry => `
+      <tr>
+        <td>${esc(entry.date||'—')}</td>
+        <td>${esc(entry.status||'—')}</td>
+        <td>${esc(entry.nextFollowupDate||'—')}</td>
+      </tr>
+      <tr class="action-row">
+        <td colspan="3"><span class="action-label">Media</span> ${attachmentsSection(entry.attachments, 'projectFollowup', `${p.id}::${entry.loggedAt}`)}</td>
+      </tr>
+    `).join('');
+    return `
+      <table class="register">
+        <thead><tr><th>Follow-up date</th><th>Status</th><th>Next follow-up date</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderRequirementTicket(r){
+    const fu = latestFollowup(r.issueId);
+    const expanded = state.expandedIssues.has(String(r.issueId));
+    const stepCount = stepsForIssue(r.issueId).length;
+    return `
+      <div class="ticket">
+        <div class="id-tag">ISSUE<br>#${r.issueId}</div>
+        <div class="body">
+          <div class="meta"><span class="dept">${esc(r.department||'—')}</span> · ${esc(r.topicCategory||'')}${r.issueType?` <span class="type-tag">${esc(r.issueType)}</span>`:''}${r.autoSource?` <span class="type-tag" title="Raised automatically on ${esc(r.autoDate||'')}">Auto-raised · ${esc(r.autoSource)}</span>`:''}</div>
+          <h3>${esc(r.issueDescription||'(no description)')}</h3>
+          ${r.impact?`<div class="field"><b>Impact:</b> ${esc(r.impact)}</div>`:''}
+          ${r.actionRequired?`<div class="field"><b>Action required:</b> ${esc(r.actionRequired)}</div>`:''}
+          ${r.actionPlan&&r.actionPlan.trim()?`<div class="field plan"><b>Action plan:</b><br>${esc(r.actionPlan).replace(/\n/g,'<br>')}</div>`:''}
+          <div class="field"><b>Raised by:</b> ${esc(r.name||'—')}${r.responsibility?` &nbsp;·&nbsp; <b>Owner:</b> ${esc(r.responsibility)}`:''}</div>
+          ${attachmentsSection(r.attachments, 'requirement', r.issueId)}
+          <div class="steps-row">
+            ${renderStepTracker(r.issueId)}
+            <button class="linklike" data-action="toggle-history" data-id="${r.issueId}">${expanded?'Hide':'View'} full history${stepCount?` (${stepCount})`:''}</button>
+          </div>
+          ${expanded ? `<div class="history-panel">${renderRegisterTable(r.issueId)}</div>` : ''}
+        </div>
+        <div class="actions">
+          ${statusPill(fu, r.issueId)}
+          ${nextFollowupBadge(r.issueId)}
+          ${capaBlock(r)}
+          <button class="rca-btn ${r.rcaRequired?'on':''}" data-action="toggle-rca" data-id="${r.issueId}" title="Tick when a Root Cause Analysis is required"><span class="box">${r.rcaRequired?'✓':''}</span>RCA required</button>
+          <button class="linklike" data-action="edit-requirement" data-id="${r.issueId}">Edit</button>
+          <button class="linklike" data-action="add-followup-for" data-id="${r.issueId}">Log follow-up</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function emptyState(title,sub){
+    return `<div class="empty"><strong>${esc(title)}</strong><br>${esc(sub)}</div>`;
+  }
+
+  // ---------- modal ----------
+  function renderModal(){
+    const m = state.modal;
+    if(m.type==='requirement'){
+      const r = m.editing || {issueId:nextIssueId(),department:'',topicCategory:'',issueType:'',issueDescription:'',impact:'',actionRequired:'',name:'',responsibility:'',rcaRequired:false};
+      return `<div class="overlay" data-action="close-modal">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>${m.editing?`Edit requirement #${r.issueId}`:'New requirement'}</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>Department</label><input id="f-department" value="${esc(r.department)}"></div>
+            <div class="form-row"><label>Topic category</label><input id="f-topicCategory" value="${esc(r.topicCategory)}"></div>
+          </div>
+          <div class="form-row"><label>Issue type</label>
+            <select id="f-issueType">
+              <option value="">— Select type —</option>
+              ${ISSUE_TYPES.map(t=>`<option value="${esc(t)}" ${r.issueType===t?'selected':''}>${esc(t)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-row"><label>Issue description</label><textarea id="f-issueDescription">${esc(r.issueDescription)}</textarea></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;cursor:pointer;"><input type="checkbox" id="f-rcaRequired" style="width:auto;" ${r.rcaRequired?'checked':''}> RCA required</label></div>
+          <div class="form-row"><label>Impact</label><textarea id="f-impact">${esc(r.impact)}</textarea></div>
+          <div class="form-row"><label>Action required</label><textarea id="f-actionRequired">${esc(r.actionRequired)}</textarea></div>
+          <div class="form-row"><label>Action plan — agreed at the meeting</label><textarea id="f-actionPlan" rows="4" placeholder="One action per line: what will be done, by whom, by when">${esc(r.actionPlan||'')}</textarea><div style="font-size:11.5px;color:var(--steel);margin-top:3px">Each line becomes an action plan in CAPA (FIT/Q/RG-QA-11) once this issue is sent to CAPA, and stays in step if you change it later.</div></div>
+          <div class="form-grid">
+            <div class="form-row"><label>Raised by</label><input id="f-name" value="${esc(r.name)}"></div>
+            <div class="form-row"><label>Owner / responsibility</label><input id="f-responsibility" value="${esc(r.responsibility)}"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="ghost" data-action="close-modal">Cancel</button>
+            <button class="primary" data-action="save-requirement" data-id="${r.issueId}">Save requirement</button>
+          </div>
+        </div>
+      </div>`;
+    } else if(m.type==='followup'){
+      const f = m.editing || {followupId:nextFollowupId(),issueId:m.presetIssueId||'',department:'',issue:'',discussedDate:todayStr(),status:'NOT SOLVED',actionRequired:'',followUpDate:''};
+      const reqOptions = state.requirements.slice().sort((a,b)=>(a.issueId||0)-(b.issueId||0))
+        .map(r=>`<option value="${r.issueId}" ${String(f.issueId)===String(r.issueId)?'selected':''}>#${r.issueId} — ${esc(r.issueDescription).slice(0,40)}</option>`).join('');
+      return `<div class="overlay" data-action="close-modal">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>${m.editing?`Edit follow-up ${esc(f.followupId)}`:'New follow-up'}</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>Linked issue</label>
+              <select id="f-issueId">${reqOptions||'<option value="">No requirements yet</option>'}</select>
+              <div id="step-preview" class="step-label" style="margin-top:4px;"></div>
+            </div>
+            <div class="form-row"><label>Department</label><input id="f-department" value="${esc(f.department)}"></div>
+          </div>
+          <div class="form-row"><label>Update / discussion notes</label><textarea id="f-issue">${esc(f.issue)}</textarea></div>
+          <div class="form-grid">
+            <div class="form-row"><label>Discussed date</label><input type="date" id="f-discussedDate" value="${esc(f.discussedDate)}"></div>
+            <div class="form-row"><label>Next follow-up due</label><input type="date" id="f-followUpDate" value="${esc(f.followUpDate)}"></div>
+          </div>
+          <div class="form-grid">
+            <div class="form-row"><label>Status</label>
+              <select id="f-status">
+                ${['NOT SOLVED','SOLVED'].map(s=>`<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-row"><label>Action required</label>
+              <select id="f-actionRequired">
+                ${['NEED TO DISCUSS AGAIN','NEED TO FOLLOW UP','NO ACTION REQUIRED','PRESENT THE PROGRESS'].map(s=>`<option ${f.actionRequired===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="ghost" data-action="close-modal">Cancel</button>
+            <button class="primary" data-action="save-followup" data-id="${esc(f.followupId)}">Save follow-up</button>
+          </div>
+        </div>
+      </div>`;
+    } else if(m.type==='project'){
+      const p = m.editing || {id:nextProjectId(),name:'',description:'',department:'',owner:'',startDate:todayStr(),status:'ACTIVE',followupStatus:'',nextFollowupDate:''};
+      return `<div class="overlay" data-action="close-modal">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>${m.editing?`Edit project #${p.id}`:'New project'}</h3>
+          <div class="form-row"><label>Project name</label><input id="f-name" value="${esc(p.name)}"></div>
+          <div class="form-row"><label>Description</label><textarea id="f-description">${esc(p.description)}</textarea></div>
+          <div class="form-grid">
+            <div class="form-row"><label>Department</label><input id="f-department" value="${esc(p.department)}"></div>
+            <div class="form-row"><label>Owner</label><input id="f-owner" value="${esc(p.owner)}"></div>
+          </div>
+          <div class="form-row"><label>Start date</label><input type="date" id="f-startDate" value="${esc(p.startDate)}"></div>
+          <div class="modal-actions">
+            <button class="ghost" data-action="close-modal">Cancel</button>
+            <button class="primary" data-action="save-project" data-id="${p.id}">Save project</button>
+          </div>
+        </div>
+      </div>`;
+    } else if(m.type==='projectFollowup'){
+      const p = state.projects.find(x=>String(x.id)===String(m.projectId)) || {};
+      return `<div class="overlay" data-action="close-modal">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>New follow-up status — ${esc(p.name||('Project #'+p.id))}</h3>
+          <div class="form-grid">
+            <div class="form-row"><label>Follow-up date</label><input type="date" id="f-followupDate" value="${esc(todayStr())}"></div>
+            <div class="form-row"><label>Next follow-up date</label><input type="date" id="f-nextFollowupDate" value=""></div>
+          </div>
+          <div class="form-row"><label>Follow-up status</label><textarea id="f-followupStatus"></textarea></div>
+          <div class="modal-actions">
+            <button class="ghost" data-action="close-modal">Cancel</button>
+            <button class="primary" data-action="save-project-followup" data-id="${p.id}">Save</button>
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+
+  // ---------- events ----------
+  function bindEvents(){
+    document.querySelectorAll('[data-tab]').forEach(el=>{
+      el.onclick = ()=>{ state.tab = el.dataset.tab; render(); };
+    });
+
+    const issueSelect = document.getElementById('f-issueId');
+    const stepPreview = document.getElementById('step-preview');
+    if(issueSelect && stepPreview){
+      const editingId = state.modal && state.modal.editing ? state.modal.editing.followupId : null;
+      const updatePreview = ()=>{
+        const count = stepsForIssue(issueSelect.value, editingId).length;
+        const stepNum = editingId ? Math.min(count+1, MAX_STEPS) : count+1;
+        if(stepNum > MAX_STEPS){
+          stepPreview.innerHTML = `<span style="color:var(--red);font-weight:600;">This issue already has ${count} follow-ups logged — beyond the ${MAX_STEPS}-step limit. Consider escalating instead.</span>`;
+        } else {
+          stepPreview.textContent = `This will be step ${stepNum} of ${MAX_STEPS} for this issue.`;
+        }
+      };
+      issueSelect.onchange = updatePreview;
+      updatePreview();
+    }
+
+    document.querySelectorAll('[data-action]').forEach(el=>{
+      el.onclick = (e)=>{
+        e.stopPropagation();
+        const action = el.dataset.action;
+        const id = el.dataset.id;
+        if(action==='new-requirement'){ state.modal = {type:'requirement', editing:null}; render(); }
+        else if(action==='edit-requirement'){
+          const r = state.requirements.find(x=>String(x.issueId)===String(id));
+          state.modal = {type:'requirement', editing:r}; render();
+        }
+        else if(action==='toggle-rca'){ toggleRCA(id); }
+        else if(action==='send-capa'){ sendCapaClick(id); }
+        else if(action==='add-followup-for'){ state.modal = {type:'followup', editing:null, presetIssueId:id}; render(); }
+        else if(action==='edit-followup'){
+          const f = state.followups.find(x=>x.followupId===id);
+          state.modal = {type:'followup', editing:f}; render();
+        }
+        else if(action==='close-modal'){ state.modal=null; render(); }
+        else if(action==='save-requirement'){ saveRequirement(id); }
+        else if(action==='save-followup'){ saveFollowup(); }
+        else if(action==='new-project'){ state.modal = {type:'project', editing:null}; render(); }
+        else if(action==='edit-project'){
+          const p = state.projects.find(x=>String(x.id)===String(id));
+          state.modal = {type:'project', editing:p}; render();
+        }
+        else if(action==='save-project'){ saveProject(id); }
+        else if(action==='log-project-followup'){ state.modal = {type:'projectFollowup', projectId:id}; render(); }
+        else if(action==='save-project-followup'){ saveProjectFollowup(id); }
+        else if(action==='mark-project-finished'){ setProjectStatus(id, 'FINISHED'); }
+        else if(action==='reopen-project'){ setProjectStatus(id, 'ACTIVE'); }
+        else if(action==='toggle-history'){
+          if(state.expandedIssues.has(id)) state.expandedIssues.delete(id);
+          else state.expandedIssues.add(id);
+          render();
+        }
+        else if(action==='toggle-project-history'){
+          if(state.expandedProjects.has(id)) state.expandedProjects.delete(id);
+          else state.expandedProjects.add(id);
+          render();
+        }
+        else if(action==='download-backup'){ downloadBackup(); }
+        else if(action==='view-attachment'){
+          const rec = findOwnerRecord(el.dataset.ownerType, el.dataset.ownerId);
+          const item = rec && (rec.attachments||[]).find(a=>a.id===el.dataset.attachmentId);
+          if(item){ state.lightbox = item; render(); }
+        }
+        else if(action==='remove-attachment'){
+          removeAttachment(el.dataset.ownerType, el.dataset.ownerId, el.dataset.attachmentId);
+        }
+        else if(action==='close-lightbox'){ state.lightbox = null; render(); }
+      };
+    });
+
+    document.querySelectorAll('.attach-input').forEach(inp=>{
+      inp.onchange = (e)=>{
+        const files = Array.from(e.target.files || []);
+        if(files.length) addAttachments(inp.dataset.ownerType, inp.dataset.ownerId, files);
+      };
+    });
+
+    const backupFile = document.getElementById('backup-file');
+    if(backupFile) backupFile.onchange = (e)=>{
+      if(e.target.files && e.target.files[0]) loadBackupFile(e.target.files[0]);
+    };
+  }
+
+  function val(id){ const el=document.getElementById(id); return el?el.value:''; }
+
+  function saveRequirement(id){
+    const data = {
+      issueId: Number(id),
+      department: val('f-department'),
+      topicCategory: val('f-topicCategory'),
+      issueType: val('f-issueType'),
+      issueDescription: val('f-issueDescription'),
+      impact: val('f-impact'),
+      actionRequired: val('f-actionRequired'),
+      actionPlan: val('f-actionPlan'),
+      name: val('f-name'),
+      responsibility: val('f-responsibility'),
+      rcaRequired: !!(document.getElementById('f-rcaRequired') && document.getElementById('f-rcaRequired').checked),
+    };
+    const idx = state.requirements.findIndex(r=>r.issueId===data.issueId);
+    // merge so existing photo/video attachments are kept when editing
+    if(idx>=0) state.requirements[idx] = {...state.requirements[idx], ...data}; else state.requirements.push(data);
+    state.modal = null;
+    saveState();
+    render();
+  }
+
+  function saveFollowup(){
+    const issueIdRaw = val('f-issueId');
+    const data = {
+      followupId: state.modal.editing ? state.modal.editing.followupId : nextFollowupId(),
+      issueId: issueIdRaw ? Number(issueIdRaw) : null,
+      department: val('f-department'),
+      issue: val('f-issue'),
+      discussedDate: val('f-discussedDate'),
+      status: val('f-status'),
+      actionRequired: val('f-actionRequired'),
+      followUpDate: val('f-followUpDate'),
+    };
+    const idx = state.followups.findIndex(f=>f.followupId===data.followupId);
+    if(idx>=0) state.followups[idx] = data; else state.followups.push(data);
+    state.modal = null;
+    saveState();
+    render();
+  }
+
+  function saveProject(id){
+    const data = {
+      id: Number(id),
+      name: val('f-name'),
+      description: val('f-description'),
+      department: val('f-department'),
+      owner: val('f-owner'),
+      startDate: val('f-startDate'),
+    };
+    const idx = state.projects.findIndex(p=>p.id===data.id);
+    if(idx>=0){
+      state.projects[idx] = {...state.projects[idx], ...data};
+    } else {
+      state.projects.push({status:'ACTIVE', followupLog:[], ...data});
+    }
+    state.modal = null;
+    saveState();
+    render();
+  }
+
+  function saveProjectFollowup(id){
+    const idx = state.projects.findIndex(p=>String(p.id)===String(id));
+    if(idx>=0){
+      const entry = {
+        date: val('f-followupDate') || todayStr(),
+        status: val('f-followupStatus'),
+        nextFollowupDate: val('f-nextFollowupDate'),
+        loggedAt: new Date().toISOString(),
+      };
+      const log = (state.projects[idx].followupLog || []).slice();
+      log.push(entry);
+      state.projects[idx] = { ...state.projects[idx], followupLog: log };
+    }
+    state.modal = null;
+    saveState();
+    render();
+  }
+
+  function setProjectStatus(id, status){
+    const idx = state.projects.findIndex(p=>String(p.id)===String(id));
+    if(idx>=0){
+      state.projects[idx] = {...state.projects[idx], status};
+      saveState();
+      render();
+    }
+  }
+
+  // Issues ticked "RCA required" are handed to the host page, which passes them to
+  // the RCA Workbench so each one gets a case there.
+  function publishRca(){
+    try{
+      if(window.parent === window) return;
+      const items = state.requirements.filter(r=>r.rcaRequired).map(r=>{
+        const desc = String(r.issueDescription||'').trim();
+        const bits = [];
+        bits.push('Raised in the weekly management meeting (issue #'+r.issueId+(r.department?', '+r.department:'')+(r.topicCategory?' / '+r.topicCategory:'')+').');
+        if(desc) bits.push('Issue: '+desc);
+        if(r.impact) bits.push('Impact: '+r.impact);
+        if(r.actionRequired) bits.push('Action required: '+r.actionRequired);
+        const owner = [r.name, r.responsibility].filter(Boolean).join(' / ');
+        if(owner) bits.push('Owner: '+owner);
+        return {
+          key: 'agenda:'+r.issueId, source: 'agenda',
+          name: 'Agenda #'+r.issueId+': '+(desc.length>60 ? desc.slice(0,57)+'...' : (desc||'Untitled issue')),
+          defect: desc.length>90 ? desc.slice(0,87)+'...' : desc,
+          statement: bits.join(' '), target: ''
+        };
+      });
+      window.parent.postMessage({type:'fitl-rca-candidates', source:'agenda', items}, '*');
+    }catch(e){}
+  }
+
+
+  // ---------- the CAPA step ----------
+  // An issue goes to CAPA in two ways only, both decided here at the weekly meeting:
+  //  1. the meeting presses "Send to CAPA" once it has reviewed the issue;
+  //  2. the issue was marked "RCA required" - it goes to CAPA by itself when the RCA Workbench finishes the analysis,
+  //     carrying the root causes found.
+  // What goes: the issue (RG-QA-10), the action plan lines (RG-QA-11) and the follow-ups logged here (RG-QA-12).
+  // After that, edits made here are passed on automatically.
+  function capaPayload(r){
+    const lines = String(r.actionPlan||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const fus = state.followups.filter(f=>String(f.issueId)===String(r.issueId))
+      .sort((x,y)=>(x.discussedDate||'').localeCompare(y.discussedDate||'') || String(x.followupId||'').localeCompare(String(y.followupId||'')))
+      .map(f=>({ key:'agenda:'+r.issueId+':'+f.followupId, date:f.discussedDate||todayStr(),
+        ref:'Weekly meeting issue #'+r.issueId+' — '+(f.status||'follow-up')+(f.actionRequired?' — '+f.actionRequired:'')+(f.followUpDate?' (next: '+f.followUpDate+')':'') }));
+    return { key:'agenda:'+r.issueId, issueId:r.issueId, autoKey:r.autoKey||'', date:(r.capa&&r.capa.sentAt)||todayStr(),
+      text:String(r.issueDescription||'').trim()+(r.impact?' Impact: '+String(r.impact).trim():''), department:r.department||'',
+      actions:lines.map((t,i)=>({ key:'agenda:'+r.issueId+':a'+(i+1), text:t })), followups:fus,
+      causes:(r.rcaResult&&r.rcaResult.causes)||[], rca:!!r.rcaRequired };
+  }
+  function postCapa(list){
+    try{ if(window.parent !== window && list.length) window.parent.postMessage({ type:'fitl-meeting-to-capa', items:list }, '*'); }catch(e){}
+  }
+  // send what has changed since the last time (nothing is sent for issues that were never sent to CAPA)
+  function syncCapa(){
+    const out = [];
+    state.requirements.forEach(r=>{
+      if(!r.capa) return;
+      const p = capaPayload(r), h = JSON.stringify(p);
+      if(r.capa.hash !== h){ r.capa.hash = h; out.push(p); }
+    });
+    if(out.length){
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ requirements: state.requirements, followups: state.followups, projects: state.projects, autoSeen: state.autoSeen })); }catch(e){}
+      postCapa(out);
+    }
+  }
+  // what the meeting has decided about flagged press risks, for the read-only "RCA" column in CAPA's Process Control Summary
+  function publishStatus(){
+    try{
+      if(window.parent === window) return;
+      const items = state.requirements.filter(r=>String(r.autoKey||'').indexOf('press:')===0)
+        .map(r=>({ key:r.autoKey, issueId:r.issueId, rca:!!r.rcaRequired, code:(r.capa&&r.capa.code)||'' }));
+      window.parent.postMessage({ type:'fitl-meeting-status', items }, '*');
+    }catch(e){}
+  }
+  function capaBlock(r){
+    if(r.capa && r.capa.code){
+      const acts = (r.capa.actions||[]).map(x=>esc(x.code)).join(', ');
+      return `<span class="pill solved" title="Sent to CAPA on ${esc(r.capa.sentAt||'')}">IN CAPA · ${esc(r.capa.code)}${acts?' · '+acts:''}</span>`;
+    }
+    if(r.capa) return `<span class="pill pending">SENT TO CAPA — WAITING FOR THE CODE</span>`;
+    if(r.rcaRequired) return `<span class="pill pending" title="An issue marked for RCA goes to CAPA by itself when the RCA is finished">RCA IN PROGRESS · TO CAPA WHEN FINISHED</span>`;
+    return `<button class="capa-btn" data-action="send-capa" data-id="${r.issueId}" title="Send to CAPA once the meeting has reviewed this issue">Send to CAPA</button>`;
+  }
+  function sendCapaClick(id){
+    const r = state.requirements.find(x=>String(x.issueId)===String(id));
+    if(!r || r.capa) return;
+    const n = String(r.actionPlan||'').split(/\r?\n/).filter(s=>s.trim()).length;
+    if(!confirm('Send issue #'+r.issueId+' to CAPA?\n\nIt becomes a new issue in CAPA (FIT/Q/RG-QA-10)'+(n?', its '+n+' action plan line'+(n===1?'':'s')+' go to the Action Plan (RG-QA-11)':'')+' and the follow-ups logged here go to the Follow-up table (RG-QA-12).\nSend it only after the meeting has reviewed it.')) return;
+    r.capa = { sentAt: todayStr() };
+    saveState(); render();
+    notice('Issue #'+r.issueId+' sent to CAPA');
+  }
+  // CAPA answers with the issue code and the action plan codes
+  function onCapaAck(items){
+    let changed = false;
+    items.forEach(it=>{
+      const m = /^agenda:(\d+)$/.exec(it.key||''); if(!m) return;
+      const r = state.requirements.find(x=>String(x.issueId)===m[1]); if(!r || !r.capa) return;
+      const acts = (it.actions||[]).map(x=>({ key:x.key, code:x.code }));
+      if(r.capa.code !== it.issueCode || JSON.stringify(r.capa.actions||[]) !== JSON.stringify(acts)){ r.capa.code = it.issueCode; r.capa.actions = acts; changed = true; }
+    });
+    if(changed){
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ requirements: state.requirements, followups: state.followups, projects: state.projects, autoSeen: state.autoSeen })); }catch(e){}
+      publishStatus(); render();
+    }
+  }
+  // the RCA Workbench finished an analysis for an issue marked "RCA required": it goes to CAPA with its root causes
+  function onRcaFinished(m){
+    const k = /^agenda:(\d+)$/.exec(m.key||''); if(!k) return;
+    const r = state.requirements.find(x=>String(x.issueId)===k[1]); if(!r) return;
+    r.rcaResult = { at: todayStr(), causes: (m.causes||[]).map(c=>({ cause:c.cause||'', root:c.root||'' })) };
+    if(!r.capa) r.capa = { sentAt: todayStr(), auto: true };
+    saveState(); render();
+    notice('RCA finished for issue #'+r.issueId+' — sent to CAPA with its root cause'+(r.rcaResult.causes.length===1?'':'s'));
+  }
+
+  // ---------- requirements raised automatically ----------
+  // 1) a risk flagged in Press Monitoring, 2) the third repeated Not OK finding in the same area or item of the
+  // Housekeeping check list. Each becomes a new requirement for the Weekly Management Meeting, once.
+  const AUTO_WINDOW_DAYS = 30;   // older history is noted as seen but not raised
+  function daysAgo(iso){ const t = new Date(iso + 'T00:00:00'); return (Date.now() - t.getTime()) / 864e5; }
+  function riskReqs(shifts){
+    const out = [];
+    shifts.forEach(s => (s.risks || []).forEach(r => {
+      const where = [r.stage, r.subStep].filter(Boolean).join(' › ');
+      out.push({ key: 'press:' + s.key + ':' + [r.stage, r.subStep, r.failureMode, r.cause].join('|'), date: s.date, source: 'Press Monitoring',
+        department: 'PRODUCTION', topicCategory: 'PRESS MONITORING', issueType: '05. Other',
+        issueDescription: 'Press monitoring flagged: ' + (r.failureMode || where || 'a risk') + (r.cause ? ' — cause: ' + r.cause : '') + (where ? ' (' + where + ')' : ''),
+        impact: 'Flagged unacceptable during press monitoring on ' + s.date + ', shift ' + (s.shiftCode || '') + (r.ap ? ', action priority ' + r.ap : '') + '.',
+        actionRequired: '', name: s.controller || 'Press monitoring', responsibility: 'Production' });
+    }));
+    return out;
+  }
+  function notice(msg){
+    let n = document.getElementById('autoNotice');
+    if(!n){ n = document.createElement('div'); n.id = 'autoNotice'; n.style.cssText = 'position:fixed;right:18px;bottom:18px;background:#1d2127;color:#fff;padding:11px 16px;border-radius:8px;font-size:13px;z-index:200;max-width:420px;box-shadow:0 6px 24px rgba(0,0,0,.25)'; document.body.appendChild(n); }
+    n.textContent = msg; n.style.display = 'block'; clearTimeout(notice._t); notice._t = setTimeout(() => { n.style.display = 'none'; }, 6000);
+  }
+  let autoReady = false; const autoQueue = [];
+  function importAuto(items){
+    if(!autoReady){ autoQueue.push(items); return; }
+    const seen = new Set(state.autoSeen), before = seen.size, by = {}; let added = 0;
+    items.forEach(it => {
+      if(!it || !it.key || seen.has(it.key)) return;
+      seen.add(it.key);
+      if(it.date && !it.manual && daysAgo(it.date) > AUTO_WINDOW_DAYS) return;   // old press shifts are skipped; anything a person sends on purpose is always raised
+      state.requirements.push({ issueId: nextIssueId(), department: it.department || '', topicCategory: it.topicCategory || '', issueType: it.issueType || '', issueDescription: it.issueDescription || '', impact: it.impact || '', actionRequired: it.actionRequired || '', name: it.name || '', responsibility: it.responsibility || '', rcaRequired: false, autoKey: it.key, autoSource: it.source || '', autoDate: it.date || '' });
+      added++; by[it.source || 'Other'] = (by[it.source || 'Other'] || 0) + 1;
+    });
+    if(seen.size !== before){ state.autoSeen = Array.from(seen); saveState(); }
+    if(added){ render(); notice(added + ' new requirement' + (added === 1 ? '' : 's') + ' raised for the Weekly Management Meeting (' + Object.keys(by).map(k => by[k] + ' from ' + k).join(', ') + ')'); }
+  }
+  window.addEventListener('message', ev => {
+    if(ev.source !== window.parent) return; const m = ev.data; if(!m) return;
+    if(m.type === 'fitl-shifts' && Array.isArray(m.items)) importAuto(riskReqs(m.items));
+    else if(m.type === 'fitl-wmm-requirements' && Array.isArray(m.items)) importAuto(m.items.map(i => Object.assign({ source: m.source || '' }, i)));
+    else if(m.type === 'fitl-capa-ack' && Array.isArray(m.items)) onCapaAck(m.items);
+    else if(m.type === 'fitl-rca-finished') onRcaFinished(m);
+  });
+
+  loadState().then(()=>{ render(); publishRca(); publishStatus(); syncCapa(); autoReady = true; autoQueue.splice(0).forEach(importAuto); try{ window.parent.postMessage({type:'fitl-agenda-ready'}, '*'); }catch(e){} });
+})();
+</script>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waste Disposal — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--navy:#1F3A5F;--green:#2C7A4B;--green-bg:#E1F0E7;--amber:#B97708;--amber-bg:#FBF0D8;--head:'Barlow Condensed','Arial Narrow',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500;white-space:nowrap}.btn:hover{border-color:#B9B2A6}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn.sm{padding:3px 9px;font-size:12.5px}.btn.ghost{border-color:transparent;color:var(--soft)}.btn.ghost:hover{color:var(--red);background:var(--red-bg)}
+  nav{background:var(--card);border-bottom:1px solid var(--line);padding:0 22px;display:flex;gap:2px;overflow-x:auto}
+  .tab{background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1px;padding:11px 16px 9px;cursor:pointer;white-space:nowrap;color:var(--soft);font-weight:600}.tab.on{color:var(--ink);border-bottom-color:var(--red)}
+  main{padding:16px 22px 60px;max-width:1500px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}.pn{padding:14px 16px;margin-bottom:14px}.pn h2{font-size:20px;text-transform:uppercase;margin-bottom:8px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  input[type=text],input[type=number],input[type=date],select,textarea{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px}input:focus,select:focus,textarea:focus{outline:2px solid #E8A0A3;border-color:var(--red)}textarea{width:100%;resize:vertical}
+  label.f{display:block;font-size:12px;font-weight:600;color:var(--soft);margin-bottom:3px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}.t{padding:12px 14px;border-left:6px solid var(--line)}.t small{display:block;color:var(--soft);font-size:12px}.t b{font:600 30px/1.1 var(--head)}.t .n{font-size:12px;color:var(--soft)}.t.good{border-left-color:var(--green)}.t.bad{border-left-color:var(--red)}.t.mid{border-left-color:var(--amber)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px;margin-bottom:14px}.cb{padding:12px 14px;height:320px;position:relative}.full{grid-column:1/-1}
+  .tw{overflow:auto;border-radius:8px}table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 9px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:top}th{background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0;z-index:1;white-space:nowrap}
+  td.r,th.r{text-align:right}td.c,th.c{text-align:center}tr.tot td{font-weight:700;background:#F7F4EE}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap;background:#ECE9E3;color:var(--soft)}.chip.ok{background:var(--green-bg);color:var(--green)}.chip.no{background:var(--red-bg);color:var(--red-d)}.chip.na{background:#ECE9E3;color:var(--soft)}.chip.warn{background:var(--amber-bg);color:#7A4F05}
+  .types{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px}
+  .types button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer}.types button:hover{border-color:#B9B2A6}.types button.on{border-color:var(--red);background:var(--red-bg)}
+  .types b{display:block;font-size:13.5px}.types small{color:var(--soft);font-size:11.5px;font-family:var(--mono)}.types span{float:right;font:600 12px var(--mono);color:var(--soft)}
+  .entry{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;padding:12px;background:#FBFAF7;border:1px dashed var(--line);border-radius:9px}.entry>div{min-width:110px}.entry input,.entry select{width:100%}
+  .empty{padding:34px;text-align:center;color:var(--soft);line-height:1.7}
+  .veil{position:fixed;inset:0;background:rgba(29,33,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:50;overflow:auto}.modal{background:#fff;border-radius:12px;width:min(640px,100%);padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto}.modal h2{font-size:24px;text-transform:uppercase;margin-bottom:12px}.mg{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}.mg .w2{grid-column:1/-1}.mg input,.mg select{width:100%}.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:420px}#toast.show{opacity:1}
+  .note{color:var(--soft);font-size:12.5px}details{margin-top:10px}summary{cursor:pointer;font-weight:600}
+  .pv{width:100%;height:66vh;border:1px solid var(--line);border-radius:8px;background:#fff}.pvt{max-height:66vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px 16px;background:#fff}.pvt img{max-width:100%}
+  .modal.wide{width:min(1000px,100%)}
+  #printArea{display:none}
+  .nf{width:100%;border-collapse:collapse;font-family:Calibri,Arial,sans-serif;margin-bottom:6px}.nf th,.nf td{border:1px solid #444;padding:4px 7px;font-size:11px;vertical-align:middle;text-align:left;height:21px}.nf th{background:#EDEDED;font-weight:700;text-align:center}
+  .nf.head td{vertical-align:middle}.nf .lg{width:24%;text-align:center;font-size:9.5px;font-weight:600}.nf .lg img{height:34px;display:block;margin:0 auto 3px}.nf .sys{text-align:center;font-weight:700;letter-spacing:.06em}.nf .ttl{text-align:center;font-weight:700;font-size:15px}.nf .hd{background:#EDEDED;font-weight:700;width:12%}
+  .pgbreak{page-break-after:always;break-after:page}
+  @media print{body{background:#fff}body>*:not(#printArea){display:none!important}#printArea{display:block}}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Waste Disposal</h1><div class="sub">EMS records FIT/E/RG-HR-01 to FIT/E/FO-HR-11 — approved collectors, monitoring, evaluation and waste issue records</div></div><button class="btn" id="xl">Download Excel</button></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="host"></div><div id="toast"></div><div id="printArea"></div><style id="pgstyle"></style>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const KEY='fitl_waste_v1',MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const dot=s=>s?String(s).slice(0,10).replace(/-/g,'.'):'';
+const f1=v=>v==null?'–':(Math.round(v*10)/10).toLocaleString();
+const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0};
+
+/* ---------- the eleven forms ---------- */
+const DOCS={
+ col:{no:'FIT/E/RG-HR-01',title:'APPROVED LIST OF WASTE COLLECTORS',land:1},
+ mon:{no:'FIT/E/RG-HR-02',title:'WASTE COLLECTOR PERFORMANCE MONITORING RECORD',land:1},
+ ev:{no:'FIT/E/RG-HR-03',title:'WASTE COLLECTORS EVALUATION RECORD',land:0},
+ food:{no:'FIT/E/FO-HR-04',title:'FOOD WASTE COLLECTION RECORD',land:1},
+ board:{no:'FIT/E/FO-HR-05',title:'RECORD FOR ISSUING WASTE CARDBOARD/ POLYTHENE AND CONTAMINATED COTTON WASTE',land:1},
+ cans:{no:'FIT/E/FO-HR-06',title:'RECORD FOR ISSUING PLASTIC CANS',land:1},
+ metal:{no:'FIT/E/FO-HR-07',title:'RECORD FOR ISSUING WASTE METALS',land:1},
+ oil:{no:'FIT/E/FO-HR-08',title:'RECORD FOR ISSUING WASTE OIL',land:1},
+ ewaste:{no:'FIT/E/FO-HR-09',title:'RECORD FOR ISSUING E - WASTE',land:1},
+ rubber:{no:'FIT/E/FO-HR-10',title:'RECORD FOR ISSUING RUBBER WASTE',land:1},
+ hazard:{no:'FIT/E/FO-HR-11',title:'RECORD FOR ISSUING HAZARDOUS WASTE',land:1}};
+const TYPES=['food','board','cans','metal','oil','ewaste','rubber','hazard'];
+const SCH={
+ food:{label:'Food waste',qty:[],amount:false,rem:true},
+ board:{label:'Cardboard, polythene, contaminated cotton',qty:[['board','Card Board'],['poly','Polythene'],['cotton','Contaminated Cotton Waste']],unit:'kg'},
+ cans:{label:'Plastic cans',amount:true,unit:'nos',rem:true},
+ metal:{label:'Waste metals',amount:true,unit:'kg',rem:true},
+ oil:{label:'Waste oil',amount:true,unit:'litres',rem:true},
+ ewaste:{label:'E-waste',amount:true,unit:'kg',rem:true},
+ rubber:{label:'Rubber waste',qty:[['tyre','Scrap Tyre'],['comp','Compound'],['spew','Tyre Spew']],unit:'kg'},
+ hazard:{label:'Hazardous waste',qty:[['csi','C and Si Dust'],['carb','Waste Carbon'],['sand','Sand Blaster Si dust'],['grease','Waste Grease'],['chem','Waste Chemical']],unit:'kg'}};
+TYPES.forEach(t=>{SCH[t].qty=SCH[t].qty||[];SCH[t].amount=!!SCH[t].amount;SCH[t].rem=!!SCH[t].rem});
+const UNITS=['kg','nos','litres','tonnes'];
+/* collector monitoring: the marks of FIT/E/RG-HR-02 */
+const CRIT=[['rt','Response Time',[['Response for first call',5],['Response after few try',4],['Call back to missed call',3],['Need a huge effort to contact',0]]],
+ ['up','Station Up Time',[['Come to collection on given date',5],['Delays from 1 day to 3 days',4],['Delays from 3 days to 7 days',3],['Delay more than one week',0]]],
+ ['pr','Price',[['At market price for cheque',5],['At market price for cash',4],['More than market price for cheque',3],['More than market price for cash',0]]],
+ ['sv','Severity',[['Low Severity (No Spills)',5],['Average Severity (Closed truck)',4],['Satisfiable Level (Closed by Tent)',3],['High severity (make bad odor/spills)',0]]]];
+const pct=m=>m&&CRIT.every(c=>m[c[0]]!=null)?CRIT.reduce((s,c)=>s+m[c[0]],0)/20*100:null;
+
+/* ---------- data ---------- */
+function seed(){return{collectors:[
+ {id:'c1',cat:'Scrap Tyre, Scrap Compound',name:'COC plastic & Rubber',contact:'Mr. Kolvin 0773242508',epl:'ok',swm:'',trade:'',br:''},
+ {id:'c2',cat:'Tyre Spew',name:'Ferentino Tyre Corporation',contact:'Mr. Buddlika 0760328663',epl:'',swm:'',trade:'',br:''},
+ {id:'c3',cat:'Plastic Containers, Waste Oil',name:'Charuka Distributor',contact:'Mr. Tharanaga 0775422288',epl:'ok',swm:'',trade:'',br:''},
+ {id:'c4',cat:'Metal Scrap',name:'Ceylon Steel Corporation',contact:'Mr. Nuwan 0713845580',epl:'ok',swm:'',trade:'',br:''},
+ {id:'c5',cat:'Boiler Ash',name:'Mr. M.C.S Kumara',contact:'',epl:'',swm:'',trade:'',br:''},
+ {id:'c6',cat:'Food Waste',name:'C. S.M. Antony Farm',contact:'Mr. Nadhun 0762005106',epl:'-',swm:'-',trade:'',br:''}],
+ recs:{},mon:[],ev:{},target:null}}
+const DTYPES=[['epl','EPL — Environmental Protection Licence'],['swm','Scheduled Waste Management License'],['trade','Trade License'],['br','Registration / BR certificate'],['agr','Agreement or contract'],['oth','Other document']];
+const dtLabel=k=>(DTYPES.find(x=>x[0]===k)||[0,k])[1];
+/* files live in the browser's IndexedDB (store 'files' of 'fitl-library', keys "waste:<id>") */
+/* files are kept in this browser; the host page copies them to the server (and the other way round when a file is missing here) */
+function fitlFile(t,k){try{parent.postMessage({type:t,k:k},'*')}catch(_){}}
+const FW={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{const q=indexedDB.open('fitl-library',1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('files'))q.result.createObjectStore('files',{keyPath:'k'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))},
+ async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('files',mode);let out;const r=fn(t.objectStore('files'));if(r)r.onsuccess=()=>{out=r.result};t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error)})},
+ put(rec){return this.tx('readwrite',s=>s.put(rec)).then(r=>{fitlFile('fitl-file-saved',rec.k);return r})},get(k){return this.tx('readonly',s=>s.get(k)).then(r=>r||this.fromServer(k))},del(k){return this.tx('readwrite',s=>s.delete(k)).then(r=>{fitlFile('fitl-file-deleted',k);return r})},
+ async fromServer(k){try{const r=await fetch('/api/files/'+encodeURIComponent(k),{credentials:'same-origin'});if(!r.ok)return null;const data=await r.arrayBuffer();let nm=k;try{nm=decodeURIComponent(r.headers.get('X-File-Name')||k)}catch(_){}const rec={k,docId:k.split('|')[0],name:nm,type:r.headers.get('Content-Type')||'',size:data.byteLength,at:new Date().toISOString(),data};await this.tx('readwrite',s=>s.put(rec));return rec}catch(_){return null}}};
+let D;try{D=JSON.parse(localStorage.getItem(KEY)||'null')}catch(_){}if(!D||!D.collectors)D=seed();D.docs=D.docs||[];TYPES.forEach(t=>{D.recs[t]=D.recs[t]||[]});D.mon=D.mon||[];D.ev=D.ev||{};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(_){toast('Could not save — browser storage is full. Download the Excel file.')}};
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3000)}
+const colName=id=>(D.collectors.find(c=>c.id===id)||{name:'(removed collector)'}).name;
+const colOpts=(sel,blank)=>(blank?'<option value="">'+blank+'</option>':'')+D.collectors.map(c=>'<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+const nextNo=t=>Math.max(0,...D.recs[t].map(r=>r.no||0))+1;
+const kgOf=(t,r)=>SCH[t].amount?(r.unit==='kg'?num(r.amt):r.unit==='tonnes'?num(r.amt)*1000:0):SCH[t].qty.reduce((s,q)=>s+num((r.q||{})[q[0]]),0);
+
+/* ---------- state ---------- */
+let TAB='dash',RT='food',MC=null,CH=[];
+const Y=new Date().getFullYear();let F={year:Y,month:0,ry:Y,rm:0,evy:Y};
+const TABS=[['dash','Dashboard'],['rec','Waste issue records'],['col','Approved collectors'],['docs','Collector documents'],['mon','Collector monitoring'],['ev','Collector evaluation']];
+const yearsIn=()=>{const s=new Set([Y]);TYPES.forEach(t=>D.recs[t].forEach(r=>s.add(+String(r.date).slice(0,4))));D.mon.forEach(r=>s.add(+String(r.date).slice(0,4)));return[...s].filter(Boolean).sort((a,b)=>b-a)};
+const inP=(d,y,m)=>String(d).slice(0,4)==y&&(!m||+String(d).slice(5,7)===+m);
+const yOpts=s=>yearsIn().map(y=>'<option'+(y==s?' selected':'')+'>'+y+'</option>').join('');
+const mOpts=(s,all)=>'<option value="0"'+(!+s?' selected':'')+'>'+all+'</option>'+MONS.map((m,i)=>'<option value="'+(i+1)+'"'+(+s===i+1?' selected':'')+'>'+m+'</option>').join('');
+const legal=v=>v==='ok'?'<span class="chip ok">ok</span>':v==='-'?'<span class="chip na">not required</span>':'<span class="chip no">not on file</span>';
+const sizeTxt=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+/* the state of a legal requirement: an attached document counts, and a document past its valid-until date is shown as expired */
+function legalState(c,k){
+  const ds=D.docs.filter(d=>d.col===c.id&&d.type===k&&d.file).sort((a,b)=>String(b.valid||'9999').localeCompare(String(a.valid||'9999')));
+  if(ds.length){const d=ds[0];return d.valid&&d.valid<todayISO()?{s:'expired',d}:{s:'doc',d}}
+  return{s:c[k]||'',d:null};
+}
+const legalChip=(c,k)=>{const x=legalState(c,k);return x.s==='expired'?'<span class="chip no" title="Valid until '+dot(x.d.valid)+'">expired '+dot(x.d.valid)+'</span>':x.s==='doc'?'<span class="chip ok" title="Document attached">ok · document'+(x.d.valid?' · until '+dot(x.d.valid):'')+'</span>':legal(x.s)};
+const docDays=d=>d.valid?Math.round((new Date(d.valid+'T00:00:00')-new Date(todayISO()+'T00:00:00'))/864e5):null;
+function destroy(){CH.forEach(c=>c.destroy());CH=[]}
+const mk=(id,cfg)=>{if(typeof Chart==='undefined'||!$(id))return;Chart.defaults.font.family="Inter,system-ui,sans-serif";CH.push(new Chart($(id),cfg))};
+
+/* ---------- screens ---------- */
+function render(){
+  destroy();$('nav').innerHTML=TABS.map(t=>'<button class="tab'+(TAB===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>').join('');
+  const v={dash:vDash,rec:vRec,col:vCol,docs:vDocs,mon:vMon,ev:vEv}[TAB]();$('main').innerHTML=v.h;if(v.after)v.after();if(TAB==='mon'&&PRE){if($('m_date'))$('m_date').value=PRE.date;if($('m_gp'))$('m_gp').value=PRE.gp;PRE=null}
+}
+function vDash(){
+  const y=F.year,m=F.month;
+  const per=TYPES.map(t=>({t,rows:D.recs[t].filter(r=>inP(r.date,y,m))}));
+  const issues=per.reduce((a,x)=>a+x.rows.length,0),kg=per.reduce((a,x)=>a+x.rows.reduce((s,r)=>s+kgOf(x.t,r),0),0);
+  const monY=D.mon.filter(r=>inP(r.date,y,m)),avgs=D.collectors.map(c=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null);return{c,n:rs.length,avg:rs.length?rs.reduce((s,r)=>s+pct(r),0)/rs.length:null}});
+  const scored=new Set(D.mon.map(r=>r.col+'|'+String(r.gp).trim().toLowerCase())),todo=[];
+  TYPES.forEach(t=>D.recs[t].forEach(r=>{if(inP(r.date,y,m)&&String(r.gp||'').trim()&&!scored.has(r.col+'|'+String(r.gp).trim().toLowerCase()))todo.push({t,r})}));
+  const miss=[];D.collectors.forEach(c=>[['epl','EPL'],['swm','Scheduled Waste Management License'],['trade','Trade License']].forEach(l=>{const st=legalState(c,l[0]);if(!st.s||st.s==='expired')miss.push({c,l:l[1]+(st.s==='expired'?' (expired '+dot(st.d.valid)+')':'')})}));const soon=D.docs.filter(d=>d.file&&d.valid&&docDays(d)>=0&&docDays(d)<=60).sort((a,b)=>a.valid.localeCompare(b.valid));
+  const withScore=avgs.filter(x=>x.avg!=null),overall=withScore.length?withScore.reduce((s,x)=>s+x.avg,0)/withScore.length:null,tg=D.target;
+  let h='<div class="bar"><select id="dy">'+yOpts(y)+'</select><select id="dm">'+mOpts(m,'Whole year')+'</select><span class="note">Everything on this page follows the period chosen here.</span><span style="flex:1"></span><label class="note">Collector performance target % <input type="number" id="dtg" min="0" max="100" style="width:80px" value="'+(D.target==null?'':D.target)+'" placeholder="not set"></label></div>';
+  h+='<div class="tiles"><div class="card t"><small>Waste issues recorded</small><b>'+issues+'</b><div class="n">gate-pass records in the period</div></div>'+
+   '<div class="card t"><small>Weight issued</small><b>'+f1(kg)+' kg</b><div class="n">all kg-based waste streams</div></div>'+
+   '<div class="card t '+(todo.length?'mid':'good')+'"><small>Gate passes not scored yet</small><b>'+todo.length+'</b><div class="n">collections with no line in the monitoring record</div></div>'+
+   '<div class="card t '+(overall==null?'':tg==null?'':overall>=tg?'good':'bad')+'"><small>Collector performance (year)</small><b>'+(overall==null?'–':f1(overall)+' %')+'</b><div class="n">'+(tg==null?'target not set — enter it on the chart':'target '+tg+' %')+'</div></div>'+
+   '<div class="card t '+(miss.length?'mid':'good')+'"><small>Legal documents missing or expired</small><b>'+miss.length+'</b><div class="n">'+D.collectors.length+' approved collectors · '+soon.length+' expiring within 60 days</div></div></div>';
+  h+='<div class="grid2"><div class="card cb full"><canvas id="c1"></canvas></div><div class="card cb"><canvas id="c2"></canvas></div><div class="card cb"><canvas id="c3"></canvas></div></div>';
+  h+='<div class="grid2"><div class="card pn" style="margin:0"><h2>Waste issued in the period</h2><div class="tw"><table><thead><tr><th>Record</th><th class="r">Issues</th><th class="r">Quantity</th></tr></thead><tbody>'+per.map(x=>{const s=SCH[x.t];let q;if(s.amount){const u={};x.rows.forEach(r=>{u[r.unit||s.unit]=(u[r.unit||s.unit]||0)+num(r.amt)});q=Object.keys(u).map(k=>f1(u[k])+' '+k).join(' + ')||'–'}else if(s.qty.length){const k=x.rows.reduce((a,r)=>a+s.qty.reduce((b,z)=>b+num((r.q||{})[z[0]]),0),0);q=x.rows.length?f1(k)+' kg':'–'}else q=x.rows.length?x.rows.length+' collections':'–';
+    return'<tr><td>'+esc(s.label)+'<div class="note">'+DOCS[x.t].no+'</div></td><td class="r">'+x.rows.length+'</td><td class="r">'+q+'</td></tr>'}).join('')+'</tbody></table></div></div>'+
+   '<div class="card pn" style="margin:0"><h2>To do</h2>'+(todo.length?'<p class="note" style="margin:0 0 6px">Collections with a gate pass that has no marks yet in the Collector monitoring record:</p><div class="tw" style="max-height:230px"><table><tbody>'+todo.slice(0,12).map(x=>'<tr><td>'+dot(x.r.date)+'</td><td>'+esc(colName(x.r.col))+'</td><td>'+esc(x.r.gp)+'</td><td class="r"><button class="btn sm" data-act="score" data-t="'+x.t+'" data-id="'+x.r.id+'">Score</button></td></tr>').join('')+'</tbody></table></div>'+(todo.length>12?'<p class="note">+ '+(todo.length-12)+' more</p>':''):'<p class="note">Every collection in this period has been scored.</p>')+
+   (soon.length?'<p style="margin:12px 0 4px"><b>Expiring within 60 days</b></p><div class="note">'+soon.slice(0,6).map(d=>esc(colName(d.col))+' — '+esc(dtLabel(d.type))+' — '+dot(d.valid)+' ('+docDays(d)+' days)').join('<br>')+'</div>':'')+(miss.length?'<p style="margin:12px 0 4px"><b>Legal documents missing or expired</b></p><div class="note">'+miss.slice(0,8).map(x=>esc(x.c.name)+' — '+x.l).join('<br>')+(miss.length>8?'<br>+ '+(miss.length-8)+' more (see Approved collectors)':'')+'</div>':'')+'</div></div>';
+  $('main').dataset.avgs=JSON.stringify(avgs.map(x=>[x.c.name,x.avg,x.n]));
+  return{h,after:()=>{
+    // monthly weight by stream for the chosen year
+    const ms=[1,2,3,4,5,6,7,8,9,10,11,12],PAL=['#1F3A5F','#2E9E6B','#E0A526','#7B61C9','#00A6C8','#C2410C','#DA1B22','#6B7280'];
+    const kgT=TYPES.filter(t=>SCH[t].amount?['kg','tonnes'].includes(SCH[t].unit)||D.recs[t].some(r=>r.unit==='kg'||r.unit==='tonnes'):SCH[t].qty.length);
+    mk('c1',{type:'bar',data:{labels:MONS,datasets:kgT.map((t,i)=>({label:SCH[t].label,data:ms.map(mm=>Math.round(D.recs[t].filter(r=>inP(r.date,y,mm)).reduce((s,r)=>s+kgOf(t,r),0)*10)/10),backgroundColor:PAL[i%8],stack:'s'}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Waste issued per month, '+y+' (kg)',font:{size:15}},legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,title:{display:true,text:'kg'}}}}});
+    const ws=avgs.filter(x=>x.avg!=null);
+    mk('c2',{type:'bar',data:{labels:ws.map(x=>x.c.name),datasets:[{label:'Average performance %, '+y,data:ws.map(x=>Math.round(x.avg*10)/10),backgroundColor:ws.map(x=>tg!=null&&x.avg<tg?'#DA1B22':'#1F3A5F')}].concat(tg!=null?[{type:'line',label:'Target '+tg+' %',data:ws.map(()=>tg),borderColor:'#1D2127',borderDash:[7,5],borderWidth:2,pointRadius:0}]:[])},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Collector performance (monitoring record, '+y+')'+(tg==null?' — enter a target above to see its line':''),font:{size:15}},legend:{position:'bottom'}},scales:{y:{min:0,max:100,title:{display:true,text:'% of the 20 marks'}}}}});
+    const byC={};TYPES.forEach(t=>D.recs[t].forEach(r=>{if(inP(r.date,y,m))byC[r.col]=(byC[r.col]||0)+kgOf(t,r)}));const bk=Object.keys(byC).filter(k=>byC[k]>0);
+    mk('c3',{type:'bar',data:{labels:bk.map(colName),datasets:[{label:'Weight issued (kg)',data:bk.map(k=>Math.round(byC[k]*10)/10),backgroundColor:'#2E9E6B'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Weight issued to each collector (kg), '+(m?MONS[m-1]+' ':'')+y,font:{size:15}},legend:{display:false}}}});
+  }};
+}
+function vRec(){
+  const s=SCH[RT],rows=D.recs[RT].filter(r=>inP(r.date,F.ry,F.rm)).sort((a,b)=>String(b.date).localeCompare(a.date)||b.no-a.no);
+  let h='<div class="types">'+TYPES.map(t=>'<button class="'+(t===RT?'on':'')+'" data-rt="'+t+'"><span>'+D.recs[t].length+'</span><b>'+esc(SCH[t].label)+'</b><small>'+DOCS[t].no+'</small></button>').join('')+'</div>';
+  h+='<div class="card pn"><h2>'+esc(DOCS[RT].title.replace(/RECORD FOR ISSUING /,'Record for issuing ').replace(/^FOOD WASTE COLLECTION RECORD$/,'Food waste collection record'))+' <span class="note" style="font-family:var(--mono);text-transform:none">'+DOCS[RT].no+'</span></h2>';
+  h+='<div class="entry" id="entry"><div><label class="f">Date</label><input type="date" id="e_date" value="'+todayISO()+'"></div><div style="min-width:200px"><label class="f">Waste collector</label><select id="e_col">'+colOpts('','Choose…')+'</select></div><div><label class="f">Gate pass number</label><input type="text" id="e_gp"></div>';
+  if(s.amount)h+='<div><label class="f">Amount</label><input type="number" id="e_amt" min="0" step="any"></div><div><label class="f">Unit</label><select id="e_unit">'+UNITS.map(u=>'<option'+(u===s.unit?' selected':'')+'>'+u+'</option>').join('')+'</select></div>';
+  s.qty.forEach(q=>{h+='<div><label class="f">'+esc(q[1])+' (kg)</label><input type="number" id="e_q_'+q[0]+'" min="0" step="any"></div>'});
+  if(s.rem)h+='<div style="min-width:200px;flex:1"><label class="f">Remarks</label><input type="text" id="e_rem"></div>';
+  h+='<div><button class="btn red" data-act="addrec">Add to record</button></div></div>';
+  h+='<div class="bar"><select id="ry">'+yOpts(F.ry)+'</select><select id="rm">'+mOpts(F.rm,'Whole year')+'</select><span class="note">'+rows.length+' entr'+(rows.length===1?'y':'ies')+'</span><span style="flex:1"></span><button class="btn" data-act="printrec">Print the form</button><button class="btn" data-act="xlrec">Excel</button></div>';
+  if(!rows.length)h+='<div class="empty">No entries in this period. Fill in the line above to record a collection.</div>';
+  else{
+    const cols=s.qty.map(q=>q[0]);let tot={},amt={};
+    h+='<div class="tw"><table><thead><tr><th>No</th><th>Date</th><th>Waste collector</th><th>Gate pass number</th>'+(s.amount?'<th class="r">Amount</th>':'')+s.qty.map(q=>'<th class="r">'+esc(q[1])+' (kg)</th>').join('')+(s.rem?'<th>Remarks</th>':'')+'<th>Marks</th><th></th></tr></thead><tbody>'+rows.map(r=>{
+      cols.forEach(k=>tot[k]=(tot[k]||0)+num((r.q||{})[k]));if(s.amount){const u=r.unit||s.unit;amt[u]=(amt[u]||0)+num(r.amt)}
+      const sc=D.mon.some(m=>m.col===r.col&&String(m.gp).trim().toLowerCase()===String(r.gp||'').trim().toLowerCase()&&String(r.gp||'').trim());
+      return'<tr><td>'+r.no+'</td><td>'+dot(r.date)+'</td><td>'+esc(colName(r.col))+'</td><td>'+esc(r.gp)+'</td>'+(s.amount?'<td class="r">'+f1(num(r.amt))+' '+esc(r.unit||s.unit)+'</td>':'')+cols.map(k=>'<td class="r">'+((r.q||{})[k]?f1(num(r.q[k])):'')+'</td>').join('')+(s.rem?'<td>'+esc(r.rem)+'</td>':'')+
+        '<td>'+(String(r.gp||'').trim()?(sc?'<span class="chip ok">scored</span>':'<button class="btn sm" data-act="score" data-t="'+RT+'" data-id="'+r.id+'">Score</button>'):'<span class="note">no gate pass</span>')+'</td><td style="white-space:nowrap"><button class="btn sm" data-act="editrec" data-id="'+r.id+'">Edit</button> <button class="btn sm ghost" data-act="delrec" data-id="'+r.id+'">✕</button></td></tr>'}).join('')+
+      '<tr class="tot"><td colspan="4">Total</td>'+(s.amount?'<td class="r">'+Object.keys(amt).map(u=>f1(amt[u])+' '+u).join(' + ')+'</td>':'')+cols.map(k=>'<td class="r">'+f1(tot[k]||0)+'</td>').join('')+(s.rem?'<td></td>':'')+'<td colspan="2"></td></tr></tbody></table></div>';
+  }
+  return{h:h+'</div>'};
+}
+
+let DC='';
+function vDocs(){
+  const sel=DC,rows=D.docs.filter(d=>!sel||d.col===sel).sort((a,b)=>colName(a.col).localeCompare(colName(b.col))||String(a.valid||'9999').localeCompare(String(b.valid||'9999')));
+  let h='<div class="card pn"><h2>Approved waste collector documents</h2><p class="note" style="margin:0 0 10px">Licences, certificates and agreements of the approved collectors. Each file is kept here, with its number and valid-until date, so it can be viewed or downloaded when needed. A licence attached here also marks that legal requirement as “ok” on the Approved collectors list.</p>'+
+   '<div class="entry"><div style="min-width:210px"><label class="f">Waste collector</label><select id="d_col">'+colOpts(sel,'Choose…')+'</select></div><div style="min-width:230px"><label class="f">Document</label><select id="d_type">'+DTYPES.map(t=>'<option value="'+t[0]+'">'+t[1]+'</option>').join('')+'</select></div><div><label class="f">Document number</label><input type="text" id="d_no"></div><div><label class="f">Issued</label><input type="date" id="d_iss"></div><div><label class="f">Valid until</label><input type="date" id="d_val"></div><div style="min-width:220px"><label class="f">File (PDF, picture, Word…)</label><input type="file" id="d_file" style="width:100%"></div><div style="min-width:180px;flex:1"><label class="f">Note</label><input type="text" id="d_note"></div><div><button class="btn red" data-act="adddoc">Add document</button></div></div>'+
+   '<div class="bar"><select id="dc_f"><option value="">All collectors</option>'+D.collectors.map(c=>'<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select><span class="note">'+rows.length+' document'+(rows.length===1?'':'s')+'</span></div>';
+  h+=rows.length?'<div class="tw"><table><thead><tr><th>Waste collector</th><th>Document</th><th>Number</th><th>Issued</th><th>Valid until</th><th>File</th><th>Note</th><th></th></tr></thead><tbody>'+rows.map(d=>{const n=docDays(d),st=!d.valid?'':n<0?'<span class="chip no">expired</span>':n<=60?'<span class="chip warn">'+n+' days left</span>':'<span class="chip ok">valid</span>';
+    return'<tr><td><b>'+esc(colName(d.col))+'</b></td><td>'+esc(dtLabel(d.type))+'</td><td>'+esc(d.no)+'</td><td>'+dot(d.issued)+'</td><td>'+(d.valid?dot(d.valid)+' '+st:'<span class="note">—</span>')+'</td><td>'+(d.file?esc(d.file.name)+'<div class="note">'+sizeTxt(d.file.size)+'</div>':'<span class="chip no">no file</span>')+'</td><td>'+esc(d.note)+'</td><td style="white-space:nowrap">'+(d.file?'<button class="btn sm red" data-act="viewdoc" data-id="'+d.id+'">View</button> <button class="btn sm" data-act="dldoc" data-id="'+d.id+'">Download</button> ':'')+'<button class="btn sm" data-act="editdoc" data-id="'+d.id+'">Edit</button> <button class="btn sm ghost" data-act="deldoc" data-id="'+d.id+'">✕</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">No documents yet'+(sel?' for this collector':'')+'. Choose the collector and the document type above, attach the file and press “Add document”.</div>';
+  return{h:h+'</div>'};
+}
+function vCol(){
+  let h='<div class="card pn"><h2>Approved list of waste collectors <span class="note" style="font-family:var(--mono);text-transform:none">'+DOCS.col.no+'</span></h2><div class="bar"><button class="btn red" data-act="addcol">+ Add a collector</button><span style="flex:1"></span><button class="btn" data-act="printcol">Print the form</button></div><div class="tw"><table><thead><tr><th>ID</th><th>Waste category</th><th>Name of waste collector</th><th>Contact details</th><th>Registration / BR no</th><th class="c">EPL</th><th class="c">Scheduled Waste Management License</th><th class="c">Trade License</th><th class="c">Documents</th><th></th></tr></thead><tbody>'+
+   D.collectors.map((c,i)=>'<tr><td>'+pad(i+1)+'</td><td>'+esc(c.cat)+'</td><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.contact)+'</td><td>'+esc(c.br)+'</td><td class="c">'+legalChip(c,'epl')+'</td><td class="c">'+legalChip(c,'swm')+'</td><td class="c">'+legalChip(c,'trade')+'</td><td class="c"><button class="btn sm" data-act="opendocs" data-id="'+c.id+'">'+D.docs.filter(d=>d.col===c.id).length+' 📎</button></td><td style="white-space:nowrap"><button class="btn sm" data-act="editcol" data-id="'+c.id+'">Edit</button> <button class="btn sm ghost" data-act="delcol" data-id="'+c.id+'">✕</button></td></tr>').join('')+'</tbody></table></div><p class="note" style="margin-top:8px">“ok” = on file (typed on the form, or a document attached under Collector documents) · “not required” = marked “-” on the form · “expired” = the attached document is past its valid-until date · “not on file” = nothing yet.</p></div>';
+  return{h};
+}
+function vMon(){
+  if(!D.collectors.length)return{h:'<div class="card empty">Add a collector first (Approved collectors).</div>'};
+  if(!D.collectors.some(c=>c.id===MC))MC=D.collectors[0].id;const c=D.collectors.find(x=>x.id===MC);
+  const rows=D.mon.filter(r=>r.col===MC).sort((a,b)=>String(b.date).localeCompare(a.date)),sc=rows.map(pct).filter(v=>v!=null),avg=sc.length?sc.reduce((a,b)=>a+b,0)/sc.length:null;
+  let h='<div class="bar"><select id="mc" style="min-width:260px">'+colOpts(MC)+'</select></div><div class="card pn"><h2>Waste collector performance monitoring <span class="note" style="font-family:var(--mono);text-transform:none">'+DOCS.mon.no+'</span></h2>'+
+   '<div class="mg" style="margin-bottom:10px"><div><span class="note">Name of the waste collector</span><br><b>'+esc(c.name)+'</b></div><div><span class="note">Registration number / BR number</span><br><b>'+(esc(c.br)||'—')+'</b> <button class="btn sm ghost" data-act="editcol" data-id="'+c.id+'">edit</button></div><div class="w2"><span class="note">Waste category</span><br><b>'+esc(c.cat)+'</b></div></div>';
+  h+='<div class="entry" id="mentry"><div><label class="f">Date</label><input type="date" id="m_date" value="'+todayISO()+'"></div><div><label class="f">Gate pass number</label><input type="text" id="m_gp"></div>'+CRIT.map(k=>'<div style="min-width:190px"><label class="f">'+k[1]+'</label><select id="m_'+k[0]+'"><option value="">Choose…</option>'+k[2].map(o=>'<option value="'+o[1]+'">'+o[0]+' — '+pad(o[1])+' marks</option>').join('')+'</select></div>').join('')+'<div><button class="btn red" data-act="addmon">Add</button></div></div>';
+  h+='<div class="bar"><b>'+rows.length+'</b> monitored collection'+(rows.length===1?'':'s')+' · average performance <b>'+(avg==null?'–':f1(avg)+' %')+'</b><span style="flex:1"></span><button class="btn" data-act="printmon">Print the form</button></div>';
+  h+=rows.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Gate pass number</th>'+CRIT.map(k=>'<th class="c">'+k[1]+'</th>').join('')+'<th class="c">%</th><th></th></tr></thead><tbody>'+rows.map(r=>{const p=pct(r);return'<tr><td>'+dot(r.date)+'</td><td>'+esc(r.gp)+'</td>'+CRIT.map(k=>'<td class="c">'+(r[k[0]]==null?'':pad(r[k[0]]))+'</td>').join('')+'<td class="c"><b>'+(p==null?'':f1(p))+'</b></td><td><button class="btn sm ghost" data-act="delmon" data-id="'+r.id+'">✕</button></td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">No monitoring lines for this collector yet.</div>';
+  h+='<details><summary>The marking criteria</summary><div class="grid2" style="margin-top:8px">'+CRIT.map(k=>'<div class="tw"><table><thead><tr><th colspan="2">'+k[1]+'</th></tr></thead><tbody>'+k[2].map(o=>'<tr><td>'+o[0]+'</td><td class="r">'+pad(o[1])+' marks</td></tr>').join('')+'</tbody></table></div>').join('')+'</div><p class="note">% = the four marks added up and divided by 20.</p></details></div>';
+  return{h};
+}
+function vEv(){
+  const y=F.evy,ev=D.ev[y]||{};
+  const rows=D.collectors.map((c,i)=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null),a=rs.length?rs.reduce((s,r)=>s+pct(r),0)/rs.length:null;return{c,i,a,n:rs.length,why:(ev[c.id]||{}).why||''}});
+  let h='<div class="bar"><select id="ey">'+yOpts(y)+'</select><span class="note">Achievement = the average % of the collector’s monitoring lines in the year. Write the reason when it is below 100 %.</span></div><div class="card pn"><h2>Waste collectors evaluation record <span class="note" style="font-family:var(--mono);text-transform:none">'+DOCS.ev.no+'</span></h2>'+
+   '<div class="bar"><label class="note">Performance target % <input type="number" id="etg" min="0" max="100" style="width:80px" value="'+(D.target==null?'':D.target)+'" placeholder="not set"></label><span style="flex:1"></span><button class="btn" data-act="printev">Print the form</button></div>'+
+   '<div class="tw"><table><thead><tr><th>No</th><th>Waste collector name</th><th class="r">Achievement</th><th>Scored collections</th><th style="min-width:340px">Reasons for deviation</th></tr></thead><tbody>'+rows.map(r=>{const low=r.a!=null&&(D.target!=null?r.a<D.target:r.a<100);return'<tr><td>'+pad(r.i+1)+'</td><td><b>'+esc(r.c.name)+'</b><div class="note">'+esc(r.c.cat)+'</div></td><td class="r"><b>'+(r.a==null?'–':f1(r.a)+' %')+'</b>'+(low?' <span class="chip '+(D.target!=null?'no':'warn')+'">'+(D.target!=null?'below target':'below 100 %')+'</span>':'')+'</td><td class="c">'+r.n+'</td><td><textarea rows="2" data-why="'+r.c.id+'" placeholder="'+(low?'Why was the achievement below '+(D.target!=null?D.target:100)+' %?':'')+'">'+esc(r.why)+'</textarea></td></tr>'}).join('')+'</tbody></table></div></div>';
+  return{h};
+}
+
+/* ---------- dialogs ---------- */
+function openModal(h){$('host').innerHTML='<div class="veil"><div class="modal">'+h+'</div></div>'}
+const closeW=()=>{$('host').innerHTML=''};
+function colForm(c){
+  const o=['','ok','-'],lab={'':'Not on file','ok':'ok — on file','-':'- — not required'};
+  const sel=(id,v)=>'<select id="'+id+'">'+o.map(x=>'<option value="'+x+'"'+(x===v?' selected':'')+'>'+lab[x]+'</option>').join('')+'</select>';
+  openModal('<h2>'+(c?'Edit collector':'Add a collector')+'</h2><div class="mg"><div class="w2"><label class="f">Name of the waste collector</label><input type="text" id="k_name" value="'+esc(c?c.name:'')+'"></div><div class="w2"><label class="f">Waste category</label><input type="text" id="k_cat" value="'+esc(c?c.cat:'')+'" placeholder="e.g. Metal Scrap"></div><div><label class="f">Contact details</label><input type="text" id="k_con" value="'+esc(c?c.contact:'')+'" placeholder="name and phone"></div><div><label class="f">Registration number / BR number</label><input type="text" id="k_br" value="'+esc(c?c.br:'')+'"></div>'+
+   '<div><label class="f">EPL</label>'+sel('k_epl',c?c.epl:'')+'</div><div><label class="f">Scheduled Waste Management License</label>'+sel('k_swm',c?c.swm:'')+'</div><div><label class="f">Trade License</label>'+sel('k_trade',c?c.trade:'')+'</div></div><div class="foot"><button class="btn" data-act="closew">Cancel</button><button class="btn red" data-act="savecol" data-id="'+(c?c.id:'')+'">Save</button></div>');
+}
+function recForm(t,r){
+  const s=SCH[t];let h='<h2>Edit entry — '+esc(s.label)+'</h2><div class="mg"><div><label class="f">Date</label><input type="date" id="x_date" value="'+esc(r.date)+'"></div><div><label class="f">Waste collector</label><select id="x_col">'+colOpts(r.col)+'</select></div><div><label class="f">Gate pass number</label><input type="text" id="x_gp" value="'+esc(r.gp)+'"></div>';
+  if(s.amount)h+='<div><label class="f">Amount</label><input type="number" id="x_amt" step="any" value="'+esc(r.amt==null?'':r.amt)+'"></div><div><label class="f">Unit</label><select id="x_unit">'+UNITS.map(u=>'<option'+(u===(r.unit||s.unit)?' selected':'')+'>'+u+'</option>').join('')+'</select></div>';
+  s.qty.forEach(q=>{h+='<div><label class="f">'+esc(q[1])+' (kg)</label><input type="number" id="x_q_'+q[0]+'" step="any" value="'+esc((r.q||{})[q[0]]==null?'':r.q[q[0]])+'"></div>'});
+  if(s.rem)h+='<div class="w2"><label class="f">Remarks</label><input type="text" id="x_rem" value="'+esc(r.rem)+'"></div>';
+  openModal(h+'</div><div class="foot"><button class="btn" data-act="closew">Cancel</button><button class="btn red" data-act="saverec" data-id="'+r.id+'">Save</button></div>');
+}
+const findRec=id=>{for(const t of TYPES){const r=D.recs[t].find(x=>x.id===id);if(r)return{t,r}}return{}};
+
+/* ---------- viewing a collector's document ---------- */
+const getFile=d=>FW.get('waste:'+d.id).then(r=>{if(!r)toast('That file is not stored in this browser. Attach it again, or restore a system backup that includes the library files.');return r}).catch(()=>{toast('The file could not be read');return null});
+let URLS=[];
+function viewDoc(d){
+  openModal('<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px"><div style="flex:1;min-width:240px"><h2 style="margin:0">'+esc(dtLabel(d.type))+'</h2><div class="note">'+esc(colName(d.col))+(d.no?' · No '+esc(d.no):'')+(d.valid?' · valid until '+dot(d.valid):'')+'</div></div><button class="btn red" data-act="dldoc" data-id="'+d.id+'">Download</button><button class="btn" data-act="closeview">Close</button></div><div id="pvbox"><div class="empty">Opening…</div></div>');
+  document.querySelector('#host .modal').classList.add('wide');
+  getFile(d).then(r=>{const box=$('pvbox');if(!r||!box){if(box)box.innerHTML='<div class="empty">The file is not stored in this browser.</div>';return}
+    const e=((r.name||'').toLowerCase().match(/\.([a-z0-9]+)$/)||[])[1]||'';
+    if(e==='pdf'||r.type==='application/pdf'){const u=URL.createObjectURL(new Blob([r.data],{type:'application/pdf'}));URLS.push(u);box.innerHTML='<iframe class="pv" src="'+u+'" title="Document"></iframe><div class="note" style="margin-top:6px">If the page above stays empty in your browser, use Download.</div>'}
+    else if(['png','jpg','jpeg','gif','webp','bmp','svg'].includes(e)){const u=URL.createObjectURL(new Blob([r.data],{type:r.type||'image/'+e}));URLS.push(u);box.innerHTML='<div class="pvt"><img src="'+u+'" alt=""></div>'}
+    else if(['txt','csv','log'].includes(e))box.innerHTML='<div class="pvt"><pre style="white-space:pre-wrap;margin:0;font:12.5px var(--mono)">'+esc(new TextDecoder().decode(r.data))+'</pre></div>';
+    else box.innerHTML='<div class="empty">This kind of file ('+esc(e||'unknown')+') cannot be shown in the browser.<br>Use <b>Download</b> to open it on your computer.</div>'});
+}
+/* ---------- actions ---------- */
+let PRE=null;
+document.addEventListener('click',e=>{
+  const tb=e.target.closest('[data-tab]');if(tb){TAB=tb.dataset.tab;render();return}
+  const rt=e.target.closest('[data-rt]');if(rt){RT=rt.dataset.rt;render();return}
+  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,id=a.dataset.id;
+  if(act==='closew')closeW();
+  else if(act==='closeview'){URLS.splice(0).forEach(u=>URL.revokeObjectURL(u));closeW()}
+  else if(act==='addrec'){
+    const s=SCH[RT],date=$('e_date').value,col=$('e_col').value,gp=$('e_gp').value.trim();
+    if(!date||!col){toast('Choose the date and the waste collector');return}
+    const r={id:'r'+uid(),no:nextNo(RT),date,col,gp};
+    if(s.amount){r.amt=num($('e_amt').value);r.unit=$('e_unit').value;if(!(r.amt>0)){toast('Enter the amount');return}}
+    if(s.qty.length){r.q={};let any=false;s.qty.forEach(q=>{const v=num($('e_q_'+q[0]).value);if(v>0){r.q[q[0]]=v;any=true}});if(!any){toast('Enter at least one weight');return}}
+    if(s.rem)r.rem=$('e_rem').value.trim();
+    D.recs[RT].push(r);save();F.ry=+date.slice(0,4);render();toast('Entry '+r.no+' added to '+DOCS[RT].no);
+  }
+  else if(act==='editrec'){const x=findRec(id);if(x.r)recForm(x.t,x.r)}
+  else if(act==='saverec'){const x=findRec(id),s=SCH[x.t];x.r.date=$('x_date').value||x.r.date;x.r.col=$('x_col').value;x.r.gp=$('x_gp').value.trim();
+    if(s.amount){x.r.amt=num($('x_amt').value);x.r.unit=$('x_unit').value}
+    if(s.qty.length){x.r.q={};s.qty.forEach(q=>{const v=num($('x_q_'+q[0]).value);if(v>0)x.r.q[q[0]]=v})}
+    if(s.rem)x.r.rem=$('x_rem').value.trim();save();closeW();render();toast('Saved')}
+  else if(act==='delrec'){const x=findRec(id);if(x.r&&confirm('Delete entry '+x.r.no+' of '+DOCS[x.t].no+'?')){D.recs[x.t]=D.recs[x.t].filter(r=>r!==x.r);save();render()}}
+  else if(act==='score'){const x=findRec(a.dataset.id?a.dataset.id:'');const rr=findRec(id).r;if(!rr)return;if(!String(rr.gp||'').trim()){toast('This collection has no gate pass number');return}PRE={date:rr.date,gp:rr.gp};TAB='mon';MC=rr.col;render()}
+  else if(act==='addmon'){const m={id:'m'+uid(),col:MC,date:$('m_date').value,gp:$('m_gp').value.trim()};if(!m.date){toast('Choose the date');return}
+    for(const k of CRIT){const v=$('m_'+k[0]).value;if(v===''){toast('Choose the marks for '+k[1]);return}m[k[0]]=+v}
+    D.mon.push(m);save();render();toast('Monitoring line added — '+f1(pct(m))+' %')}
+  else if(act==='delmon'){if(confirm('Delete this monitoring line?')){D.mon=D.mon.filter(r=>r.id!==id);save();render()}}
+  else if(act==='addcol')colForm(null);
+  else if(act==='editcol')colForm(D.collectors.find(c=>c.id===id));
+  else if(act==='savecol'){const name=$('k_name').value.trim();if(!name){toast('Enter the name of the collector');return}
+    let c=id?D.collectors.find(x=>x.id===id):{id:'c'+uid()};Object.assign(c,{name,cat:$('k_cat').value.trim(),contact:$('k_con').value.trim(),br:$('k_br').value.trim(),epl:$('k_epl').value,swm:$('k_swm').value,trade:$('k_trade').value});
+    if(!id)D.collectors.push(c);save();closeW();render();toast('Collector saved')}
+  else if(act==='delcol'){const c=D.collectors.find(x=>x.id===id),n=TYPES.reduce((s,t)=>s+D.recs[t].filter(r=>r.col===id).length,0)+D.mon.filter(r=>r.col===id).length;
+    if(confirm('Remove '+c.name+' from the approved list?'+(n?'\n\n'+n+' record lines mention this collector; they stay in the records.':''))){D.collectors=D.collectors.filter(x=>x!==c);save();render()}}
+  else if(act==='opendocs'){DC=id;TAB='docs';render()}
+  else if(act==='adddoc'){
+    const col=$('d_col').value,f=$('d_file').files[0];if(!col){toast('Choose the waste collector');return}if(!f){toast('Attach the file of the document');return}
+    if(f.size>25*1048576&&!confirm('This file is '+(f.size/1048576).toFixed(0)+' MB. Large files fill the browser storage quickly. Attach it anyway?'))return;
+    const d={id:'d'+uid(),col,type:$('d_type').value,no:$('d_no').value.trim(),issued:$('d_iss').value,valid:$('d_val').value,note:$('d_note').value.trim()};
+    f.arrayBuffer().then(buf=>FW.put({k:'waste:'+d.id,docId:d.id,name:f.name,type:f.type||'',size:f.size,at:new Date().toISOString(),data:buf})).then(()=>{d.file={k:'waste:'+d.id,name:f.name,type:f.type||'',size:f.size};D.docs.push(d);if(DC&&DC!==col)DC=col;save();render();toast('Document added for '+colName(col))}).catch(x=>toast('The file could not be stored: '+x));}
+  else if(act==='editdoc'){const d=D.docs.find(x=>x.id===id);openModal('<h2>Edit document</h2><div class="mg"><div><label class="f">Document</label><select id="y_type">'+DTYPES.map(t=>'<option value="'+t[0]+'"'+(t[0]===d.type?' selected':'')+'>'+t[1]+'</option>').join('')+'</select></div><div><label class="f">Document number</label><input type="text" id="y_no" value="'+esc(d.no)+'"></div><div><label class="f">Issued</label><input type="date" id="y_iss" value="'+esc(d.issued)+'"></div><div><label class="f">Valid until</label><input type="date" id="y_val" value="'+esc(d.valid)+'"></div><div class="w2"><label class="f">Note</label><input type="text" id="y_note" value="'+esc(d.note)+'"></div><div class="w2"><label class="f">Replace the file (optional)</label><input type="file" id="y_file"></div></div><div class="foot"><button class="btn" data-act="closew">Cancel</button><button class="btn red" data-act="savedoc" data-id="'+id+'">Save</button></div>')}
+  else if(act==='savedoc'){const d=D.docs.find(x=>x.id===id),f=$('y_file').files[0];Object.assign(d,{type:$('y_type').value,no:$('y_no').value.trim(),issued:$('y_iss').value,valid:$('y_val').value,note:$('y_note').value.trim()});
+    const done=()=>{save();closeW();render();toast('Saved')};
+    if(f)f.arrayBuffer().then(buf=>FW.put({k:'waste:'+d.id,docId:d.id,name:f.name,type:f.type||'',size:f.size,at:new Date().toISOString(),data:buf})).then(()=>{d.file={k:'waste:'+d.id,name:f.name,type:f.type||'',size:f.size};done()}).catch(x=>toast('The file could not be stored: '+x));else done()}
+  else if(act==='deldoc'){const d=D.docs.find(x=>x.id===id);if(d&&confirm('Delete this document of '+colName(d.col)+' ('+dtLabel(d.type)+')? The file is removed as well.')){FW.del('waste:'+id).catch(()=>{});D.docs=D.docs.filter(x=>x!==d);save();render()}}
+  else if(act==='dldoc'){const d=D.docs.find(x=>x.id===id);getFile(d).then(r=>{if(!r)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.data],{type:r.type||'application/octet-stream'}));a.download=(colName(d.col)+'_'+dtLabel(d.type).split(' ')[0]+(d.no?'_'+d.no:'')).replace(/[^\w.-]+/g,'_')+(/\.[A-Za-z0-9]{1,6}$/.exec(r.name)||[''])[0];document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},900)})}
+  else if(act==='viewdoc'){const d=D.docs.find(x=>x.id===id);viewDoc(d)}
+  else if(act==='printcol')printForm('col');else if(act==='printmon')printForm('mon');else if(act==='printev')printForm('ev');else if(act==='printrec')printForm(RT);
+  else if(act==='xlrec')xl(RT);
+});
+document.addEventListener('change',e=>{const t=e.target,i=t.id;
+  if(i==='dy'){F.year=+t.value;render()}else if(i==='dm'){F.month=+t.value;render()}
+  else if(i==='ry'){F.ry=+t.value;render()}else if(i==='rm'){F.rm=+t.value;render()}
+  else if(i==='mc'){MC=t.value;render()}else if(i==='dc_f'){DC=t.value;render()}else if(i==='ey'){F.evy=+t.value;render()}
+  else if(i==='etg'||i==='dtg'){const v=parseFloat(t.value);D.target=isFinite(v)&&v>=0?v:null;save();render()}
+  else if(t.dataset.why){const y=F.evy;D.ev[y]=D.ev[y]||{};D.ev[y][t.dataset.why]={why:t.value.trim()};save()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeW()});
+
+/* ---------- printing, laid out like the Word forms ---------- */
+const hdrHTML=(k,pg,n)=>{const d=DOCS[k];return'<table class="nf head"><tr><td rowspan="4" class="lg"><img src="'+LOGO+'" alt="">FERENTINO INDUSTRIAL TYRES (PVT) LTD<br>SRI LANKA</td><td class="sys">ENVIRONMENTAL MANAGEMENT SYSTEM</td><td class="hd">Doc No</td><td colspan="3"><b>'+d.no+'</b></td></tr><tr><td class="ttl" rowspan="3">'+d.title+'</td><td class="hd">Issue No</td><td>02</td><td class="hd">Revision No</td><td>00</td></tr><tr><td class="hd">Issue Date</td><td>2026.04.20</td><td class="hd">Revision Date</td><td></td></tr><tr><td class="hd">Page No</td><td colspan="3">Page '+pg+' of '+n+'</td></tr></table>'};
+function chunks(rows,per,min){const out=[];for(let i=0;i<Math.max(rows.length,1);i+=per)out.push(rows.slice(i,i+per));return out}
+const blankRows=(n,cols)=>Array.from({length:n},()=>'<tr>'+'<td></td>'.repeat(cols)+'</tr>').join('');
+const lg=(c,k)=>{const x=legalState(c,k);return x.s==='doc'?'ok':x.s==='expired'?'expired':(x.s||'')};
+function printForm(k){
+  const per=k==='ev'?30:12,pages=[];let cols=0,headRow='',data=[],pre='',post='';
+  if(k==='col'){headRow='<tr><th rowspan="2">ID</th><th rowspan="2">Waste category</th><th rowspan="2">Name of Waste Collector</th><th rowspan="2">Contact Details</th><th colspan="3">Legal Requirement</th></tr><tr><th>EPL</th><th>Schedule Waste Management License</th><th>Trade License</th></tr>';cols=7;data=D.collectors.map((c,i)=>'<tr><td>'+pad(i+1)+'</td><td>'+esc(c.cat)+'</td><td>'+esc(c.name)+'</td><td>'+esc(c.contact)+'</td><td>'+lg(c,'epl')+'</td><td>'+lg(c,'swm')+'</td><td>'+lg(c,'trade')+'</td></tr>')}
+  else if(k==='mon'){const c=D.collectors.find(x=>x.id===MC);if(!c){toast('Choose a collector');return}pre='<table class="nf"><tr><td class="hd">Name of the Waste Collector</td><td>'+esc(c.name)+'</td><td class="hd">Registration Number / BR Number</td><td>'+esc(c.br)+'</td><td class="hd">Waste Category</td><td>'+esc(c.cat)+'</td></tr></table>';
+    headRow='<tr><th>Date</th><th>Gate pass Number</th><th>Response Time</th><th>Station Up Time</th><th>Price</th><th>Severity</th><th>%</th></tr>';cols=7;
+    data=D.mon.filter(r=>r.col===MC).sort((a,b)=>String(a.date).localeCompare(b.date)).map(r=>'<tr><td>'+dot(r.date)+'</td><td>'+esc(r.gp)+'</td>'+CRIT.map(q=>'<td>'+pad(r[q[0]])+'</td>').join('')+'<td>'+f1(pct(r))+'</td></tr>');
+    post='<table class="nf"><tr><th colspan="8">WASTE COLLECTOR PERFORMANCE MONITORING CRITERIA</th></tr><tr>'+CRIT.map(q=>'<td colspan="2" style="vertical-align:top"><b>'+q[1]+'</b><br>'+q[2].map(o=>o[0]+' — '+pad(o[1])+' marks').join('<br>')+'</td>').join('')+'</tr></table>'}
+  else if(k==='ev'){const y=F.evy,ev=D.ev[y]||{};headRow='<tr><th>No</th><th>Waste Collector Name</th><th>Achievement</th><th>Reasons for Deviation</th></tr>';cols=4;
+    data=D.collectors.map((c,i)=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null),a=rs.length?rs.reduce((s,r)=>s+pct(r),0)/rs.length:null;return'<tr><td>'+pad(i+1)+'</td><td>'+esc(c.name)+'</td><td>'+(a==null?'':f1(a)+' %')+'</td><td>'+esc((ev[c.id]||{}).why||'')+'</td></tr>'});pre='<p style="font:12px Calibri,Arial;margin:0 0 6px">Evaluation year: <b>'+y+'</b></p>'}
+  else{const s=SCH[k],rows=D.recs[k].filter(r=>inP(r.date,F.ry,F.rm)).sort((a,b)=>a.no-b.no),base='<th'+(s.qty.length?' rowspan="2"':'')+'>';
+    headRow='<tr>'+base+'No</th>'+base+'Date</th>'+base+'Waste Collector Name</th>'+base+'Gate Pass Number</th>'+(s.qty.length?'<th colspan="'+s.qty.length+'">Waste Amount (Kg)</th>':'')+(s.amount?base+'Amount</th>':'')+(s.rem?base+'Remarks</th>':'')+'</tr>'+(s.qty.length?'<tr>'+s.qty.map(q=>'<th>'+esc(q[1])+'</th>').join('')+'</tr>':'');
+    cols=4+s.qty.length+(s.amount?1:0)+(s.rem?1:0);
+    data=rows.map(r=>'<tr><td>'+r.no+'</td><td>'+dot(r.date)+'</td><td>'+esc(colName(r.col))+'</td><td>'+esc(r.gp)+'</td>'+s.qty.map(q=>'<td>'+((r.q||{})[q[0]]?f1(num(r.q[q[0]])):'')+'</td>').join('')+(s.amount?'<td>'+f1(num(r.amt))+' '+esc(r.unit||s.unit)+'</td>':'')+(s.rem?'<td>'+esc(r.rem)+'</td>':'')+'</tr>')}
+  const ch=chunks(data,per);let h='';
+  ch.forEach((rs,i)=>{h+='<div class="'+(i<ch.length-1?'pgbreak':'')+'">'+hdrHTML(k,i+1,ch.length)+(i===0?pre:'')+'<table class="nf"><thead>'+headRow+'</thead><tbody>'+rs.join('')+blankRows(Math.max(0,per-rs.length),cols)+'</tbody></table>'+(i===ch.length-1?post:'')+'</div>'});
+  $('printArea').innerHTML=h;$('pgstyle').textContent='@page{size:A4 '+(DOCS[k].land?'landscape':'portrait')+';margin:10mm}';setTimeout(()=>window.print(),80);
+}
+
+/* ---------- Excel ---------- */
+function sheetFor(k){
+  if(k==='col')return{n:'RG-HR-01 Collectors',a:[['ID','Waste category','Name of Waste Collector','Contact Details','Registration / BR no','EPL','Schedule Waste Management License','Trade License']].concat(D.collectors.map((c,i)=>[pad(i+1),c.cat,c.name,c.contact,c.br,lg(c,'epl'),lg(c,'swm'),lg(c,'trade')]))};
+  if(k==='mon')return{n:'RG-HR-02 Monitoring',a:[['Waste collector','Date','Gate pass Number','Response Time','Station Up Time','Price','Severity','%']].concat(D.mon.slice().sort((a,b)=>colName(a.col).localeCompare(colName(b.col))||String(a.date).localeCompare(b.date)).map(r=>[colName(r.col),r.date,r.gp,r.rt,r.up,r.pr,r.sv,pct(r)==null?'':Math.round(pct(r)*10)/10]))};
+  if(k==='ev'){const y=F.evy,ev=D.ev[y]||{};return{n:'RG-HR-03 Evaluation '+y,a:[['No','Waste Collector Name','Achievement %','Scored collections','Reasons for Deviation']].concat(D.collectors.map((c,i)=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null);return[pad(i+1),c.name,rs.length?Math.round(rs.reduce((s,r)=>s+pct(r),0)/rs.length*10)/10:'',rs.length,(ev[c.id]||{}).why||'']}))}}
+  const s=SCH[k];return{n:DOCS[k].no.replace('FIT/E/','')+' '+s.label.slice(0,14),a:[['No','Date','Waste Collector Name','Gate Pass Number'].concat(s.qty.map(q=>q[1]+' (kg)')).concat(s.amount?['Amount','Unit']:[]).concat(s.rem?['Remarks']:[])].concat(D.recs[k].slice().sort((a,b)=>a.no-b.no).map(r=>[r.no,r.date,colName(r.col),r.gp].concat(s.qty.map(q=>(r.q||{})[q[0]]||'')).concat(s.amount?[r.amt,r.unit||s.unit]:[]).concat(s.rem?[r.rem||'']:[])))};
+}
+function xl(only){
+  if(typeof XLSX==='undefined'){toast('The Excel library did not load — check the internet connection.');return}
+  const wb=XLSX.utils.book_new();(only?[only]:['col','mon','ev'].concat(TYPES)).forEach(k=>{const s=sheetFor(k),w=XLSX.utils.aoa_to_sheet(s.a);w['!cols']=s.a[0].map(()=>({wch:22}));XLSX.utils.book_append_sheet(wb,w,s.n.slice(0,31))});
+  if(!only){const a=[['Waste collector','Document','Number','Issued','Valid until','File','Note']].concat(D.docs.map(d=>[colName(d.col),dtLabel(d.type),d.no,d.issued,d.valid,d.file?d.file.name:'',d.note]));const w=XLSX.utils.aoa_to_sheet(a);w['!cols']=a[0].map(()=>({wch:24}));XLSX.utils.book_append_sheet(wb,w,'Collector documents')}
+  XLSX.writeFile(wb,only?'Waste_'+DOCS[only].no.replace(/[^\w]+/g,'_')+'.xlsx':'Waste_disposal_records.xlsx');
+}
+$('xl').onclick=()=>xl();
+render();
+if(PRE){}
+})();
+</script>
+</body>
+</html>

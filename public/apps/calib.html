@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Temperature Gauge Calibration</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#EEF0EE; --card:#FFFFFF; --ink:#1A2730; --muted:#5B6B75; --line:#CBD2D5;
+    --steel:#2C5A78; --steel-d:#1F4259; --pass:#23704A; --pass-bg:#E2F1E8;
+    --fail:#B0322A; --fail-bg:#F8E3E0; --idle:#8A979E;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.45;font-size:15px}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 16px 64px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:3px solid var(--steel);padding-bottom:12px;margin-bottom:20px}
+  h1{font-size:26px;margin:0;font-weight:700;letter-spacing:-.01em}
+  header .sub{color:var(--muted);font-size:14px;margin-top:2px}
+  .rptno{font-size:13px;color:var(--muted);text-align:right}
+  .rptno input{width:190px;margin-top:4px;text-align:right;font-weight:600}
+  section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px 18px 20px;margin-bottom:18px}
+  h2{font-size:17px;margin:0 0 14px;font-weight:650}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 16px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  input,select,textarea{font:inherit;color:var(--ink);width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:#fff}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
+  textarea{resize:vertical;min-height:70px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  .points{display:grid;gap:12px}
+  .pt{display:grid;grid-template-columns:150px 1fr 1fr 110px 1.3fr;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:5px;background:#FAFBFA}
+  .pt .name{font-weight:650}
+  .pt .name small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+  .pt .err{font-variant-numeric:tabular-nums;font-size:20px;font-weight:650}
+  .pt .err small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+  .pt label{margin-bottom:3px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* deviation bar: shows where the error sits inside the tolerance band */
+  .dev{position:relative;height:34px}
+  .dev .track{position:absolute;left:0;right:0;top:15px;height:4px;background:var(--line);border-radius:2px}
+  .dev .band{position:absolute;left:25%;right:25%;top:9px;height:16px;background:var(--pass-bg);border:1px solid #9CCBB1;border-radius:3px}
+  .dev .zero{position:absolute;left:50%;top:5px;height:24px;width:2px;background:var(--ink);opacity:.55}
+  .dev .mark{position:absolute;top:7px;width:6px;height:20px;border-radius:2px;background:var(--idle);transform:translateX(-3px);transition:left .15s}
+  .dev .mark.ok{background:var(--pass)} .dev .mark.bad{background:var(--fail)}
+  .dev .lbl{position:absolute;top:-3px;font-size:10.5px;color:var(--muted)}
+  .dev .lbl.l{left:25%;transform:translateX(-50%)} .dev .lbl.r{left:75%;transform:translateX(-50%)}
+
+  .verdict{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:5px;border:1px solid var(--line);background:#F3F5F4;margin-top:14px}
+  .verdict .big{font-size:22px;font-weight:700}
+  .verdict.pass{background:var(--pass-bg);border-color:#9CCBB1;color:var(--pass)}
+  .verdict.fail{background:var(--fail-bg);border-color:#E3A9A3;color:var(--fail)}
+  .verdict .why{color:var(--ink);font-size:14px}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap}
+  button{font:inherit;cursor:pointer;border-radius:4px;padding:10px 18px;border:1px solid var(--steel);background:#fff;color:var(--steel-d);font-weight:600}
+  button.primary{background:var(--steel);color:#fff}
+  button.primary:hover{background:var(--steel-d)}
+  button:hover{background:#EDF3F7} button.primary:hover{background:var(--steel-d)}
+  button.small{padding:5px 10px;font-size:13px}
+  button.danger{border-color:var(--fail);color:var(--fail)}
+  .msg{margin-top:10px;font-size:14px;min-height:20px}
+  .msg.err{color:var(--fail)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:13px}
+  td.res.pass{color:var(--pass);font-weight:650} td.res.fail{color:var(--fail);font-weight:650}
+  .scroll{overflow-x:auto}
+  .empty{color:var(--muted);font-size:14px}
+
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:18px}
+
+  @media (max-width:760px){
+    .pt{grid-template-columns:1fr 1fr}
+    .pt .name,.pt .dev,.pt .errbox{grid-column:1 / -1}
+  }
+  @media (prefers-reduced-motion:reduce){.dev .mark{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAoAPEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5w8czPpPjTV7W1Zra2tr2aKKKI7EiRZGAVQOAAAAAKyv7Wuv+fmf/AL7NaXxJ/wCSh67/ANhC4/8ARrVi1+Gyk222f68UYRhTjGKsklp8ix/a11/z8z/99mj+1rr/AJ+Z/wDvs103wV+AvjL9o3xk3h7wL4dv/E2tR2zXj2tpsDRwqQGdmcqoGWA5PJIAr1j/AIdN/tIf9Ei8R/8AgRaf/Hq2p4WvUXNTg2vJNnlY7iLKMFV9hjcVSpzte06kIuz2dpNOx4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne/f8Omv2kf8AokXiP/wItP8A49XA/DT9kD4m/GX4h+IfCfhTwdqWveIfCjMmr2drJCTYMrmMq7lwhO8FcBjyp9DTlg8RFqMoSTe2j19DOjxPktanOrSxlKUYK8mqkGopuycmpWSb0u7a6Hn/APa11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIE/wDJI/EQ+txaf/Hqv6hi/wDn1L/wF/5HN/rnw7/0H0P/AAbT/wDkjwH+1rr/AJ+Z/wDvs0f2tdf8/M//AH2a9B+Cf7HvxP8A2kbjWo/AfgzVPFB8Ozi21J7N4hHayksAhd3VWJ2t90ngZ6EGu9/4dN/tIf8ARIvEf/gRaf8Ax6ohg8ROPNCEmvJNnTi+KMlwtV0MVjKUJreMqkItXV1dOSaundeWp4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne0+Nv+CaHx++HXhe81rWPhT4pttM0+MzXM0aw3JhQDLOUikZ9oAJJA4FcN8CP2avHv7T+tX+nfD7wtqPiq80uBbq7jtDGot42barMzsq8nOBnJweODSlhq8ZKEoNN7Kzu/ka0eIMqq4eeLpYqnKlD4pKcHGP+KSdl82cf/a11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIk/wDJIvEf/gRaf/Hq0+oYv/n1L/wF/wCRw/658O/9B9D/AMG0/wD5I8B/ta6/5+Z/++zR/a11/wA/M/8A32a9A+CX7IHxN/aSutbh8B+DdT8Ut4cmW31JrOSHy7WRiwCl2dVYnY33SeBnpiuw8R/8Evf2hvCmjz3978I/FgtbZS8hgWG5dVAyTsikZz+ANRDCYiUeeMJNd7Ox14jiXJ8PX+rYjF0oVFb3ZVIKWuq0bvqmmtNUzw/+1rr/AJ+Z/wDvs0f2tdf8/M//AH2as+FPCGqeOvF2naBo+n3Wo63q12lhZ2MSfvrid22rGFOMNu45xjBzjBr0b42fsMfF39nDwjHr3jrwLqnhrSJrqOyiuLme3YSzvnZGqpIzMxweAOxrONKpKLnGLaW7s7L1OzEZpgqFeGGr1oRqT+GLlFSl/hi3d/JM8w/ta6/5+Z/++zR/a11/z8z/APfZr3yD/glD+0fcQJIvwi8S7ZFDDdLaq2CM8gygg+xGRTv+HTf7SH/RIvEf/gRaf/Hq3+oYv/n1L/wF/wCR5P8Arnw7/wBB9D/wbT/+SPAf7Wuv+fmf/vs0f2tdf8/M/wD32a9L+Iv7EfxZ+Enjbwx4a8R+BtW0vxB40uDa6Hp7ywST6lICoIRUkbABZclsDnrwaPjn+xH8WP2ZfB8ev+P/AATqPhbR5bhbSO5u7i3ZZJWDMEVUkZicKx4HABzWUsNXSbcHpvo9PXsdtLiDKqkqUKeJpt1fgSnFuetvd197VNaX1TR5p/a11/z8z/8AfZo/ta6/5+Z/++zXuegf8EuP2hfFGhWWp2Hwo8R3FjqMCXNvL5tsnmRuoZW2tKGGQQcEA+1cR8cP2Sfid+zVDbTePfA3iDwvbXj+VBc3cANtK+M7BKhZN2P4c59qc8LiIR55wkl3adiMNxJk+JrLDYfF0p1H9mNSDlpvom3p6HB/2tdf8/M//fZo/ta6/wCfmf8A77Nd98Bv2Q/ib+1Ba6nP8PvBmq+KYNGkSK9ktWiRLd3BZVJkdQSQCcDOB1xkU6y/Y/8AibqXx1n+GNt4O1K58fWkJuJ9FhkheaCMIrlnYP5a4VlPLfxDuRUrD1nFSUXZ6LR6vsu5vPO8thVqUJ4imp01zTi5xTjHR80le8VZrV2Wq7nn/wDa11/z8z/99mj+1rr/AJ+Z/wDvs179/wAOm/2kP+iReI//AAItP/j1MuP+CUX7R9rbvK3wh8TFY1LEJLauxA9FEpJPsOa2+oYv/n1L/wABf+R5y4z4ef8AzH0P/BtP/wCSPBP7Wuv+fmf/AL7NH9rXX/PzP/32aXWtEvfDWs3enalZ3Wn6hYStb3NrcxNFNbyKcMjo2CrA9QarVyO60Z9HFxklKOqZY/ta6/5+Z/8Avs0VXopXKsbXxJ/5KHrv/YQuP/RrViMwRSzEBVGST2FbfxJ/5KHrv/YQuP8A0a1YyNsdWwpKsGAYAgkHPIPBHsetOW5MPhR+1f8AwRQ/Zh0/9j39jXVfix4xWPTNV8ZWZ1q7muBtbTdIhRnhQ56bl3TEf7ajtXyFfft9+GPjj8c9e8bePP2gPjh4Y0TVr0yWHhTwVZXFtDY2i/LFG07yBQ+0AsUi5ZmOa+ePiT/wUU+N3xf+HN94R8SfETV9S8M6lCtvdaf5FvDFNEpBEZMcasFyo4BwQMdK8Xr38TnMFSpYfCxtGC1v1ffR/wBXPxbIfCvEzzHH5zxBWUsRiZWi6dmoU1tFOrTdnoldJNKKs9Wfa37Wv7cPw/svhjGPgz8Vf2mbrxTLdoJpfEXia5S0tbUAmQhc/O7HaoGeMk9hn9CP+CWf7Nsf7Bv7Bdx4p1nTrzUPF3ie0bxVrcVnC1zeTkxl4LRAoLO6xkDABzJI571+EBAYEEAg9RXuXw8/4KWfHv4U+D7LQNB+KPiOz0fTYxDaW8ghufs8YGFRWlRm2gcAZwBwKrLs6hSxDxGIjraytsvOzf6mXG/hTisfklPJcmrqMHUU6rqt81RL4Y88I7J6pctr2e61+vvCGp+NfiB8RNW8WfFHxn+2LbHW72W8/wCEc8F+EtUsLHTkY/JAkrknai4X5I1zjOTmvOP+CgXxmn+Hvh7w3pHw38QftZadrPiS5kguE8danfWiXkO0IILeF9pld3kUEjhRgfxceRf8Pb/2kv8AorOu/wDgJZ//ABmuA8d/tj/E/wCKHxa0Dx34i8YahrPizwrt/sjULmGFjp5Vi6lI9nl5DHdkqTnB7DEV8zouk4U3K76ta+evM/67G+TeH+a0sxhisbGj7OCdoQm+W6i1BOKoQVk7Xbbdl9rY/V79l7/gnl4G/wCCcn7O1p4t+JvxM8T6G3lwXWq2ra9Np3h+zvpQqiMwW7IZyG2pl2bdt6AVwXwl/ZKvf2vvEevy+A/28vGniK+tpDdXtrpJkRbISsSu2L7SNsYPyjAwMAV+c/x2/bg+LX7Tnhe10Tx7451XxLpFndC9htJ44Y41mCsquRGi7iAzAZzjJrkPhB8ZvFXwB8eW3ifwXrt94c1+0jeKO8tCN3luMMjBgVZT6MCMgHqAa3nnOEUoUoUX7NebUvPZ2+/8Lnk4fwr4knQxOPxeZRePqttfu6c6KS1irVKTklvdxt0upcuv7Nft6/t++E/+Cdf7LF38MtN8Wan4k+K9poKWVl/aPnXN4xkQq2o3MrjaR99x8xywCgYBxt/8ErP2Yo/2AP2B5fEWr6Ze3/izxFZnxNrVvZwNcXkn7otBaRqgLOyxkDAH35H9a/Gj4+/tZfET9qU6a3xC8TT+KJNH3izlubW3jkgV8b1DRopKnAO0kjIzjNdZ8O/+Clfx6+FHg+y0DQPij4ks9H02MRWtvIIbn7PGOAitKjNtA4AzgDgV00+I6X1t16kXyxVoWtpfdtN6vpe+x4mL8Dcy/wBW45Tg68FWrVVUxLlKVqnLfljGUaacYpty5XB2k/idlf7A8Ian40+IHxF1bxb8UPGX7Ytt/bd7LeDw34L8JapYWOnI5ykCSuSdqLhfkjXOM5Oa83/4KB/Gab4f+HvDmj/DjX/2sdP1nxJcyQXEfjrU760S8h2hBBbwvtMrO8igkcKMDndx5F/w9v8A2kv+is67/wCAln/8Zrz/AMeftj/E/wCKHxb8P+O/EXjHUNY8W+Fdv9kahcxQsdPKsXUpHs8vIY7slScgHsMefiMzoypOFNyu+rWvnrzP+ux9lk3h/mtHMYYvGxo+zgnaEJvluotQTiqEFZO1223p9rY/Zr4AeB9B/wCCOn/BMi41PXkgbV9LsW1jWQmA2o6rOFCWynuAxjhX2XNeA/8ABCv/AIKLeLPjX8X/ABr4B+I3iK91vVNfMniTRJLuYyfZ23/6VaRZ6RqGR0TooV8V+d3x1/bk+Ln7TXhO30Lx7461bxJo1rdLex2c8cMcQmUMquRGi7iAzYzkDNcL8NPiZr/wb8eab4o8LardaJ4g0eQy2d9b48yBipQ4BBBBVmBBBBBNdM+IVCvReGTVOmrW797/AC28zwcL4JVMTk2ZQzypCrj8ZJz9oruMGneCi2lJLmvzWXwtRV7H7m/C3/glxpPgL/gpz4u+N7x2jaNfWa3ejWK4za6rOpS8nK4wPlXK/wC1O57V+en/AAW+/bZm+Pn7XMPhrw9qLjw78KJjb2s0EmBLquQZ51I7xlVjU9ijkda8ql/4K1/tIzRMjfFrXwrgqdttaKRn0IiyD7ivniaV7iZ5JHeSSV2kd2OWdmJLMSepJJJPvWeZ5zQqUHh8HFxUpOUr21e/Tz/JHfwF4W5tgc4jnXE2IhXqUaUaNFR5moxS5W3zRjry3XW7lJvWx+nf/BCmy+LP7THxu1bxx4u+Inj/AFbwV4JT7PHaXut3MttqeoyrwjKzYdYoyXI6bnjrJ/4Lgf8ABSDxOP2jbb4c/Dnxbrfh2x8DITrV1o989q95fyqD5LOhBKxR4yP77n+7Xxx8GP2/vjH+zt4Fh8M+CPHeoeG9BglknS0trW2ZfMkbc7lnjLMSe5J6AdAK8p13XLzxRrt9qeo3U17qOpXEl3d3MzbpLiaRi7ux7ksST9axnnHLgFhaLlzN3k3+S1v2+7zPTwnhe6vGFXiLM40nRhHko0ox0j05ppxUebWT05tZb+6j9Sf+CEnwH8T/ALQXxJ1L4+fEfWdd8USeHIpPD3ha41i7ku5BIcm5lRpCSFQMYxjjc8ncVo/Fp2/4K1/8FadO8F27fbfhF8CGNxqrKc2+oXauPMXPQ+ZKiwj/AGIZSOua+Bfhz/wUZ+N/wh+Hdh4S8L/ETVtD8OaVA1taWNrbWyrboxJIVjGWySzHdnOTnNYXwF/bL+KH7L2manZ/D/xhfeGYNauBdX/2eCCR7uUDAZ2kRmOATxnHJPUmt6eb4eNCnhnGTjfmnteT7b7X79Ejycb4Y55WzjHZ7Tq0o1pU/ZYVJyUaMHdOTtDSfK5Ncqa55yd9j9Mf+C83/BQXXPgePDHwx+HfiG98PeJ5mTXNWv8ATpjFPZW6Ei3gyvTzHBZh3SPHRq+gfDGo6R/wVr/4JebbgW4vvGOhtbXAOP8AiXaxBwW6fLsuEDDH8JHrX4PfE/4oeIfjT491HxR4r1a613xBq7K93fXJHmTFVCLwAAAFUAAAAAV2/wACP24fi1+zH4XutE8BeOdV8NaTeXRvZrSCOGSNpiqqzgSI2CQqg4xnaK2p8R3xVWddN05q3L2XTy739TzMd4FOlw9gMJlFSFPHYaaqe1d0pSestUnKyajyXW0dldn7KfCrwzof/BGv/gmLNeaz9luNa0WybUNTMbf8hfWbjAWJT1I8wpGvoiZ7VwP/AAQz/Z5v9J+Fvij4/eNnN741+LtzLf8A2lgXkisRIzcAZP72Tc23+6kQ7V+VHx3/AG3viz+074atdG8feOdW8S6VZXIvIbWdIoolmClQ5EaLuIDNjOcZOKtfBn9vv4z/ALPXg5PD3gz4i6/omhQsXhsV8qeG3JOT5YlRtgJJOFwMnOKuHEGGjiaclB+zpxtFaXv3evbTfzOTEeC2fVcjxtGWLpvG42qp1p+9yumm5KnF8vMvftJ+7ZpKOy1+gf2wfjn+1d8c/wBovxV4l8NaH8fPDHhea6MGjabpthqNrFFaRfLG5jRQPMkA3seuXx2Ffo1+x7Frn7C3/BO+48afGXxL4j1nxDHYS+I9bOsX8t3PZllBhsY95OGA2JtHWR29a/JH/h7h+0l/0VnXf/ASz/8AjNYHxG/4KO/HL4t6Pa6f4j+JGtapZWd5DqEULw28aieFt0bnZGN21sHByMgccVlhc6oUKk66c5Tadr2sm+trnocQeFWdZvgMLk8qeFw+GpSjzezc3UlGKty8zpL1bd7ys3tr518avi5q3x9+L/ibxvroVNW8U6jLqFxGowsBY/LGB6IgVf8AgNcxWl4x8Yan8QfFN/res3b3+q6nKZ7q4dVVpnPUkKAB+ArNr5icnKTk3e5/QGEoRo0IUYRUVFJKK2SStZaLRbLRadEFFFFSdBtfEn/koeu/9hC4/wDRrVi0UU3uTD4V6BRRRSKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//2Q==" alt="Ferentino" style="height:36px;width:auto;flex-shrink:0;border-radius:4px">
+    <div>
+      <h1>Temperature gauge calibration</h1>
+      <div class="sub">Ferentino Industrial Tyres (Pvt) Ltd &mdash; three-point check against a standard gauge</div>
+    </div>
+    </div>
+    <div class="rptno">
+      <label for="reportNo" style="margin:0">Report number</label>
+      <input id="reportNo" type="text" autocomplete="off">
+    </div>
+  </header>
+
+  <section>
+    <h2>Gauge under test</h2>
+    <div class="grid">
+      <div><label for="gaugeId">Gauge ID / tag</label><input id="gaugeId" type="text" placeholder="e.g. TG-014"></div>
+      <div><label for="location">Equipment / location</label><input id="location" type="text" placeholder="e.g. Press 07 platen"></div>
+      <div><label for="makeModel">Make / model</label><input id="makeModel" type="text"></div>
+      <div><label for="range">Range</label><input id="range" type="text" placeholder="e.g. 0 – 250 °C"></div>
+      <div><label for="resolution">Resolution (smallest division, °C)</label><input id="resolution" type="text" inputmode="decimal" placeholder="e.g. 1"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Standard gauge</h2>
+    <div class="grid">
+      <div><label for="stdId">Standard ID</label><input id="stdId" type="text"></div>
+      <div><label for="stdCert">Certificate number</label><input id="stdCert" type="text"></div>
+      <div><label for="stdDue">Standard calibration due</label><input id="stdDue" type="date"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Calibration details</h2>
+    <div class="grid">
+      <div><label for="calDate">Calibration date</label><input id="calDate" type="date"></div>
+      <div><label for="interval">Calibration interval (months)</label><input id="interval" type="number" min="1" step="1" value="6"></div>
+      <div><label for="tol">Acceptance tolerance (± °C)</label><input id="tol" type="number" step="any" min="0" value="2"></div>
+      <div><label for="step">Reference table step (°C)</label><input id="step" type="number" step="any" min="0.5" value="10"></div>
+      <div><label for="calBy">Calibrated by</label><input id="calBy" type="text"></div>
+      <div><label for="checkBy">Checked by</label><input id="checkBy" type="text"></div>
+    </div>
+    <div class="hint">Error = gauge reading - standard reading. A point passes when the error is within ± the tolerance.</div>
+  </section>
+
+  <section>
+    <h2>Readings</h2>
+    <div class="points" id="points"></div>
+    <div class="verdict" id="verdict">
+      <div class="big" id="vbig">Enter readings</div>
+      <div class="why" id="vwhy">Fill in the standard and gauge reading for each point.</div>
+    </div>
+    <div style="margin-top:14px"><label for="remarks">Remarks</label><textarea id="remarks" placeholder="Optional &mdash; e.g. gauge adjusted and rechecked, replace at next shutdown"></textarea></div>
+  </section>
+
+  <section>
+    <h2>Reference table: actual temperature for gauge reading</h2>
+    <div id="corrBox"></div>
+    <div class="hint">Built from the three calibration points by straight-line interpolation. Actual = gauge reading - error. Valid only between the room-temperature and 150 °C gauge readings. This table is printed on page 2 of the report.</div>
+  </section>
+
+  <section>
+    <h2>Report</h2>
+    <div class="actions">
+      <button class="primary" id="btnPdf">Download calibration report (PDF)</button>
+      <button id="btnPrint">Print</button>
+      <button id="btnNew">New calibration</button>
+    </div>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+
+  <section>
+    <h2>Saved calibrations</h2>
+    <div id="history"></div>
+    <div class="hint">Each downloaded report is also saved in this browser so you can reopen it. Clearing browser data removes this list; the PDF is the official record.</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var POINTS = [
+    {key:'room', name:'Room temperature', sub:'Ambient', nominal:'Ambient'},
+    {key:'p100', name:'100 °C', sub:'Nominal point', nominal:'100'},
+    {key:'p150', name:'150 °C', sub:'Nominal point', nominal:'150'}
+  ];
+  var HKEY = 'fitl_temp_gauge_cal_history';
+  var $ = function(id){return document.getElementById(id)};
+  var FIELDS = ['reportNo','gaugeId','location','makeModel','range','resolution','stdId','stdCert','stdDue','calDate','interval','tol','step','calBy','checkBy','remarks'];
+
+  /* ---------- build reading rows ---------- */
+  var pbox = $('points');
+  POINTS.forEach(function(p){
+    var d = document.createElement('div');
+    d.className = 'pt';
+    d.innerHTML =
+      '<div class="name">'+p.name+'<small>'+p.sub+'</small></div>'+
+      '<div><label for="std_'+p.key+'">Standard reading (°C)</label><input id="std_'+p.key+'" type="number" step="any" inputmode="decimal"></div>'+
+      '<div><label for="gau_'+p.key+'">Gauge reading (°C)</label><input id="gau_'+p.key+'" type="number" step="any" inputmode="decimal"></div>'+
+      '<div class="errbox"><div class="err num" id="err_'+p.key+'">&ndash;<small>error, °C</small></div></div>'+
+      '<div class="dev" aria-hidden="true"><div class="track"></div><div class="band"></div><div class="zero"></div><div class="mark" id="mark_'+p.key+'" style="left:50%"></div><span class="lbl l" id="ll_'+p.key+'"></span><span class="lbl r" id="lr_'+p.key+'"></span></div>';
+    pbox.appendChild(d);
+  });
+
+  /* ---------- helpers ---------- */
+  function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function num(v){if(v===''||v==null)return null;var n=parseFloat(v);return isFinite(n)?n:null}
+  function fmt(n){return (Math.round(n*100)/100).toString()}
+  function sgn(n){var s=fmt(n);return n>0?'+'+s:s}
+  function fmtDate(iso){
+    if(!iso)return '';
+    var p=iso.split('-'); if(p.length!==3)return iso;
+    var m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return p[2]+' '+m[parseInt(p[1],10)-1]+' '+p[0];
+  }
+  function addMonths(iso,n){
+    if(!iso||!n)return '';
+    var p=iso.split('-').map(Number), d=new Date(p[0],p[1]-1+n,p[2]);
+    if(d.getDate()!==p[2]) d=new Date(p[0],p[1]-1+n+1,0);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function loadHistory(){try{return JSON.parse(localStorage.getItem(HKEY)||'[]')||[]}catch(e){return []}}
+  function saveHistory(h){try{localStorage.setItem(HKEY,JSON.stringify(h));return true}catch(e){return false}}
+  function nextReportNo(){
+    var d=today().replace(/-/g,''), h=loadHistory(), n=1;
+    h.forEach(function(r){if(r.data&&r.data.reportNo&&r.data.reportNo.indexOf('CAL-'+d)===0)n++});
+    return 'CAL-'+d+'-'+String(n).padStart(2,'0');
+  }
+
+  /* ---------- calculation ---------- */
+  function compute(){
+    var tol = num($('tol').value);
+    var rows = POINTS.map(function(p){
+      var s=num($('std_'+p.key).value), g=num($('gau_'+p.key).value), e=null, ok=null;
+      if(s!==null && g!==null){
+        e = Math.round((g-s)*1000)/1000;
+        if(tol!==null) ok = Math.abs(e) <= tol + 1e-9;
+      }
+      return {key:p.key,name:p.name,nominal:p.nominal,std:s,gau:g,err:e,ok:ok};
+    });
+    return {tol:tol, rows:rows};
+  }
+  function overall(c){
+    var filled = c.rows.filter(function(r){return r.err!==null});
+    if(c.tol===null) return {state:'none',text:'Enter the tolerance',why:'Set the acceptance tolerance to judge the readings.'};
+    if(filled.length<c.rows.length) return {state:'none',text:'Enter readings',why:filled.length+' of '+c.rows.length+' points complete.'};
+    var bad = c.rows.filter(function(r){return !r.ok});
+    if(bad.length===0) return {state:'pass',text:'PASS',why:'All three points are within ± '+fmt(c.tol)+' °C.'};
+    return {state:'fail',text:'FAIL',why:bad.map(function(r){return r.name+' ('+sgn(r.err)+' °C)'}).join(', ')+' outside ± '+fmt(c.tol)+' °C.'};
+  }
+
+  /* ---------- reference table (gauge reading -> actual) ---------- */
+  // pts: [{g:gaugeReading, e:error}] for the three calibration points
+  function buildCorrTable(pts, step){
+    if(!pts || pts.length!==3 || !(step>0)) return null;
+    if(!(pts[0].g < pts[1].g && pts[1].g < pts[2].g)) return null;
+    function errAt(g){
+      var a = g<=pts[1].g ? pts[0] : pts[1], b = g<=pts[1].g ? pts[1] : pts[2];
+      return a.e + (b.e-a.e)*(g-a.g)/(b.g-a.g);
+    }
+    var lo=pts[0].g, hi=pts[2].g, list=[], seen={};
+    function add(g,cal){
+      var k=Math.round(g*1000);
+      if(seen[k]){ if(cal) seen[k].cal=true; return; }
+      seen[k]={g:g,cal:!!cal}; list.push(seen[k]);
+    }
+    pts.forEach(function(p){add(p.g,true)});
+    var n=Math.ceil(lo/step - 1e-9);
+    for(var g=n*step; g<hi-1e-9; g=(++n)*step){ if(g>lo+1e-9) add(Math.round(g*1000)/1000,false); }
+    list.sort(function(a,b){return a.g-b.g});
+    return list.map(function(r){
+      var e=errAt(r.g), actual=r.g-e;
+      return {g:r.g, corr:-e, actual:actual, cal:r.cal};
+    });
+  }
+  function f1(n){var v=Math.round(n*10)/10; return (Object.is(v,-0)?0:v).toFixed(1)}
+  function s1(n){var v=Math.round(n*10)/10; return (v>0?'+':'')+(Object.is(v,-0)?0:v).toFixed(1)}
+
+  /* ---------- calibration curve charts ---------- */
+  function niceRange(a,b,n){
+    if(!(b>a)){a-=1;b+=1}
+    var pad=(b-a)*0.06; a-=pad; b+=pad;
+    var raw=(b-a)/n, mag=Math.pow(10,Math.floor(Math.log10(raw))), r=raw/mag;
+    var step=(r<1.5?1:r<3?2:r<7?5:10)*mag;
+    var min=Math.floor(a/step+1e-9)*step, max=Math.ceil(b/step-1e-9)*step, ticks=[];
+    for(var v=min; v<=max+step*1e-6; v+=step) ticks.push(Math.round(v*1e6)/1e6);
+    return {min:min,max:max,step:step,ticks:ticks};
+  }
+  function tickLabel(v,step){var d=step>=1?0:Math.min(3,Math.ceil(-Math.log10(step)));return v.toFixed(d)}
+
+  // rows: [{gau,err}] x3 (ascending), tol: number|null
+  function chartSpecs(rows, tol){
+    var pts=rows.map(function(r){return {g:r.gau,e:r.err}});
+    var g0=pts[0].g, g2=pts[2].g;
+    var act=pts.map(function(p){return [p.g,p.g-p.e]});
+    var ys=act.map(function(p){return p[1]}).concat([g0,g2]);
+    var actual={
+      title:'Actual temperature vs gauge reading (dashed = ideal)',
+      xlabel:'Gauge reading (°C)', ylabel:'Actual temperature (°C)',
+      xr:niceRange(g0,g2,5), yr:niceRange(Math.min.apply(null,ys),Math.max.apply(null,ys),5),
+      line:act, points:act, ideal:[[g0,g0],[g2,g2]], band:null
+    };
+    var es=pts.map(function(p){return p.e});
+    if(tol!==null){es.push(tol,-tol)}
+    es.push(0);
+    var error={
+      title:'Error vs gauge reading (green = tolerance)',
+      xlabel:'Gauge reading (°C)', ylabel:'Error, gauge - standard (°C)',
+      xr:niceRange(g0,g2,5), yr:niceRange(Math.min.apply(null,es),Math.max.apply(null,es),5),
+      line:pts.map(function(p){return [p.g,p.e]}), points:pts.map(function(p){return [p.g,p.e]}),
+      ideal:null, band:tol!==null?[-tol,tol]:null
+    };
+    return [actual,error];
+  }
+
+  function svgChart(s){
+    var W=420,H=270,ml=52,mr=12,mt=30,mb=44, pw=W-ml-mr, ph=H-mt-mb;
+    function X(v){return ml+(v-s.xr.min)/(s.xr.max-s.xr.min)*pw}
+    function Y(v){return mt+ph-(v-s.yr.min)/(s.yr.max-s.yr.min)*ph}
+    var o='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(s.title)+'" style="max-width:520px;font-family:inherit">';
+    o+='<text x="'+ml+'" y="16" font-size="13" font-weight="600" fill="#1A2730">'+esc(s.title)+'</text>';
+    o+='<rect x="'+ml+'" y="'+mt+'" width="'+pw+'" height="'+ph+'" fill="#fff" stroke="#CBD2D5"/>';
+    if(s.band){o+='<rect x="'+ml+'" y="'+Y(s.band[1])+'" width="'+pw+'" height="'+(Y(s.band[0])-Y(s.band[1]))+'" fill="#E2F1E8" stroke="#9CCBB1"/>'}
+    s.yr.ticks.forEach(function(t){
+      o+='<line x1="'+ml+'" x2="'+(ml+pw)+'" y1="'+Y(t)+'" y2="'+Y(t)+'" stroke="'+(t===0&&s.band?'#5B6B75':'#E3E7E8')+'"/>';
+      o+='<text x="'+(ml-6)+'" y="'+(Y(t)+4)+'" font-size="11" text-anchor="end" fill="#5B6B75">'+tickLabel(t,s.yr.step)+'</text>';
+    });
+    s.xr.ticks.forEach(function(t){
+      o+='<line x1="'+X(t)+'" x2="'+X(t)+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="#E3E7E8"/>';
+      o+='<text x="'+X(t)+'" y="'+(mt+ph+16)+'" font-size="11" text-anchor="middle" fill="#5B6B75">'+tickLabel(t,s.xr.step)+'</text>';
+    });
+    if(s.ideal){o+='<line x1="'+X(s.ideal[0][0])+'" y1="'+Y(s.ideal[0][1])+'" x2="'+X(s.ideal[1][0])+'" y2="'+Y(s.ideal[1][1])+'" stroke="#8A979E" stroke-dasharray="5 4"/>'}
+    o+='<polyline fill="none" stroke="#2C5A78" stroke-width="2" points="'+s.line.map(function(p){return X(p[0])+','+Y(p[1])}).join(' ')+'"/>';
+    s.points.forEach(function(p){o+='<circle cx="'+X(p[0])+'" cy="'+Y(p[1])+'" r="4.5" fill="#2C5A78" stroke="#fff" stroke-width="1.5"/>'});
+    o+='<text x="'+(ml+pw/2)+'" y="'+(H-6)+'" font-size="12" text-anchor="middle" fill="#1A2730">'+esc(s.xlabel)+'</text>';
+    o+='<text transform="translate(13 '+(mt+ph/2)+') rotate(-90)" font-size="12" text-anchor="middle" fill="#1A2730">'+esc(s.ylabel)+'</text>';
+    return o+'</svg>';
+  }
+
+  function tableFromData(rows, step){
+    var ok = rows.every(function(r){return r.err!==null});
+    if(!ok) return {state:'incomplete'};
+    var pts = rows.map(function(r){return {g:r.gau,e:r.err}});
+    if(!(pts[0].g<pts[1].g && pts[1].g<pts[2].g)) return {state:'order'};
+    var t = buildCorrTable(pts, step);
+    return t ? {state:'ok',rows:t} : {state:'step'};
+  }
+
+  function renderCorr(c){
+    var box=$('corrBox'), r=tableFromData(c.rows, num($('step').value));
+    if(r.state==='incomplete'){box.innerHTML='<div class="empty">Enter all three readings to build the table.</div>';return}
+    if(r.state==='order'){box.innerHTML='<div class="empty">Gauge readings must increase from room temperature to 100 °C to 150 °C. Check the gauge readings.</div>';return}
+    if(r.state==='step'){box.innerHTML='<div class="empty">Enter a table step greater than 0.</div>';return}
+    var h='<div class="charts">'+chartSpecs(c.rows,c.tol).map(svgChart).join('')+'</div>';
+    h+='<div class="scroll"><table><thead><tr><th>Gauge reading (°C)</th><th>Correction (°C)</th><th>Actual temperature (°C)</th><th></th></tr></thead><tbody>';
+    r.rows.forEach(function(x){
+      h+='<tr><td class="num">'+f1(x.g)+'</td><td class="num">'+s1(x.corr)+'</td><td class="num"><strong>'+f1(x.actual)+'</strong></td><td>'+(x.cal?'Calibration point':'')+'</td></tr>';
+    });
+    box.innerHTML=h+'</tbody></table></div>';
+  }
+
+  function render(){
+    var c = compute();
+    c.rows.forEach(function(r){
+      var e=$('err_'+r.key), m=$('mark_'+r.key);
+      $('ll_'+r.key).textContent = c.tol!==null ? '-'+fmt(c.tol) : '';
+      $('lr_'+r.key).textContent = c.tol!==null ? '+'+fmt(c.tol) : '';
+      if(r.err===null){
+        e.innerHTML='&ndash;<small>error, °C</small>'; e.style.color='';
+        m.style.left='50%'; m.className='mark';
+      } else {
+        e.innerHTML=sgn(r.err)+'<small>error, °C</small>';
+        e.style.color = r.ok===null ? '' : (r.ok ? 'var(--pass)' : 'var(--fail)');
+        var pos = 50;
+        if(c.tol>0) pos = 50 + (r.err/c.tol)*25;       // band spans 25%..75%
+        pos = Math.max(2, Math.min(98, pos));
+        m.style.left = pos+'%';
+        m.className = 'mark' + (r.ok===null ? '' : (r.ok ? ' ok':' bad'));
+      }
+    });
+    var o = overall(c), v = $('verdict');
+    v.className = 'verdict' + (o.state==='pass'?' pass':o.state==='fail'?' fail':'');
+    $('vbig').textContent = o.text; $('vwhy').textContent = o.why;
+    renderCorr(c);
+    return {c:c,o:o};
+  }
+
+  /* ---------- state ---------- */
+  function collect(){
+    var d={};
+    FIELDS.forEach(function(f){d[f]=$(f).value});
+    POINTS.forEach(function(p){d['std_'+p.key]=$('std_'+p.key).value; d['gau_'+p.key]=$('gau_'+p.key).value});
+    return d;
+  }
+  function fill(d){
+    FIELDS.forEach(function(f){$(f).value = d[f]!=null?d[f]:''});
+    POINTS.forEach(function(p){$('std_'+p.key).value=d['std_'+p.key]||''; $('gau_'+p.key).value=d['gau_'+p.key]||''});
+    render();
+  }
+  function freshForm(keepSetup){
+    var keep = {};
+    if(keepSetup){['stdId','stdCert','stdDue','calBy','checkBy','interval','tol','step'].forEach(function(f){keep[f]=$(f).value})}
+    fill({});
+    $('interval').value = keep.interval||'6';
+    $('tol').value = keep.tol||'2';
+    $('step').value = keep.step||'10';
+    ['stdId','stdCert','stdDue','calBy','checkBy'].forEach(function(f){if(keep[f])$(f).value=keep[f]});
+    $('calDate').value = today();
+    $('reportNo').value = nextReportNo();
+    render();
+  }
+
+  /* ---------- messages ---------- */
+  function say(t,isErr){var m=$('msg');m.textContent=t;m.className='msg'+(isErr?' err':'')}
+
+  function validate(){
+    var miss=[];
+    if(!$('gaugeId').value.trim()) miss.push('gauge ID');
+    if(!$('calDate').value) miss.push('calibration date');
+    if(num($('tol').value)===null) miss.push('tolerance');
+    var c=compute();
+    c.rows.forEach(function(r){if(r.err===null)miss.push(r.name+' readings')});
+    if(!(num($('step').value)>0)) miss.push('reference table step');
+    if(!miss.length){
+      var t=tableFromData(c.rows, num($('step').value));
+      if(t.state==='order') miss.push('gauge readings that increase from room temperature to 100 °C to 150 °C');
+    }
+    return miss;
+  }
+
+  /* ---------- PDF ---------- */
+  function buildPdf(d){
+    var J = window.jspdf && window.jspdf.jsPDF;
+    if(!J) return null;
+    var doc = new J({unit:'mm',format:'a4'});
+    var W=210, M=15, y=0;
+    var steel=[44,90,120], ink=[26,39,48], mut=[91,107,117], line=[203,210,213];
+
+    // recompute from saved data
+    var tol=num(d.tol);
+    var rows = POINTS.map(function(p){
+      var s=num(d['std_'+p.key]), g=num(d['gau_'+p.key]);
+      var e=Math.round((g-s)*1000)/1000;
+      return {name:p.name,nominal:p.nominal,std:s,gau:g,err:e,ok:Math.abs(e)<=tol+1e-9};
+    });
+    var pass = rows.every(function(r){return r.ok});
+    var due = addMonths(d.calDate, parseInt(d.interval,10)||0);
+
+    // header
+    doc.setFillColor.apply(doc,steel); doc.rect(0,0,W,26,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text('Ferentino Industrial Tyres (Pvt) Ltd',M,11);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text('Temperature Gauge Calibration Report',M,19);
+    doc.setFontSize(9);
+    doc.text('Report no: '+(d.reportNo||'-'),W-M,11,{align:'right'});
+    doc.text('Date: '+fmtDate(d.calDate),W-M,19,{align:'right'});
+    y=36;
+
+    function sectionTitle(t){
+      doc.setTextColor.apply(doc,steel); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text(t,M,y); y+=1.8;
+      doc.setDrawColor.apply(doc,steel); doc.setLineWidth(0.4); doc.line(M,y,W-M,y); y+=5.5;
+    }
+    function kv(pairs){
+      // two columns of label/value
+      var colW=(W-2*M)/2;
+      for(var i=0;i<pairs.length;i+=2){
+        for(var j=0;j<2;j++){
+          var p=pairs[i+j]; if(!p) continue;
+          var x=M+j*colW;
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor.apply(doc,mut);
+          doc.text(p[0],x,y);
+          doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor.apply(doc,ink);
+          var val=doc.splitTextToSize(String(p[1]||'-'),colW-6);
+          doc.text(val[0],x,y+4.6);
+        }
+        y+=11;
+      }
+      y+=1;
+    }
+
+    sectionTitle('Gauge under test');
+    kv([
+      ['Gauge ID / tag',d.gaugeId],['Equipment / location',d.location],
+      ['Make / model',d.makeModel],['Range',d.range],
+      ['Resolution (°C)',d.resolution]
+    ]);
+
+    sectionTitle('Standard gauge');
+    kv([
+      ['Standard ID',d.stdId],['Certificate number',d.stdCert],
+      ['Standard calibration due',fmtDate(d.stdDue)]
+    ]);
+
+    sectionTitle('Calibration');
+    kv([
+      ['Calibration date',fmtDate(d.calDate)],['Next calibration due',fmtDate(due)],
+      ['Acceptance tolerance','± '+fmt(tol)+' °C'],['Calibration interval',(d.interval||'-')+' months']
+    ]);
+
+    sectionTitle('Results');
+    var cols=[
+      {h:'Point',w:44,a:'left'},{h:'Standard (°C)',w:32,a:'right'},{h:'Gauge (°C)',w:32,a:'right'},
+      {h:'Error (°C)',w:30,a:'right'},{h:'Result',w:42,a:'left'}
+    ];
+    var x=M, tw=cols.reduce(function(a,c){return a+c.w},0);
+    doc.setFillColor(232,237,239); doc.rect(M,y-4.5,tw,8,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor.apply(doc,ink);
+    cols.forEach(function(c){
+      var tx = c.a==='right' ? x+c.w-3 : x+3;
+      doc.text(c.h,tx,y,{align:c.a}); x+=c.w;
+    });
+    y+=8;
+    rows.forEach(function(r){
+      x=M;
+      var vals=[r.name,fmt(r.std),fmt(r.gau),sgn(r.err),r.ok?'Within tolerance':'Out of tolerance'];
+      cols.forEach(function(c,i){
+        var tx = c.a==='right' ? x+c.w-3 : x+3;
+        doc.setFont('helvetica', i===4?'bold':'normal'); doc.setFontSize(10);
+        if(i===4||i===3){ doc.setTextColor.apply(doc, r.ok?[35,112,74]:[176,50,42]); } else { doc.setTextColor.apply(doc,ink); }
+        doc.text(vals[i],tx,y,{align:c.a}); x+=c.w;
+      });
+      doc.setDrawColor.apply(doc,line); doc.setLineWidth(0.2); doc.line(M,y+3.2,M+tw,y+3.2);
+      y+=9;
+    });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,mut);
+    doc.text('Error = gauge reading - standard reading.',M,y); y+=8;
+
+    // overall result
+    var bc = pass?[226,241,232]:[248,227,224], tc = pass?[35,112,74]:[176,50,42];
+    doc.setFillColor.apply(doc,bc); doc.setDrawColor.apply(doc,tc); doc.setLineWidth(0.4);
+    doc.rect(M,y,W-2*M,13,'FD');
+    doc.setTextColor.apply(doc,tc); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('Overall result: '+(pass?'PASS':'FAIL'),M+4,y+8.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(pass?'All points within ± '+fmt(tol)+' °C':'One or more points outside ± '+fmt(tol)+' °C',W-M-4,y+8.3,{align:'right'});
+    y+=21;
+
+    // remarks
+    doc.setTextColor.apply(doc,steel); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Remarks',M,y); y+=6;
+    doc.setTextColor.apply(doc,ink); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    var rem = (d.remarks||'').trim() || 'None.';
+    var lines = doc.splitTextToSize(rem, W-2*M);
+    doc.text(lines.slice(0,6),M,y);
+    y += Math.min(lines.length,6)*5 + 10;
+
+    // signatures
+    var sy = Math.max(y, 238);
+    var sw=(W-2*M-16)/3;
+    var sigs=[['Calibrated by',d.calBy],['Checked by',d.checkBy],['Approved by','']];
+    sigs.forEach(function(s,i){
+      var sx=M+i*(sw+8);
+      doc.setDrawColor.apply(doc,ink); doc.setLineWidth(0.3); doc.line(sx,sy+12,sx+sw,sy+12);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor.apply(doc,ink);
+      if(s[1]) doc.text(String(s[1]),sx,sy+8);
+      doc.setFont('helvetica','normal'); doc.setTextColor.apply(doc,mut);
+      doc.text(s[0]+' (name, signature, date)',sx,sy+16.5);
+    });
+
+    // ---- reference table page(s) ----
+    var tr = tableFromData(rows.map(function(r){return {gau:r.gau,err:r.err}}), num(d.step)||10);
+    if(tr.state==='ok'){
+      var ccols=[
+        {h:'Gauge reading (°C)',w:50,a:'right'},{h:'Correction (°C)',w:42,a:'right'},
+        {h:'Actual temperature (°C)',w:52,a:'right'},{h:'Note',w:36,a:'left'}
+      ];
+      var ctw=ccols.reduce(function(a,c){return a+c.w},0);
+      function ctableHeader(){
+        var cx=M;
+        doc.setFillColor(232,237,239); doc.rect(M,y-4.5,ctw,8,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor.apply(doc,ink);
+        ccols.forEach(function(c){
+          doc.text(c.h, c.a==='right'?cx+c.w-4:cx+3, y, {align:c.a}); cx+=c.w;
+        });
+        y+=8;
+      }
+      function pageTop(){
+        doc.addPage();
+        doc.setFillColor.apply(doc,steel); doc.rect(0,0,W,16,'F');
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+        doc.text('Ferentino Industrial Tyres (Pvt) Ltd',M,10);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9);
+        doc.text('Report no: '+(d.reportNo||'-'),W-M,10,{align:'right'});
+        y=28;
+      }
+      pageTop();
+      doc.setTextColor.apply(doc,steel); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      doc.text('Reference table: actual temperature for gauge reading',M,y); y+=2;
+      doc.setDrawColor.apply(doc,steel); doc.setLineWidth(0.4); doc.line(M,y,W-M,y); y+=6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor.apply(doc,mut);
+      var notes=[
+        'Gauge: '+(d.gaugeId||'-')+(d.location?'  |  '+d.location:'')+'  |  Calibrated '+fmtDate(d.calDate),
+        'Built from the three calibration points by straight-line interpolation. Actual temperature = gauge reading - error.',
+        'Valid only between the lowest and highest gauge readings in this table. Do not extrapolate outside this range.'
+      ];
+      notes.forEach(function(t){
+        doc.splitTextToSize(t,W-2*M).forEach(function(l){doc.text(l,M,y); y+=4.6});
+      });
+      y+=3;
+
+      function pdfChart(cx,cy,cw,ch,s){
+        var ml=14, mb=11, mt=7, mr=3, px=cx+ml, py=cy+mt, pw=cw-ml-mr, ph=ch-mt-mb;
+        function X(v){return px+(v-s.xr.min)/(s.xr.max-s.xr.min)*pw}
+        function Y(v){return py+ph-(v-s.yr.min)/(s.yr.max-s.yr.min)*ph}
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor.apply(doc,ink);
+        doc.text(doc.splitTextToSize(s.title,cw)[0],cx,cy+2);
+        doc.setFillColor(255,255,255); doc.setDrawColor.apply(doc,line); doc.setLineWidth(0.25);
+        doc.rect(px,py,pw,ph,'FD');
+        if(s.band){
+          doc.setFillColor(226,241,232); doc.setDrawColor(156,203,177);
+          doc.rect(px,Y(s.band[1]),pw,Y(s.band[0])-Y(s.band[1]),'FD');
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor.apply(doc,mut);
+        s.yr.ticks.forEach(function(t){
+          var zero=(t===0&&s.band);
+          doc.setDrawColor.apply(doc, zero?mut:[227,231,232]); doc.setLineWidth(zero?0.3:0.15);
+          doc.line(px,Y(t),px+pw,Y(t));
+          doc.text(tickLabel(t,s.yr.step),px-1.5,Y(t)+0.9,{align:'right'});
+        });
+        s.xr.ticks.forEach(function(t){
+          doc.setDrawColor(227,231,232); doc.setLineWidth(0.15);
+          doc.line(X(t),py,X(t),py+ph);
+          doc.text(tickLabel(t,s.xr.step),X(t),py+ph+3.8,{align:'center'});
+        });
+        if(s.ideal){
+          doc.setDrawColor(138,151,158); doc.setLineWidth(0.3);
+          doc.setLineDashPattern([1.4,1.2],0);
+          doc.line(X(s.ideal[0][0]),Y(s.ideal[0][1]),X(s.ideal[1][0]),Y(s.ideal[1][1]));
+          doc.setLineDashPattern([],0);
+        }
+        doc.setDrawColor.apply(doc,steel); doc.setLineWidth(0.6);
+        for(var i=1;i<s.line.length;i++){
+          doc.line(X(s.line[i-1][0]),Y(s.line[i-1][1]),X(s.line[i][0]),Y(s.line[i][1]));
+        }
+        doc.setFillColor.apply(doc,steel); doc.setDrawColor(255,255,255); doc.setLineWidth(0.3);
+        s.points.forEach(function(p){doc.circle(X(p[0]),Y(p[1]),1.15,'FD')});
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor.apply(doc,ink);
+        doc.text(s.xlabel,px+pw/2,cy+ch-1,{align:'center'});
+        doc.text(s.ylabel,cx+3,py+ph/2+doc.getTextWidth(s.ylabel)/2,{angle:90});
+      }
+      var cwid=(W-2*M-8)/2, chei=66;
+      var specs=chartSpecs(rows.map(function(r){return {gau:r.gau,err:r.err}}), tol);
+      pdfChart(M,y,cwid,chei,specs[0]);
+      pdfChart(M+cwid+8,y,cwid,chei,specs[1]);
+      y+=chei+9;
+      ctableHeader();
+      tr.rows.forEach(function(r,idx){
+        if(y>272){ pageTop(); ctableHeader(); }
+        var cx=M;
+        if(r.cal){ doc.setFillColor(238,243,246); doc.rect(M,y-5,ctw,7.6,'F'); }
+        var vals=[f1(r.g), s1(r.corr), f1(r.actual), r.cal?'Calibration point':''];
+        ccols.forEach(function(c,i){
+          doc.setFont('helvetica', (i===2||r.cal)?'bold':'normal'); doc.setFontSize(10);
+          doc.setTextColor.apply(doc,ink);
+          doc.text(vals[i], c.a==='right'?cx+c.w-4:cx+3, y, {align:c.a}); cx+=c.w;
+        });
+        doc.setDrawColor.apply(doc,line); doc.setLineWidth(0.15); doc.line(M,y+2.6,M+ctw,y+2.6);
+        y+=7.6;
+      });
+    }
+
+    // footers on every page
+    var total=doc.getNumberOfPages();
+    for(var pg=1;pg<=total;pg++){
+      doc.setPage(pg);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,mut);
+      doc.text('Report '+(d.reportNo||'')+' — Gauge '+(d.gaugeId||''),M,287);
+      doc.text('Page '+pg+' of '+total,W-M,287,{align:'right'});
+    }
+    return doc;
+  }
+
+  function fileName(d){
+    return (d.reportNo||'calibration').replace(/[^A-Za-z0-9_-]+/g,'_')+'_'+(d.gaugeId||'gauge').replace(/[^A-Za-z0-9_-]+/g,'_')+'.pdf';
+  }
+
+  /* ---------- history ---------- */
+  function renderHistory(){
+    var h=loadHistory(), box=$('history');
+    if(!h.length){box.innerHTML='<div class="empty">Nothing saved yet. Download a report to save it here.</div>';return}
+    var html='<div class="scroll"><table><thead><tr><th>Report</th><th>Gauge</th><th>Date</th><th>Result</th><th></th></tr></thead><tbody>';
+    h.forEach(function(r,i){
+      html+='<tr><td>'+esc(r.data.reportNo)+'</td><td>'+esc(r.data.gaugeId)+'</td><td>'+esc(fmtDate(r.data.calDate))+'</td>'+
+        '<td class="res '+(r.pass?'pass':'fail')+'">'+(r.pass?'Pass':'Fail')+'</td>'+
+        '<td style="white-space:nowrap"><button class="small" data-act="open" data-i="'+i+'">Open</button> '+
+        '<button class="small" data-act="pdf" data-i="'+i+'">PDF</button> '+
+        '<button class="small danger" data-act="del" data-i="'+i+'">Delete</button></td></tr>';
+    });
+    box.innerHTML=html+'</tbody></table></div>';
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  $('history').addEventListener('click',function(ev){
+    var b=ev.target.closest('button'); if(!b)return;
+    var h=loadHistory(), i=+b.getAttribute('data-i'), r=h[i]; if(!r)return;
+    var act=b.getAttribute('data-act');
+    if(act==='open'){fill(r.data);say('Opened '+r.data.reportNo+'. Download again to save changes under the same report number.');window.scrollTo({top:0,behavior:'smooth'})}
+    if(act==='pdf'){var doc=buildPdf(r.data); if(doc)doc.save(fileName(r.data)); else say('The PDF library did not load. Check the internet connection and reload.',true)}
+    if(act==='del'){
+      if(confirm('Delete '+r.data.reportNo+' from this browser? A downloaded PDF is not affected.')){h.splice(i,1);saveHistory(h);renderHistory()}
+    }
+  });
+
+  /* ---------- actions ---------- */
+  $('btnPdf').addEventListener('click',function(){
+    var miss=validate();
+    if(miss.length){say('Complete before downloading: '+miss.join(', ')+'.',true);return}
+    var d=collect(), doc=buildPdf(d);
+    if(!doc){say('The PDF library did not load. Check the internet connection and reload, or use Print.',true);return}
+    var res=render();
+    doc.save(fileName(d));
+    var h=loadHistory().filter(function(r){return r.data.reportNo!==d.reportNo});
+    h.unshift({data:d,pass:res.o.state==='pass',saved:new Date().toISOString()});
+    saveHistory(h.slice(0,100));
+    renderHistory();
+    say('Report downloaded: '+fileName(d));
+  });
+
+  $('btnPrint').addEventListener('click',function(){
+    var miss=validate();
+    if(miss.length){say('Complete before printing: '+miss.join(', ')+'.',true);return}
+    var d=collect(), doc=buildPdf(d);
+    if(!doc){window.print();return}
+    var url=doc.output('bloburl'); var w=window.open(url,'_blank');
+    if(!w) say('Pop-up blocked. Use Download instead, then print the PDF.',true);
+  });
+
+  $('btnNew').addEventListener('click',function(){
+    if(confirm('Start a new calibration? Standard gauge details, tolerance and names are kept; readings are cleared.')){freshForm(true);say('')}
+  });
+
+  document.addEventListener('input',function(ev){
+    if(ev.target.closest('.wrap')) render();
+  });
+
+  /* ---------- init ---------- */
+  freshForm(false);
+  renderHistory();
+})();
+</script>
+</body>
+</html>

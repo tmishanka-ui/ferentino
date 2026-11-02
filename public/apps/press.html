@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITL Press Monitoring Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --bg-page:#11151a;
+    --bg-panel:#1a2129;
+    --bg-panel-alt:#212a33;
+    --bg-raised:#242e38;
+    --border:#2b3742;
+    --border-strong:#3c4b58;
+    --text-primary:#edf1f4;
+    --text-secondary:#98a7b3;
+    --text-muted:#65727e;
+    --accent-pressure:#ff9d1f;
+    --accent-pressure-dim:#3a2b12;
+    --accent-temp:#3fc6ff;
+    --accent-temp-dim:#122b38;
+    --success:#4fd88a;
+    --success-dim:#123023;
+    --danger:#ff6161;
+    --danger-dim:#331414;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(255,157,31,0.06), transparent),
+      radial-gradient(ellipse 900px 500px at 90% 0%, rgba(63,198,255,0.05), transparent),
+      var(--bg-page);
+    color:var(--text-primary);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 64px;}
+
+  /* header */
+  .header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:16px;flex-wrap:wrap;
+    padding-bottom:20px;margin-bottom:22px;
+    border-bottom:1px solid var(--border);
+  }
+  .header .brand-mark{
+    display:flex;align-items:center;gap:14px;
+  }
+  .brand-mark .plate{
+    width:46px;height:46px;border-radius:8px;
+    background:linear-gradient(155deg,var(--bg-raised),var(--bg-panel-alt));
+    border:1px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;flex-shrink:0;
+  }
+  .plate::before{
+    content:'';width:20px;height:20px;border-radius:50%;
+    border:3px solid var(--accent-pressure);
+    border-top-color:transparent;border-left-color:transparent;
+    transform:rotate(45deg);
+  }
+  h1{
+    font-family:var(--font-display);font-weight:600;
+    font-size:24px;letter-spacing:0.02em;margin:0;
+    text-transform:uppercase;
+  }
+  .subtitle{
+    color:var(--text-secondary);font-size:13px;margin-top:3px;
+    letter-spacing:0.02em;
+  }
+  .status-pill{
+    display:flex;align-items:center;gap:8px;
+    background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:999px;padding:7px 14px 7px 10px;
+    font-size:12.5px;color:var(--text-secondary);
+    font-family:var(--font-mono);
+  }
+  .status-pill .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--success);
+    box-shadow:0 0 0 3px var(--success-dim);
+    flex-shrink:0;
+  }
+  .status-pill.idle .dot{background:var(--text-muted);box-shadow:0 0 0 3px rgba(101,114,126,0.2);}
+
+  /* upload zone */
+  .upload-zone{
+    border:1.5px dashed var(--border-strong);
+    border-radius:var(--radius);
+    background:var(--bg-panel);
+    padding:22px 24px;
+    display:flex;align-items:center;gap:18px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+    margin-bottom:20px;
+  }
+  .upload-zone:hover, .upload-zone.dragover{
+    border-color:var(--accent-pressure);
+    background:var(--bg-panel-alt);
+  }
+  .upload-zone input[type=file]{display:none;}
+  .upload-icon{
+    width:44px;height:44px;border-radius:8px;flex-shrink:0;
+    background:var(--accent-pressure-dim);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .upload-icon svg{width:22px;height:22px;stroke:var(--accent-pressure);}
+  .upload-text .t1{font-size:14.5px;font-weight:500;margin:0 0 2px;}
+  .upload-text .t2{font-size:12.5px;color:var(--text-muted);margin:0;}
+
+  /* network panel */
+  .network-panel{
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--bg-panel);padding:12px 16px;margin-bottom:20px;
+  }
+  .network-row{display:flex;align-items:center;gap:12px;}
+  .net-icon{
+    width:9px;height:9px;border-radius:50%;flex-shrink:0;
+    background:var(--text-muted);
+  }
+  .net-icon.connected{background:var(--success);box-shadow:0 0 0 3px var(--success-dim);}
+  .net-icon.error{background:var(--danger);box-shadow:0 0 0 3px var(--danger-dim);}
+  .network-info{flex:1;min-width:0;}
+  .net-title{font-size:13px;font-weight:500;margin:0 0 2px;color:var(--text-primary);}
+  .net-sub{font-size:12px;color:var(--text-muted);margin:0;}
+  .net-btn{
+    background:var(--bg-panel-alt);border:1px solid var(--border-strong);
+    color:var(--text-primary);border-radius:7px;padding:7px 14px;
+    font-size:12.5px;font-family:var(--font-body);cursor:pointer;flex-shrink:0;
+  }
+  .net-btn:hover{border-color:var(--accent-pressure);}
+  .net-btn.primary{background:var(--accent-pressure-dim);color:var(--accent-pressure);border-color:var(--accent-pressure);}
+  .network-connect-row{
+    display:flex;gap:8px;margin-top:10px;padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+  .network-connect-row input{
+    flex:1;background:var(--bg-panel-alt);border:1px solid var(--border-strong);
+    color:var(--text-primary);border-radius:7px;padding:8px 12px;
+    font-family:var(--font-mono);font-size:13px;min-width:0;
+  }
+  .network-connect-row input:focus{outline:none;border-color:var(--accent-pressure);}
+
+  /* controls */
+  .controls-row{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .field-group{display:flex;flex-direction:column;gap:5px;}
+  .field-group label{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-muted);font-weight:500;
+  }
+  select{
+    background:var(--bg-panel);border:1px solid var(--border-strong);
+    color:var(--text-primary);border-radius:8px;
+    padding:9px 34px 9px 12px;font-family:var(--font-mono);font-size:13.5px;
+    min-width:170px;appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398a7b3' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+  select:focus{outline:none;border-color:var(--accent-pressure);}
+  select:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* empty state */
+  .empty-state{
+    text-align:center;padding:70px 20px;
+    color:var(--text-muted);
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--bg-panel);
+  }
+  .empty-state svg{width:38px;height:38px;stroke:var(--text-muted);margin-bottom:14px;}
+  .empty-state .e1{font-size:15px;color:var(--text-secondary);margin:0 0 4px;font-weight:500;}
+  .empty-state .e2{font-size:13px;margin:0;}
+
+  .dashboard{display:none;}
+  .dashboard.visible{display:block;}
+
+  /* meta strip */
+  .meta-strip{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+    margin-bottom:20px;
+  }
+  .meta-card{
+    background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:13px 16px;
+  }
+  .meta-card .label{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-muted);margin:0 0 5px;font-weight:500;
+  }
+  .meta-card .value{
+    font-family:var(--font-mono);font-size:14.5px;color:var(--text-primary);
+    margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  /* gauges */
+  .gauge-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    margin-bottom:20px;
+  }
+  .gauge-card{
+    background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:18px 20px;
+    display:flex;align-items:center;gap:18px;
+  }
+  .gauge-card .gauge-info{flex:1;}
+  .gauge-card .gauge-title{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-muted);font-weight:500;margin:0 0 6px;
+  }
+  .gauge-card .gauge-value{
+    font-family:var(--font-display);font-size:30px;font-weight:600;margin:0;
+    line-height:1;
+  }
+  .gauge-card .gauge-sub{font-size:12px;color:var(--text-secondary);margin:6px 0 0;}
+  .gauge-svg-wrap{width:110px;height:66px;flex-shrink:0;}
+
+  /* panels */
+  .panel{
+    background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px 22px;margin-bottom:20px;
+  }
+  .panel-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .panel-title{
+    font-family:var(--font-display);font-size:15px;font-weight:500;
+    text-transform:uppercase;letter-spacing:0.03em;margin:0;
+  }
+  .legend-row{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-secondary);}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-swatch{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+  .chart-wrap{position:relative;width:100%;height:280px;}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--text-muted);font-weight:500;padding:0 10px 10px;
+    border-bottom:1px solid var(--border-strong);
+  }
+  tbody td{
+    padding:9px 10px;border-bottom:1px solid var(--border);
+    font-family:var(--font-mono);color:var(--text-primary);
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--bg-panel-alt);}
+  .press-tag{
+    display:inline-block;padding:2px 8px;border-radius:5px;
+    font-size:12px;font-weight:500;
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:2px 9px;border-radius:999px;font-size:11.5px;font-family:var(--font-body);
+  }
+  .badge.pending{background:var(--danger-dim);color:var(--danger);}
+  .badge.saved{background:var(--success-dim);color:var(--success);}
+
+  /* risk monitoring panel */
+  .risk-summary-badges{display:flex;gap:8px;flex-wrap:wrap;}
+  .risk-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 11px;border-radius:999px;font-size:12px;font-weight:500;
+  }
+  .risk-badge.ok{background:var(--success-dim);color:var(--success);}
+  .risk-badge.warn{background:var(--danger-dim);color:var(--danger);}
+  .risk-badge.info{background:var(--bg-panel-alt);color:var(--text-secondary);border:1px solid var(--border-strong);}
+  .risk-clear-state{
+    display:flex;align-items:center;gap:10px;
+    padding:16px 4px;color:var(--text-secondary);font-size:13.5px;
+  }
+  .risk-clear-state svg{width:20px;height:20px;stroke:var(--success);flex-shrink:0;}
+  .risk-subhead{
+    font-size:11.5px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--text-muted);font-weight:500;margin:16px 0 8px;
+  }
+  #riskFlaggedWrap .risk-subhead{margin-top:0;}
+  #riskPanel table{margin-bottom:4px;}
+  #riskPanel td{white-space:normal;}
+
+  /* toast */
+  .toast{
+    position:fixed;bottom:24px;right:24px;
+    background:var(--bg-raised);border:1px solid var(--border-strong);
+    border-radius:9px;padding:12px 18px;
+    display:flex;align-items:center;gap:10px;
+    font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    transform:translateY(16px);opacity:0;pointer-events:none;
+    transition:transform .2s ease, opacity .2s ease;
+    z-index:100;max-width:340px;
+  }
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--success);}
+  .toast.error .dot{background:var(--danger);}
+
+  @media (max-width:760px){
+    .meta-strip{grid-template-columns:repeat(2,1fr);}
+    .gauge-row{grid-template-columns:1fr;}
+    .controls-row{flex-direction:column;align-items:stretch;}
+    select{min-width:0;width:100%;}
+    .network-row{flex-wrap:wrap;}
+    .network-row .net-btn{flex:1 1 auto;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="brand-mark">
+      <div class="plate" style="background:#fff;padding:3px;display:flex;align-items:center;justify-content:center;"><img src="data:image/jpeg;base64,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" alt="Ferentino" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div>
+        <h1>Press Monitoring</h1>
+        <p class="subtitle">Ferentino Industrial Tyres PVT LTD &mdash; press floor dashboard</p>
+      </div>
+    </div>
+    <div class="status-pill idle" id="statusPill">
+      <span class="dot"></span>
+      <span id="statusText">No shift loaded</span>
+    </div>
+  </div>
+
+  <label class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept=".csv,text/csv">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div class="upload-text">
+      <p class="t1">Drop a shift monitoring CSV here, or click to upload</p>
+      <p class="t2" id="uploadHint">Round-wise pressure and temperature readings are parsed and saved automatically</p>
+      <p class="t2" id="storageModeHint" style="margin-top:2px;"></p>
+    </div>
+  </label>
+
+  <div class="network-panel" id="networkPanel">
+    <div class="network-row">
+      <i class="net-icon" id="netIcon"></i>
+      <div class="network-info">
+        <p class="net-title" id="netTitle">Not connected to a network server</p>
+        <p class="net-sub" id="netSub">Updates only save to this browser. Connect to a shared server so every computer sees the same data.</p>
+      </div>
+      <button type="button" class="net-btn" id="netToggleBtn">Connect&hellip;</button>
+    </div>
+    <div class="network-connect-row" id="networkConnectRow" style="display:none;">
+      <input type="text" id="serverUrlInput" placeholder="http://192.168.1.23:8787">
+      <button type="button" class="net-btn primary" id="netConnectBtn">Connect</button>
+      <button type="button" class="net-btn" id="netCancelBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div class="network-panel" id="backupPanel">
+    <div class="network-row">
+      <i class="net-icon" id="backupIcon"></i>
+      <div class="network-info">
+        <p class="net-title">Move data between computers manually</p>
+        <p class="net-sub" id="backupSub">Download a backup file here, then import it on another computer to bring its dashboard up to date.</p>
+      </div>
+      <button type="button" class="net-btn" id="exportBtn">Download backup</button>
+      <button type="button" class="net-btn primary" id="importBtn">Import backup&hellip;</button>
+      <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;">
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="field-group">
+      <label for="dateSelect">Shift date</label>
+      <select id="dateSelect" disabled><option>No data yet</option></select>
+    </div>
+    <div class="field-group">
+      <label for="shiftSelect">Shift</label>
+      <select id="shiftSelect" disabled><option>&mdash;</option></select>
+    </div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+    <p class="e1">No shift data yet</p>
+    <p class="e2">Upload a press-monitoring CSV above to populate the dashboard.</p>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+
+    <div class="meta-strip">
+      <div class="meta-card"><p class="label">Process controller</p><p class="value" id="metaController">&mdash;</p></div>
+      <div class="meta-card"><p class="label">Shift window</p><p class="value" id="metaShiftLabel">&mdash;</p></div>
+      <div class="meta-card"><p class="label">Started</p><p class="value" id="metaStarted">&mdash;</p></div>
+      <div class="meta-card"><p class="label">Ended</p><p class="value" id="metaEnded">&mdash;</p></div>
+    </div>
+
+    <div class="gauge-row">
+      <div class="gauge-card">
+        <div class="gauge-svg-wrap"><svg id="gaugePressure" viewBox="0 0 120 70"></svg></div>
+        <div class="gauge-info">
+          <p class="gauge-title">Avg pressure &mdash; latest round</p>
+          <p class="gauge-value" id="gaugePressureValue" style="color:var(--accent-pressure);">&mdash;</p>
+          <p class="gauge-sub" id="gaugePressureSub">bar</p>
+        </div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-svg-wrap"><svg id="gaugeTemp" viewBox="0 0 120 70"></svg></div>
+        <div class="gauge-info">
+          <p class="gauge-title">Avg temperature &mdash; latest round</p>
+          <p class="gauge-value" id="gaugeTempValue" style="color:var(--accent-temp);">&mdash;</p>
+          <p class="gauge-sub" id="gaugeTempSub">&deg;C</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="riskPanel">
+      <div class="panel-head">
+        <p class="panel-title">Risk monitoring summary</p>
+        <div class="risk-summary-badges" id="riskBadges"></div>
+      </div>
+      <div id="riskClearState" class="risk-clear-state" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>No unacceptable risks flagged, and all required stages signed off this shift.</span>
+      </div>
+      <div id="riskFlaggedWrap" style="display:none;">
+        <p class="risk-subhead">Items flagged unacceptable</p>
+        <table>
+          <thead><tr><th>Round</th><th>Stage</th><th>Sub-step</th><th>Failure mode</th><th>Cause</th><th>Action point</th></tr></thead>
+          <tbody id="riskFlaggedBody"></tbody>
+        </table>
+      </div>
+      <div id="riskSignoffWrap" style="display:none;">
+        <p class="risk-subhead">Stage sign-offs (QR scanned)</p>
+        <table>
+          <thead><tr><th>Round</th><th>Stage</th><th>Signed off at</th><th>Code</th></tr></thead>
+          <tbody id="riskSignoffBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <p class="panel-title">Pressure by round (bar)</p>
+        <div class="legend-row" id="pressureLegend"></div>
+      </div>
+      <div class="chart-wrap"><canvas id="pressureChart" role="img" aria-label="Line chart of press pressure readings by round, one line per press"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <p class="panel-title">Temperature by round (&deg;C) &mdash; avg across gauges per press</p>
+        <div class="legend-row" id="tempLegend"></div>
+      </div>
+      <div class="chart-wrap"><canvas id="tempChart" role="img" aria-label="Line chart of press temperature readings by round, one line per press"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><p class="panel-title">Round-wise readings</p></div>
+      <table>
+        <thead>
+          <tr><th>Round</th><th>Press</th><th>Pressure (bar)</th><th title="Presses with multiple temperature gauges show all readings, plus their average">Temperature (&deg;C)</th><th>Recorded at</th></tr>
+        </thead>
+        <tbody id="readingsTableBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <span class="dot"></span>
+  <span id="toastText"></span>
+</div>
+
+<script>
+(function(){
+
+  var MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  var SERIES_COLORS = ['#ff9d1f','#3fc6ff','#4fd88a','#c084fc','#f472b6','#facc15','#fb7185','#60a5fa'];
+  var MPA_TO_BAR = 10; // 1 MPa = 10 bar
+
+  // Presses 1M-4M report pressure in bar already; presses 5M-7M report in MPa
+  // and are converted here so every chart and table works in a single unit (bar).
+  function normalizePressureToBar(pressId, rawValue){
+    var m = (pressId || '').match(/^(\d+)/);
+    var bankNum = m ? parseInt(m[1], 10) : null;
+    if(bankNum !== null && bankNum >= 5 && bankNum <= 7){
+      return { value: rawValue * MPA_TO_BAR, originalUnit: 'MPa' };
+    }
+    return { value: rawValue, originalUnit: 'bar' };
+  }
+
+  var state = {
+    index: [],          // [{date, shiftCode, shiftLabel, processController, uploadedAt}]
+    currentRecord: null,
+    pressureChart: null,
+    tempChart: null
+  };
+
+  // ---------- date / time parsing ----------
+
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Accepts "21 Aug 2026", "2026-08-21", "21/08/2026", "21-08-2026", "08/21/2026" (US),
+  // returns {day, monIdx, year} or null if the string can't be confidently parsed.
+  function normalizeYear(y){
+    if(y >= 100) return y;
+    return y < 70 ? 2000 + y : 1900 + y; // 2-digit year heuristic: 00-69 => 2000s, 70-99 => 1900s
+  }
+
+  function parseFlexibleDMY(str){
+    if(!str) return null;
+    var s = str.trim();
+
+    // "21 Aug 2026" / "Aug 21 2026" / "21-Aug-26" (month name present, 2- or 4-digit year)
+    var wordMatch = s.match(/([A-Za-z]{3,})/);
+    if(wordMatch){
+      var monIdx = MONTHS[wordMatch[1].slice(0,1).toUpperCase() + wordMatch[1].slice(1,3).toLowerCase()];
+      if(monIdx === undefined){
+        // try matching against MONTH_NAMES case-insensitively
+        var lower = wordMatch[1].slice(0,3).toLowerCase();
+        for(var i=0;i<MONTH_NAMES.length;i++){
+          if(MONTH_NAMES[i].toLowerCase() === lower){ monIdx = i; break; }
+        }
+      }
+      if(monIdx !== undefined){
+        var nums = s.match(/\d+/g) || [];
+        if(nums.length >= 2){
+          var day = parseInt(nums[0].length <= 2 ? nums[0] : nums[1], 10);
+          var yearStr = nums.filter(function(n){ return n.length === 4; })[0];
+          var year = yearStr ? parseInt(yearStr,10) : normalizeYear(parseInt(nums[nums.length-1],10));
+          if(day >= 1 && day <= 31 && year > 1900) return { day: day, monIdx: monIdx, year: year };
+        }
+      }
+    }
+
+    // "2026-08-21" or "2026/08/21" (ISO, year first)
+    var iso = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if(iso){
+      var y = parseInt(iso[1],10), mo = parseInt(iso[2],10)-1, d = parseInt(iso[3],10);
+      if(mo >= 0 && mo <= 11 && d >= 1 && d <= 31) return { day: d, monIdx: mo, year: y };
+    }
+
+    // "21/08/2026", "21-08-2026", or "21-08-26" (day-month-year, 2- or 4-digit year)
+    var dmy = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if(dmy){
+      var a = parseInt(dmy[1],10), b = parseInt(dmy[2],10), yr = normalizeYear(parseInt(dmy[3],10));
+      if(a > 12 && b <= 12) return { day: a, monIdx: b-1, year: yr };   // unambiguous D/M/Y
+      if(b > 12 && a <= 12) return { day: b, monIdx: a-1, year: yr };   // unambiguous M/D/Y
+      if(a <= 12 && b <= 12) return { day: a, monIdx: b-1, year: yr };  // ambiguous — assume D/M/Y
+    }
+
+    return null;
+  }
+
+  function toISO(dmy){
+    var mm = String(dmy.monIdx+1).padStart(2,'0');
+    var dd = String(dmy.day).padStart(2,'0');
+    return dmy.year + '-' + mm + '-' + dd;
+  }
+
+  function parseDateTimeStr(str){
+    if(!str) return {iso:null, display:'\u2014'};
+    var dmy = parseFlexibleDMY(str);
+    if(!dmy) return {iso:null, display: str};
+    var timeMatch = str.match(/(\d{1,2}:\d{2})/);
+    var time = timeMatch ? timeMatch[1] : '';
+    var displayDate = dmy.day + ' ' + MONTH_NAMES[dmy.monIdx] + ' ' + dmy.year;
+    return { iso: toISO(dmy), display: displayDate + (time ? ', ' + time : '') };
+  }
+
+  function formatDateDisplay(iso){
+    if(!iso) return 'Unknown date';
+    var parts = iso.split('-');
+    var d = new Date(Date.UTC(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10)));
+    if(isNaN(d.getTime())) return 'Unknown date';
+    return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'});
+  }
+
+  // ---------- CSV parsing ----------
+
+  function parseShiftCSV(text){
+    var parsed = Papa.parse(text, {skipEmptyLines:false});
+    var rows = parsed.data;
+
+    var meta = {};
+    var metaKeys = ['Process Controller','Shift code','Shift','Shift date','Shift started','Shift ended'];
+    rows.forEach(function(row){
+      if(row && metaKeys.indexOf(row[0]) !== -1){
+        meta[row[0]] = row[1] || '';
+      }
+    });
+
+    var headerIdx = -1;
+    for(var i=0;i<rows.length;i++){
+      if(rows[i] && (rows[i][0] || '').trim() === 'PRESS READINGS'){ headerIdx = i; break; }
+    }
+    if(headerIdx === -1){
+      throw new Error('This file does not look like a press-monitoring shift CSV (no PRESS READINGS section found).');
+    }
+
+    var readings = [];
+    var j = headerIdx + 2; // skip section title + column header row
+    while(j < rows.length){
+      var row = rows[j];
+      if(!row || row.length < 2 || (row[0] === '' && (row[1] === undefined || row[1] === ''))) break;
+      var roundRaw = (row[0] || '').trim();
+      if(roundRaw !== '\u2014' && roundRaw !== ''){
+        var pressId = (row[2] || '').trim();
+        var pressureRaw = parseFloat(row[3]);
+        var temperatureRaw = (row[4] || '').trim();
+        var temperatures = temperatureRaw.split(';')
+          .map(function(s){ return parseFloat(s.trim()); })
+          .filter(function(n){ return !isNaN(n); });
+        if(!isNaN(pressureRaw) && temperatures.length > 0){
+          var converted = normalizePressureToBar(pressId, pressureRaw);
+          var avgTemperature = temperatures.reduce(function(s,n){ return s + n; }, 0) / temperatures.length;
+          readings.push({
+            round: parseInt(roundRaw, 10),
+            press: pressId,
+            pressure: converted.value,
+            pressureUnitOriginal: converted.originalUnit,
+            temperature: avgTemperature,
+            temperatures: temperatures,
+            temperatureRaw: temperatureRaw,
+            recordedAt: (row[1] || '').trim()
+          });
+        }
+      }
+      j++;
+    }
+
+    if(!meta['Shift date']) throw new Error('Could not find a shift date in this file.');
+    if(readings.length === 0) throw new Error('No press readings found in this file.');
+
+    // ---- risk monitoring: items flagged unacceptable ----
+    var riskFlags = [];
+    var riskHeaderIdx = -1;
+    for(var ri=0; ri<rows.length; ri++){
+      if(rows[ri] && (rows[ri][0] || '').trim() === 'RISK MONITORING - ITEMS FLAGGED UNACCEPTABLE'){ riskHeaderIdx = ri; break; }
+    }
+    if(riskHeaderIdx !== -1){
+      var rj = riskHeaderIdx + 2; // skip section title + column header row
+      while(rj < rows.length){
+        var rrow = rows[rj];
+        if(!rrow || rrow.length < 2 || (rrow[0] === '' && (rrow[1] === undefined || rrow[1] === ''))) break;
+        var rRoundRaw = (rrow[0] || '').trim();
+        var rMsg = (rrow[1] || '').trim();
+        // A placeholder row looks like: "—,No unacceptable risks flagged this shift,,,,,"
+        var isPlaceholder = (rRoundRaw === '\u2014') && /no .*risk/i.test(rMsg);
+        if(!isPlaceholder && rRoundRaw !== ''){
+          riskFlags.push({
+            round: rRoundRaw === '\u2014' ? null : parseInt(rRoundRaw, 10),
+            recordedAt: rMsg,
+            stage: (rrow[2] || '').trim(),
+            subStep: (rrow[3] || '').trim(),
+            failureMode: (rrow[4] || '').trim(),
+            cause: (rrow[5] || '').trim(),
+            ap: (rrow[6] || '').trim()
+          });
+        }
+        rj++;
+      }
+    }
+
+    // ---- risk monitoring: stage sign-offs (QR scanned) ----
+    var stageSignoffs = [];
+    var signoffHeaderIdx = -1;
+    for(var si=0; si<rows.length; si++){
+      if(rows[si] && (rows[si][0] || '').trim() === 'RISK MONITORING - STAGE SIGN-OFFS (QR scanned)'){ signoffHeaderIdx = si; break; }
+    }
+    if(signoffHeaderIdx !== -1){
+      var sj = signoffHeaderIdx + 2; // skip section title + column header row
+      while(sj < rows.length){
+        var srow = rows[sj];
+        if(!srow || srow.length < 2 || (srow[0] === '' && (srow[1] === undefined || srow[1] === ''))) break;
+        var sRoundRaw = (srow[0] || '').trim();
+        var sStageOrMsg = (srow[1] || '').trim();
+        // Placeholder row looks like: "—,No stages signed off this shift,,"
+        var sIsPlaceholder = (sRoundRaw === '\u2014') && /no .*sign/i.test(sStageOrMsg);
+        if(!sIsPlaceholder && sRoundRaw !== ''){
+          stageSignoffs.push({
+            round: sRoundRaw === '\u2014' ? null : parseInt(sRoundRaw, 10),
+            stage: sStageOrMsg,
+            signedOffAt: (srow[2] || '').trim(),
+            code: (srow[3] || '').trim()
+          });
+        }
+        sj++;
+      }
+    }
+
+    var shiftDMY = parseFlexibleDMY(meta['Shift date']);
+    if(!shiftDMY){
+      throw new Error('Could not understand the shift date "' + meta['Shift date'] + '". Expected something like "21 Aug 2026" or "2026-08-21".');
+    }
+    var shiftDateISO = toISO(shiftDMY);
+    var started = parseDateTimeStr(meta['Shift started']);
+    var ended = parseDateTimeStr(meta['Shift ended']);
+
+    return {
+      shiftDateISO: shiftDateISO,
+      shiftCode: (meta['Shift code'] || '').trim(),
+      shiftLabel: (meta['Shift'] || '').trim(),
+      processController: (meta['Process Controller'] || '').trim(),
+      shiftStartedDisplay: started.display,
+      shiftEndedDisplay: ended.display,
+      readings: readings,
+      riskFlags: riskFlags,
+      stageSignoffs: stageSignoffs
+    };
+  }
+
+  // ---------- storage ----------
+  // Three possible backends, tried in this priority order:
+  //  1. "server"  — a small LAN sync server (press-monitoring-server.js) the user has
+  //                 pointed this dashboard at. Shared across every computer on the network.
+  //  2. "claude"  — window.storage, only available inside Claude's artifact preview.
+  //                 Shared across anyone viewing the artifact there.
+  //  3. "local"   — the browser's own localStorage. Only visible on this one device.
+
+  var LOCAL_PREFIX = 'fitl-press-dashboard::';
+  var SERVER_PREF_KEY = LOCAL_PREFIX + 'server-url';
+
+  var usingClaudeStorage = (typeof window.storage !== 'undefined' && window.storage
+    && typeof window.storage.get === 'function' && typeof window.storage.set === 'function');
+
+  var state_serverUrl = null; // set by initServerConnection()
+
+  function getServerUrlPref(){
+    try{ return localStorage.getItem(SERVER_PREF_KEY) || ''; } catch(e){ return ''; }
+  }
+  function setServerUrlPref(url){
+    try{ localStorage.setItem(SERVER_PREF_KEY, url); } catch(e){}
+  }
+  function clearServerUrlPref(){
+    try{ localStorage.removeItem(SERVER_PREF_KEY); } catch(e){}
+  }
+
+  function normalizeServerUrl(url){
+    var u = (url || '').trim();
+    if(!u) return '';
+    if(!/^https?:\/\//i.test(u)) u = 'http://' + u;
+    return u.replace(/\/+$/, '');
+  }
+
+  function pingServer(url, timeoutMs){
+    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = controller ? setTimeout(function(){ controller.abort(); }, timeoutMs || 4000) : null;
+    return fetch(url + '/health', { signal: controller ? controller.signal : undefined })
+      .then(function(r){ if(timer) clearTimeout(timer); if(!r.ok) throw new Error('Server responded with an error'); return r.json(); })
+      .then(function(j){ return !!(j && j.ok); })
+      .catch(function(){ if(timer) clearTimeout(timer); return false; });
+  }
+
+  function connectToServer(rawUrl){
+    var url = normalizeServerUrl(rawUrl);
+    if(!url) return Promise.resolve({ ok:false, error:'Enter a server address.' });
+    return pingServer(url, 4000).then(function(ok){
+      if(!ok) return { ok:false, error:'Could not reach a sync server at that address.' };
+      state_serverUrl = url;
+      setServerUrlPref(url);
+      return { ok:true };
+    });
+  }
+
+  function disconnectFromServer(){
+    state_serverUrl = null;
+    clearServerUrlPref();
+  }
+
+  function initServerConnection(){
+    var saved = getServerUrlPref();
+    if(!saved) return Promise.resolve(false);
+    return pingServer(normalizeServerUrl(saved), 3000).then(function(ok){
+      if(ok){ state_serverUrl = normalizeServerUrl(saved); return true; }
+      return false; // stored address unreachable right now — stay disconnected, keep the pref for next reload
+    });
+  }
+
+  function currentStorageMode(){
+    if(state_serverUrl) return 'server';
+    if(usingClaudeStorage) return 'claude';
+    return 'local';
+  }
+
+  function storageGet(key){
+    if(state_serverUrl){
+      return fetch(state_serverUrl + '/storage/' + encodeURIComponent(key))
+        .then(function(r){ if(!r.ok) throw new Error('Server error'); return r.json(); })
+        .then(function(j){ return j.value; });
+    }
+    if(usingClaudeStorage){
+      return window.storage.get(key, true)
+        .then(function(res){ return res ? res.value : null; })
+        .catch(function(){ return null; });
+    }
+    try{
+      var v = localStorage.getItem(LOCAL_PREFIX + key);
+      return Promise.resolve(v === null ? null : v);
+    } catch(e){ return Promise.resolve(null); }
+  }
+
+  function storageSet(key, value){
+    if(state_serverUrl){
+      return fetch(state_serverUrl + '/storage/' + encodeURIComponent(key), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: value })
+      }).then(function(r){ if(!r.ok) throw new Error('Server error'); return true; });
+    }
+    if(usingClaudeStorage){
+      return window.storage.set(key, value, true);
+    }
+    try{
+      localStorage.setItem(LOCAL_PREFIX + key, value);
+      return Promise.resolve(true);
+    } catch(e){ return Promise.reject(e); }
+  }
+
+  function recordKey(date, shiftCode){ return 'record:' + date + ':' + shiftCode; }
+
+  function loadIndex(){
+    return storageGet('index')
+      .then(function(v){ return v ? JSON.parse(v) : []; })
+      .catch(function(){ return []; });
+  }
+
+  function saveIndex(entries){
+    return storageSet('index', JSON.stringify(entries));
+  }
+
+  function getRecord(date, shiftCode){
+    return storageGet(recordKey(date, shiftCode))
+      .then(function(v){ return v ? JSON.parse(v) : null; })
+      .catch(function(){ return null; });
+  }
+
+  function riskKey(rf){ return [rf.round, rf.stage, rf.subStep, rf.failureMode, rf.cause].join('||'); }
+
+  function mergeRiskFlags(existingFlags, newFlags){
+    var map = {};
+    (existingFlags || []).forEach(function(rf){ map[riskKey(rf)] = rf; });
+    (newFlags || []).forEach(function(rf){ map[riskKey(rf)] = rf; });
+    var merged = Object.keys(map).map(function(k){ return map[k]; });
+    merged.sort(function(a,b){ return (a.round||0) - (b.round||0); });
+    return merged;
+  }
+
+  function signoffKey(s){ return [s.round, s.stage, s.signedOffAt, s.code].join('||'); }
+
+  function mergeStageSignoffs(existingSignoffs, newSignoffs){
+    var map = {};
+    (existingSignoffs || []).forEach(function(s){ map[signoffKey(s)] = s; });
+    (newSignoffs || []).forEach(function(s){ map[signoffKey(s)] = s; });
+    var merged = Object.keys(map).map(function(k){ return map[k]; });
+    merged.sort(function(a,b){ return (a.round||0) - (b.round||0); });
+    return merged;
+  }
+
+  function saveRecord(newRec){
+    var key = recordKey(newRec.shiftDateISO, newRec.shiftCode);
+    return getRecord(newRec.shiftDateISO, newRec.shiftCode).then(function(existing){
+      var merged;
+      if(existing){
+        var map = {};
+        existing.readings.forEach(function(r){ map[r.round + '_' + r.press] = r; });
+        newRec.readings.forEach(function(r){ map[r.round + '_' + r.press] = r; });
+        var mergedReadings = Object.keys(map).map(function(k){ return map[k]; });
+        mergedReadings.sort(function(a,b){
+          if(a.round !== b.round) return a.round - b.round;
+          return a.press.localeCompare(b.press, undefined, {numeric:true});
+        });
+        merged = {
+          shiftDateISO: newRec.shiftDateISO,
+          shiftCode: newRec.shiftCode,
+          shiftLabel: newRec.shiftLabel || existing.shiftLabel,
+          processController: newRec.processController || existing.processController,
+          shiftStartedDisplay: existing.shiftStartedDisplay,
+          shiftEndedDisplay: newRec.shiftEndedDisplay || existing.shiftEndedDisplay,
+          readings: mergedReadings,
+          riskFlags: mergeRiskFlags(existing.riskFlags, newRec.riskFlags),
+          stageSignoffs: mergeStageSignoffs(existing.stageSignoffs, newRec.stageSignoffs)
+        };
+      } else {
+        newRec.readings.sort(function(a,b){
+          if(a.round !== b.round) return a.round - b.round;
+          return a.press.localeCompare(b.press, undefined, {numeric:true});
+        });
+        newRec.riskFlags = mergeRiskFlags([], newRec.riskFlags);
+        newRec.stageSignoffs = mergeStageSignoffs([], newRec.stageSignoffs);
+        merged = newRec;
+      }
+      return storageSet(key, JSON.stringify(merged)).then(function(){ return merged; });
+    });
+  }
+
+  function upsertIndexEntry(rec){
+    return loadIndex().then(function(entries){
+      var found = false;
+      var updated = entries.map(function(e){
+        if(e.date === rec.shiftDateISO && e.shiftCode === rec.shiftCode){
+          found = true;
+          return { date: rec.shiftDateISO, shiftCode: rec.shiftCode, shiftLabel: rec.shiftLabel,
+                    processController: rec.processController, uploadedAt: new Date().toISOString() };
+        }
+        return e;
+      });
+      if(!found){
+        updated.push({ date: rec.shiftDateISO, shiftCode: rec.shiftCode, shiftLabel: rec.shiftLabel,
+                        processController: rec.processController, uploadedAt: new Date().toISOString() });
+      }
+      return saveIndex(updated).then(function(){ state.index = updated; publishRiskFlags(); });
+    });
+  }
+
+  // ---------- UI: toast ----------
+
+  var toastTimer = null;
+  function showToast(msg, isError){
+    var toast = document.getElementById('toast');
+    var text = document.getElementById('toastText');
+    text.textContent = msg;
+    toast.classList.toggle('error', !!isError);
+    toast.classList.add('show');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 3200);
+  }
+
+  // ---------- UI: controls ----------
+
+  function uniqueSortedDates(entries){
+    var dates = Array.from(new Set(entries.map(function(e){ return e.date; })));
+    dates.sort(function(a,b){ return b.localeCompare(a); });
+    return dates;
+  }
+
+  function populateDateSelect(selectedDate){
+    var dateSelect = document.getElementById('dateSelect');
+    var dates = uniqueSortedDates(state.index);
+    dateSelect.innerHTML = '';
+    dates.forEach(function(d){
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = formatDateDisplay(d);
+      dateSelect.appendChild(opt);
+    });
+    dateSelect.disabled = dates.length === 0;
+    if(selectedDate && dates.indexOf(selectedDate) !== -1) dateSelect.value = selectedDate;
+    return dateSelect.value;
+  }
+
+  function populateShiftSelect(date, selectedShift){
+    var shiftSelect = document.getElementById('shiftSelect');
+    var shifts = state.index.filter(function(e){ return e.date === date; });
+    shifts.sort(function(a,b){ return a.shiftCode.localeCompare(b.shiftCode); });
+    shiftSelect.innerHTML = '';
+    shifts.forEach(function(s){
+      var opt = document.createElement('option');
+      opt.value = s.shiftCode;
+      opt.textContent = 'Shift ' + s.shiftCode + (s.shiftLabel ? ' \u2014 ' + s.shiftLabel : '');
+      shiftSelect.appendChild(opt);
+    });
+    shiftSelect.disabled = shifts.length === 0;
+    if(selectedShift && shifts.some(function(s){ return s.shiftCode === selectedShift; })){
+      shiftSelect.value = selectedShift;
+    }
+    return shiftSelect.value;
+  }
+
+  // ---------- UI: render dashboard ----------
+
+  function pressColorMap(presses){
+    var map = {};
+    presses.forEach(function(p, i){ map[p] = SERIES_COLORS[i % SERIES_COLORS.length]; });
+    return map;
+  }
+
+  function renderMeta(rec){
+    document.getElementById('metaController').textContent = rec.processController || '\u2014';
+    document.getElementById('metaShiftLabel').textContent = rec.shiftLabel || ('Shift ' + rec.shiftCode);
+    document.getElementById('metaStarted').textContent = rec.shiftStartedDisplay || '\u2014';
+    document.getElementById('metaEnded').textContent = rec.shiftEndedDisplay || '\u2014';
+    document.getElementById('statusText').textContent = formatDateDisplay(rec.shiftDateISO) + ' \u00b7 Shift ' + rec.shiftCode;
+    var pill = document.getElementById('statusPill');
+    pill.classList.remove('idle');
+  }
+
+  function describeArc(cx, cy, r, startDeg, endDeg){
+    function toXY(deg){
+      var rad = deg * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    var start = toXY(startDeg), end = toXY(endDeg);
+    var largeArc = (endDeg - startDeg) <= 180 ? 0 : 1;
+    return 'M ' + start.x + ' ' + start.y + ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + end.x + ' ' + end.y;
+  }
+
+  function drawGauge(svgId, value, min, max, colorHex){
+    var svg = document.getElementById(svgId);
+    var cx = 60, cy = 62, r = 48;
+    var t = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0;
+    var trackPath = describeArc(cx, cy, r, -180, 0);
+    var valuePath = describeArc(cx, cy, r, -180, -180 + t * 180);
+    var needleDeg = -180 + t * 180;
+    var needleRad = needleDeg * Math.PI / 180;
+    var nx = cx + (r - 10) * Math.cos(needleRad);
+    var ny = cy + (r - 10) * Math.sin(needleRad);
+
+    var ticks = '';
+    [0, 0.25, 0.5, 0.75, 1].forEach(function(tt){
+      var deg = -180 + tt * 180;
+      var rad = deg * Math.PI / 180;
+      var x1 = cx + (r + 4) * Math.cos(rad), y1 = cy + (r + 4) * Math.sin(rad);
+      var x2 = cx + (r - 4) * Math.cos(rad), y2 = cy + (r - 4) * Math.sin(rad);
+      ticks += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#3c4b58" stroke-width="2"/>';
+    });
+
+    svg.innerHTML =
+      '<path d="'+trackPath+'" fill="none" stroke="#2b3742" stroke-width="9" stroke-linecap="round"/>' +
+      '<path d="'+valuePath+'" fill="none" stroke="'+colorHex+'" stroke-width="9" stroke-linecap="round"/>' +
+      ticks +
+      '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="'+colorHex+'" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<circle cx="'+cx+'" cy="'+cy+'" r="4.5" fill="'+colorHex+'"/>';
+  }
+
+  function renderGauges(rec){
+    var rounds = Array.from(new Set(rec.readings.map(function(r){ return r.round; }))).sort(function(a,b){ return a-b; });
+    var latestRound = rounds[rounds.length - 1];
+    var latestReadings = rec.readings.filter(function(r){ return r.round === latestRound; });
+    var avgPressure = latestReadings.reduce(function(s,r){ return s + r.pressure; }, 0) / latestReadings.length;
+    var avgTemp = latestReadings.reduce(function(s,r){ return s + r.temperature; }, 0) / latestReadings.length;
+
+    var pressures = rec.readings.map(function(r){ return r.pressure; });
+    var temps = rec.readings.map(function(r){ return r.temperature; });
+    var pMax = Math.max.apply(null, pressures) * 1.15 || 200;
+    var tMax = Math.max.apply(null, temps) * 1.15 || 200;
+
+    document.getElementById('gaugePressureValue').textContent = Math.round(avgPressure * 10) / 10;
+    document.getElementById('gaugePressureSub').textContent = 'bar \u00b7 round ' + latestRound;
+    document.getElementById('gaugeTempValue').textContent = (Math.round(avgTemp * 10) / 10) + '\u00b0';
+    document.getElementById('gaugeTempSub').textContent = '\u00b0C \u00b7 round ' + latestRound;
+
+    drawGauge('gaugePressure', avgPressure, 0, pMax, '#ff9d1f');
+    drawGauge('gaugeTemp', avgTemp, 0, tMax, '#3fc6ff');
+  }
+
+  function buildLegend(elId, presses, colorMap){
+    var el = document.getElementById(elId);
+    el.innerHTML = '';
+    presses.forEach(function(p){
+      var item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = '<span class="legend-swatch" style="background:'+colorMap[p]+'"></span>' + p;
+      el.appendChild(item);
+    });
+  }
+
+  function renderCharts(rec){
+    var rounds = Array.from(new Set(rec.readings.map(function(r){ return r.round; }))).sort(function(a,b){ return a-b; });
+    var presses = Array.from(new Set(rec.readings.map(function(r){ return r.press; }))).sort(function(a,b){
+      return a.localeCompare(b, undefined, {numeric:true});
+    });
+    var roundColorMap = {};
+    rounds.forEach(function(rnd, i){ roundColorMap[rnd] = SERIES_COLORS[i % SERIES_COLORS.length]; });
+    var roundLegendMap = {};
+    rounds.forEach(function(rnd){ roundLegendMap['Round ' + rnd] = roundColorMap[rnd]; });
+
+    buildLegend('pressureLegend', Object.keys(roundLegendMap), roundLegendMap);
+    buildLegend('tempLegend', Object.keys(roundLegendMap), roundLegendMap);
+
+    function datasetsFor(field){
+      return rounds.map(function(rnd){
+        var byPress = {};
+        rec.readings.filter(function(r){ return r.round === rnd; }).forEach(function(r){ byPress[r.press] = r[field]; });
+        var color = roundColorMap[rnd];
+        return {
+          label: 'Round ' + rnd,
+          data: presses.map(function(p){ return byPress.hasOwnProperty(p) ? byPress[p] : null; }),
+          borderColor: color,
+          backgroundColor: color,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          spanGaps: true,
+          tension: 0.25
+        };
+      });
+    }
+
+    var commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          title: { display: true, text: 'Press ID', color: '#98a7b3', font: {family:'Inter', size:11} },
+          ticks: { color: '#98a7b3', font: {family:'JetBrains Mono', size:11} },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: { color: '#98a7b3', font: {family:'JetBrains Mono', size:11} },
+          grid: { color: 'rgba(255,255,255,0.06)' }
+        }
+      }
+    };
+
+    if(state.pressureChart) state.pressureChart.destroy();
+    if(state.tempChart) state.tempChart.destroy();
+
+    state.pressureChart = new Chart(document.getElementById('pressureChart'), {
+      type: 'line',
+      data: { labels: presses, datasets: datasetsFor('pressure') },
+      options: commonOptions
+    });
+
+    state.tempChart = new Chart(document.getElementById('tempChart'), {
+      type: 'line',
+      data: { labels: presses, datasets: datasetsFor('temperature') },
+      options: commonOptions
+    });
+  }
+
+  function renderTable(rec){
+    var tbody = document.getElementById('readingsTableBody');
+    tbody.innerHTML = '';
+    var presses = Array.from(new Set(rec.readings.map(function(r){ return r.press; }))).sort(function(a,b){
+      return a.localeCompare(b, undefined, {numeric:true});
+    });
+    var colorMap = pressColorMap(presses);
+    var rows = rec.readings.slice().sort(function(a,b){
+      if(a.round !== b.round) return a.round - b.round;
+      return a.press.localeCompare(b.press, undefined, {numeric:true});
+    });
+    rows.forEach(function(r){
+      var tr = document.createElement('tr');
+      var pending = r.recordedAt === 'not saved' || !r.recordedAt;
+      var convertedNote = r.pressureUnitOriginal === 'MPa'
+        ? ' <span style="color:var(--text-muted);font-size:11px;">(' + (Math.round(r.pressure/10*100)/100) + ' MPa)</span>'
+        : '';
+      var tempCell = (r.temperatures && r.temperatures.length > 1)
+        ? r.temperatures.map(function(t){ return Math.round(t*10)/10; }).join(' / ') +
+          ' <span style="color:var(--text-muted);font-size:11px;">(avg ' + (Math.round(r.temperature*10)/10) + ')</span>'
+        : String(Math.round(r.temperature*10)/10);
+      tr.innerHTML =
+        '<td>' + r.round + '</td>' +
+        '<td><span class="press-tag" style="background:'+colorMap[r.press]+'22;color:'+colorMap[r.press]+'">' + r.press + '</span></td>' +
+        '<td>' + (Math.round(r.pressure*100)/100) + convertedNote + '</td>' +
+        '<td>' + tempCell + '</td>' +
+        '<td>' + (pending
+          ? '<span class="badge pending">pending</span>'
+          : '<span class="badge saved">' + r.recordedAt + '</span>') + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function renderRisk(rec){
+    var flags = rec.riskFlags || [];
+    var signoffs = rec.stageSignoffs || [];
+
+    var badges = document.getElementById('riskBadges');
+    badges.innerHTML =
+      '<span class="risk-badge ' + (flags.length ? 'warn' : 'ok') + '">' +
+        flags.length + ' flagged risk' + (flags.length === 1 ? '' : 's') +
+      '</span>' +
+      '<span class="risk-badge info">' + signoffs.length + ' stage sign-off' + (signoffs.length === 1 ? '' : 's') + '</span>';
+
+    var flaggedWrap = document.getElementById('riskFlaggedWrap');
+    var signoffWrap = document.getElementById('riskSignoffWrap');
+    var clearState = document.getElementById('riskClearState');
+
+    if(flags.length === 0 && signoffs.length === 0){
+      clearState.style.display = 'flex';
+      flaggedWrap.style.display = 'none';
+      signoffWrap.style.display = 'none';
+      return;
+    }
+    clearState.style.display = 'none';
+
+    if(flags.length > 0){
+      flaggedWrap.style.display = '';
+      var fbody = document.getElementById('riskFlaggedBody');
+      fbody.innerHTML = flags.map(function(f){
+        return '<tr>' +
+          '<td>' + (f.round != null ? f.round : '\u2014') + '</td>' +
+          '<td>' + escapeHtml(f.stage) + '</td>' +
+          '<td>' + escapeHtml(f.subStep) + '</td>' +
+          '<td>' + escapeHtml(f.failureMode) + '</td>' +
+          '<td>' + escapeHtml(f.cause) + '</td>' +
+          '<td>' + escapeHtml(f.ap) + '</td>' +
+        '</tr>';
+      }).join('');
+    } else {
+      flaggedWrap.style.display = 'none';
+    }
+
+    if(signoffs.length > 0){
+      signoffWrap.style.display = '';
+      var sbody = document.getElementById('riskSignoffBody');
+      sbody.innerHTML = signoffs.map(function(s){
+        return '<tr>' +
+          '<td>' + (s.round != null ? s.round : '\u2014') + '</td>' +
+          '<td>' + escapeHtml(s.stage) + '</td>' +
+          '<td>' + escapeHtml(s.signedOffAt) + '</td>' +
+          '<td>' + escapeHtml(s.code) + '</td>' +
+        '</tr>';
+      }).join('');
+    } else {
+      signoffWrap.style.display = 'none';
+    }
+  }
+
+  function renderDashboard(rec){
+    state.currentRecord = rec;
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('dashboard').classList.add('visible');
+    renderMeta(rec);
+    renderGauges(rec);
+    renderRisk(rec);
+    renderCharts(rec);
+    renderTable(rec);
+  }
+
+  function loadAndRender(date, shiftCode){
+    if(!date || !shiftCode) return;
+    getRecord(date, shiftCode).then(function(rec){
+      if(rec) renderDashboard(rec);
+    });
+  }
+
+  // ---------- file handling ----------
+
+  function handleFile(file){
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var text = e.target.result;
+      var rec;
+      try{
+        rec = parseShiftCSV(text);
+      } catch(err){
+        showToast(err.message || 'Could not parse this CSV.', true);
+        return;
+      }
+      saveRecord(rec).then(function(merged){
+        return upsertIndexEntry(merged).then(function(){ return merged; });
+      }).then(function(merged){
+        var d = populateDateSelect(merged.shiftDateISO);
+        var s = populateShiftSelect(d, merged.shiftCode);
+        loadAndRender(d, s);
+        showToast('Saved \u2014 ' + formatDateDisplay(merged.shiftDateISO) + ', shift ' + merged.shiftCode + ' updated automatically.');
+      }).catch(function(err){
+        showToast('Could not save this file: ' + (err && err.message ? err.message : 'unknown error'), true);
+      });
+    };
+    reader.onerror = function(){ showToast('Could not read this file.', true); };
+    reader.readAsText(file);
+  }
+
+  var uploadZone = document.getElementById('uploadZone');
+  var fileInput = document.getElementById('fileInput');
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    fileInput.value = '';
+  });
+  uploadZone.addEventListener('dragover', function(e){ e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', function(){ uploadZone.classList.remove('dragover'); });
+  uploadZone.addEventListener('drop', function(e){
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    if(e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+
+  document.getElementById('dateSelect').addEventListener('change', function(){
+    var d = this.value;
+    var s = populateShiftSelect(d, null);
+    loadAndRender(d, s);
+  });
+  document.getElementById('shiftSelect').addEventListener('change', function(){
+    var d = document.getElementById('dateSelect').value;
+    loadAndRender(d, this.value);
+  });
+
+  // ---------- network panel ----------
+
+  function refreshNetworkUI(){
+    var mode = currentStorageMode();
+    var icon = document.getElementById('netIcon');
+    var title = document.getElementById('netTitle');
+    var sub = document.getElementById('netSub');
+    var toggleBtn = document.getElementById('netToggleBtn');
+    var hint = document.getElementById('storageModeHint');
+
+    icon.className = 'net-icon' + (mode === 'server' ? ' connected' : '');
+
+    if(mode === 'server'){
+      title.textContent = 'Connected \u2014 shared with your network';
+      sub.textContent = 'Synced with ' + state_serverUrl + '. Every computer pointed at this address sees the same updates.';
+      toggleBtn.textContent = 'Disconnect';
+      hint.textContent = 'Saved to your network server \u2014 visible to every connected computer';
+    } else if(mode === 'claude'){
+      title.textContent = 'Using shared Claude storage';
+      sub.textContent = 'This preview syncs through Claude. Connect a network server instead if you want updates visible outside Claude too.';
+      toggleBtn.textContent = 'Connect\u2026';
+      hint.textContent = 'Saved to shared Claude storage for this dashboard';
+    } else {
+      title.textContent = 'Not connected to a network server';
+      sub.textContent = 'Updates only save to this browser. Connect to a shared server so every computer sees the same data.';
+      toggleBtn.textContent = 'Connect\u2026';
+      hint.textContent = 'Saved to this browser only \u2014 use the same browser/device to see past uploads';
+    }
+  }
+
+  var networkConnectRow = document.getElementById('networkConnectRow');
+  var serverUrlInput = document.getElementById('serverUrlInput');
+
+  document.getElementById('netToggleBtn').addEventListener('click', function(){
+    if(currentStorageMode() === 'server'){
+      disconnectFromServer();
+      refreshNetworkUI();
+      showToast('Disconnected from network server.');
+      return;
+    }
+    serverUrlInput.value = getServerUrlPref() || '';
+    networkConnectRow.style.display = 'flex';
+    serverUrlInput.focus();
+  });
+
+  document.getElementById('netCancelBtn').addEventListener('click', function(){
+    networkConnectRow.style.display = 'none';
+  });
+
+  function attemptConnect(){
+    var btn = document.getElementById('netConnectBtn');
+    var raw = serverUrlInput.value;
+    btn.textContent = 'Connecting\u2026';
+    btn.disabled = true;
+    connectToServer(raw).then(function(result){
+      btn.disabled = false;
+      btn.textContent = 'Connect';
+      if(!result.ok){
+        showToast(result.error || 'Could not connect.', true);
+        return;
+      }
+      networkConnectRow.style.display = 'none';
+      refreshNetworkUI();
+      showToast('Connected \u2014 loading shared shift data\u2026');
+      bootstrapDashboard();
+    });
+  }
+  document.getElementById('netConnectBtn').addEventListener('click', attemptConnect);
+  serverUrlInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') attemptConnect(); });
+
+  // ---------- backup: export / import ----------
+
+  function collectAllData(){
+    return loadIndex().then(function(entries){
+      return Promise.all(entries.map(function(e){
+        return getRecord(e.date, e.shiftCode);
+      })).then(function(records){
+        var validRecords = records.filter(function(r){ return !!r; });
+        return {
+          exportedAt: new Date().toISOString(),
+          source: 'FITL Press Monitoring Dashboard',
+          index: entries,
+          records: validRecords
+        };
+      });
+    });
+  }
+
+  function downloadBackup(){
+    var btn = document.getElementById('exportBtn');
+    btn.disabled = true;
+    btn.textContent = 'Preparing\u2026';
+    collectAllData().then(function(backup){
+      if(backup.records.length === 0){
+        showToast('Nothing to back up yet \u2014 upload a shift CSV first.', true);
+        return;
+      }
+      var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      var stamp = new Date().toISOString().slice(0,10);
+      a.href = url;
+      a.download = 'fitl-press-monitoring-backup-' + stamp + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      showToast('Backup downloaded \u2014 ' + backup.records.length + ' shift record(s).');
+    }).catch(function(){
+      showToast('Could not prepare the backup.', true);
+    }).then(function(){
+      btn.disabled = false;
+      btn.textContent = 'Download backup';
+    });
+  }
+
+  function restoreBackup(file){
+    var btn = document.getElementById('importBtn');
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var backup;
+      try{
+        backup = JSON.parse(e.target.result);
+      } catch(err){
+        showToast('That file is not valid JSON.', true);
+        return;
+      }
+      if(!backup || !Array.isArray(backup.records)){
+        showToast('This does not look like a dashboard backup file.', true);
+        return;
+      }
+      if(backup.records.length === 0){
+        showToast('That backup file has no shift records in it.', true);
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Importing\u2026';
+      Promise.all(backup.records.map(function(rec){
+        return saveRecord(rec).then(function(merged){ return upsertIndexEntry(merged); });
+      })).then(function(){
+        btn.disabled = false;
+        btn.textContent = 'Import backup\u2026';
+        showToast('Imported ' + backup.records.length + ' shift record(s).');
+        bootstrapDashboard();
+      }).catch(function(){
+        btn.disabled = false;
+        btn.textContent = 'Import backup\u2026';
+        showToast('Something went wrong while importing that backup.', true);
+      });
+    };
+    reader.onerror = function(){ showToast('Could not read that file.', true); };
+    reader.readAsText(file);
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', downloadBackup);
+  document.getElementById('importBtn').addEventListener('click', function(){
+    document.getElementById('importFileInput').click();
+  });
+  document.getElementById('importFileInput').addEventListener('change', function(){
+    if(this.files && this.files[0]) restoreBackup(this.files[0]);
+    this.value = '';
+  });
+
+  // ---------- init ----------
+
+  function bootstrapDashboard(){
+    return loadIndex().then(function(entries){
+      state.index = entries;
+      if(entries.length === 0){
+        document.getElementById('emptyState').style.display = '';
+        document.getElementById('dashboard').classList.remove('visible');
+        return;
+      }
+      var d = populateDateSelect(null);
+      var s = populateShiftSelect(d, null);
+      loadAndRender(d, s);
+    });
+  }
+
+  // Saved shifts and their flagged risks are handed to the host page, which passes them
+  // to the CAPA platform (the Summary Record for Process Controlling).
+  var publishTimer = null;
+  function publishRiskFlags(){
+    clearTimeout(publishTimer);
+    publishTimer = setTimeout(function(){
+      if(window.parent === window) return;
+      loadIndex().then(function(entries){
+        return Promise.all(entries.map(function(e){ return getRecord(e.date, e.shiftCode); }));
+      }).then(function(recs){
+        // Every saved shift goes to the CAPA platform's Summary Record for Process Controlling
+        // (RG-QA-09), with its flagged risks - or none, which CAPA shows as "no significant issue".
+        var items = [];
+        recs.forEach(function(rec){
+          if(!rec) return;
+          items.push({
+            key: rec.shiftDateISO + '|' + rec.shiftCode,
+            date: rec.shiftDateISO, shiftCode: rec.shiftCode, shiftLabel: rec.shiftLabel || '',
+            controller: rec.processController || '',
+            risks: (rec.riskFlags || []).map(function(f){
+              return { round: f.round, recordedAt: f.recordedAt, stage: f.stage, subStep: f.subStep, failureMode: f.failureMode, cause: f.cause, ap: f.ap };
+            })
+          });
+        });
+        window.parent.postMessage({ type: 'fitl-shifts', items: items }, '*');
+      }).catch(function(){});
+    }, 600);
+  }
+
+  refreshNetworkUI();
+  initServerConnection().then(function(connected){
+    refreshNetworkUI();
+    bootstrapDashboard();
+    publishRiskFlags();
+  });
+
+})();
+</script>
+</body>
+</html>

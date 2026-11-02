@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Satisfaction — FIT Export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--navy:#1F3A5F;--green:#2C7A4B;--green-bg:#E1F0E7;--amber:#B97708;--amber-bg:#FBF0D8;--head:'Barlow Condensed','Arial Narrow',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select{font:inherit;color:inherit}h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#B9B2A6}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn.sm{padding:3px 10px;font-size:12.5px}.btn:disabled{opacity:.45;cursor:default}
+  main{padding:16px 22px 50px;max-width:1500px;margin:0 auto}
+  .status{font-size:12.5px;color:var(--soft);margin:0 0 12px}.status b{color:var(--ink)}.warn{color:#8A5A00;background:#FFF3D6;padding:1px 8px;border-radius:9px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.bar select{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 10px}.bar label{color:var(--soft);font-size:12.5px;display:flex;gap:6px;align-items:center}
+  .bar input[type=number]{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 8px;width:70px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-bottom:14px}
+  .k{padding:13px 16px;border-left:6px solid var(--line)}.k.good{border-left-color:var(--green)}.k.bad{border-left-color:var(--red)}.k.mid{border-left-color:var(--amber)}
+  .k small{display:block;color:var(--soft);font-size:12px}.k b{display:block;font:600 34px/1.1 var(--head)}.k .t{font-size:12px;color:var(--soft);margin-top:2px}
+  .k.good b{color:var(--green)}.k.bad b{color:var(--red-d)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}
+  .cb{padding:12px 14px;height:340px;position:relative}.cb.tall{height:400px}.full{grid-column:1/-1}
+  .tw{overflow:auto;margin-bottom:14px}table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line2);text-align:center;white-space:nowrap}th{background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft)}
+  td:first-child,th:first-child{text-align:left;white-space:normal;min-width:260px}
+  .pn{padding:14px 16px;margin-bottom:14px}.pn h2{font-size:20px;text-transform:uppercase;margin-bottom:8px}
+  .c5{background:#CFE8D8}.c4{background:#E6F2EA}.c3{background:#FBF0D8}.c2{background:#F6D5D6}.c1{background:#F1B4B6}.cn{color:#aaa}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:11.5px;font-weight:600;background:#ECE9E3;color:var(--soft)}.chip.ok{background:var(--green-bg);color:var(--green)}.chip.no{background:var(--red-bg);color:var(--red-d)}
+  .empty{padding:50px 20px;text-align:center;color:var(--soft);line-height:1.7}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:34px;text-align:center;color:var(--soft);background:#fff;margin-bottom:14px}.drop.over{border-color:var(--red);background:var(--red-bg)}
+  .note{color:var(--soft);font-size:12.5px}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Customer Satisfaction</h1><div class="sub">Export Department — customer survey marks (1 to 5) by indicator, month and customer</div></div>
+<label class="btn red" style="margin:0">Upload survey files<input id="f" type="file" accept=".xlsx,.xls" multiple hidden></label><button class="btn" id="xl" disabled>Download Excel</button><button class="btn" id="clr" disabled>Clear data</button></header>
+<main>
+<p class="status" id="st">Upload the customer satisfaction workbooks (one per customer, for example the Germany and Italy files). Each upload replaces that customer’s earlier data.</p>
+<div id="dropzone" class="drop">Drop the survey workbooks here, or use <b>Upload survey files</b> above.</div>
+<div id="app" hidden></div>
+</main>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const KEY='fitl_cs_v1',PAL=['#1F3A5F','#00A6C8','#2E9E6B','#E0A526','#7B61C9'],CPAL=['#1F3A5F','#2E9E6B','#7B61C9','#E0A526','#00A6C8'],MARK=['#DA1B22','#F08A8F','#E0A526','#8CC9A4','#2C7A4B'];
+const mlabel=m=>MONS[+m.slice(5)-1]+' '+m.slice(2,4),f2=v=>v==null?'–':(Math.round(v*100)/100).toFixed(2);
+let DS=[],V={cust:'all',from:'',to:'',kpi:3,obj:4},CH=[];
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){DS=s.ds||[];V.kpi=s.kpi||3;V.obj=s.obj||4}}catch(_){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({ds:DS,kpi:V.kpi,obj:V.obj}))}catch(_){$('st').textContent='Could not save — the browser storage is full. Download the Excel summary.'}};
+
+/* ---------- reading a survey workbook ---------- */
+const num=v=>typeof v==='number'&&isFinite(v)?v:null;
+const ym=v=>{if(v instanceof Date)return v.getFullYear()+'-'+pad(v.getMonth()+1);if(typeof v==='number'&&v>30000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)}return null};
+const isoDate=v=>{if(v instanceof Date)return v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate());const m=/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/.exec(String(v||''));return m?m[3]+'-'+pad(m[2])+'-'+pad(m[1]):''};
+const rows=ws=>XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:true});
+function parseSurvey(ws){
+  const A=rows(ws),inv=[],qs=[],issues=[];
+  for(let r=0;r<A.length;r++){
+    const a=A[r][0];if(!(typeof a==='string'&&a.trim().toLowerCase()==='month'))continue;
+    const row=A[r],blocks=[];let st=null;
+    for(let c=1;c<row.length;c++){const v=row[c],m=ym(v);
+      if(m){if(st)blocks.push({c0:st.c,c1:c-1,m:st.m});st={c,m}}
+      else if(typeof v==='string'&&/^\s*average/i.test(v)){if(st){blocks.push({c0:st.c,c1:c-1,m:st.m});st=null}}}
+    if(st)blocks.push({c0:st.c,c1:row.length-1,m:st.m});
+    let ri=-1,rd=-1;for(let k=r+1;k<=r+3&&k<A.length;k++){const t=String(A[k][0]||'').toLowerCase();if(ri<0&&/invoice/.test(t))ri=k;if(rd<0&&/despatch|dispatch/.test(t))rd=k}
+    if(ri<0)continue;
+    const qr=[];for(let k=Math.max(ri,rd)+1;k<A.length&&k<Math.max(ri,rd)+12;k++){const t=A[k][0];if(typeof t==='string'&&/^\s*\d+\s*[.)]/.test(t))qr.push(k);else if(qr.length)break}
+    if(!qr.length)continue;
+    if(!qs.length)qr.forEach(k=>qs.push(String(A[k][0]).replace(/^\s*\d+\s*[.)]\s*/,'').trim()));
+    blocks.forEach(b=>{for(let c=b.c0;c<=b.c1;c++){
+      const id=A[ri][c],s=qr.map(k=>{const v=A[k][c];if(v==null||v==='')return null;const n=num(v);if(n==null||n<1||n>5){issues.push('row '+(k+1)+': “'+v+'” is not a mark from 1 to 5');return null}return n});
+      if(s.every(x=>x==null))continue;
+      inv.push({inv:id==null?'':String(id).trim(),date:rd>=0?isoDate(A[rd][c]):'',month:b.m,s:s.slice(0,5)})}});
+  }
+  return{inv,qs:qs.slice(0,5),issues};
+}
+function parseExtras(wb){
+  const out={name:'',target:null,sheetAvg:{},prev:{}};
+  const tn=wb.SheetNames.find(n=>/^target$/i.test(n.trim()));
+  if(tn){const A=rows(wb.Sheets[tn]);
+    for(const r of A){for(const v of r){if(typeof v==='string'){const m=/(\d+(?:\.\d+)?)\s*or\s*\+/i.exec(v);if(m&&out.target==null)out.target=+m[1]}}}
+    const hr=A.findIndex(r=>r.filter(v=>ym(v)).length>=3);
+    if(hr>=0){const mc={};A[hr].forEach((v,c)=>{const m=ym(v);if(m)mc[c]=m});
+      for(let r=hr+1;r<A.length;r++){const nm=A[r][0];if(typeof nm==='string'&&nm.trim()&&!/^customer$/i.test(nm.trim())){out.name=nm.trim();Object.keys(mc).forEach(c=>{const n=num(A[r][c]);if(n!=null)out.sheetAvg[mc[c]]=n});break}}}}
+  const gn=wb.SheetNames.find(n=>/graphic|compar/i.test(n));
+  if(gn){const A=rows(wb.Sheets[gn]);
+    for(const r of A){const y=r[0];if((typeof y==='string'||typeof y==='number')&&/^20\d\d$/.test(String(y).trim())){const vals=[];for(let c=1;c<=12;c++)vals.push(num(r[c]));if(vals.some(v=>v!=null))out.prev[String(y).trim()]=vals}}}
+  return out;
+}
+function parseWorkbook(wb,fileName){
+  const cands=wb.SheetNames.map(n=>({n,r:parseSurvey(wb.Sheets[n])})).filter(x=>x.r.inv.length);
+  if(!cands.length)throw new Error('no survey sheet found (a sheet with “Month”, “Invoice No” and numbered questions)');
+  cands.sort((a,b)=>b.r.inv.length-a.r.inv.length);const best=cands[0],ex=parseExtras(wb);
+  return{name:ex.name||fileName.replace(/\.[^.]+$/,''),file:fileName,at:new Date().toISOString(),qs:best.r.qs,inv:best.r.inv,target:ex.target,sheetAvg:ex.sheetAvg,prev:ex.prev,issues:best.r.issues.slice(0,20)};
+}
+
+/* ---------- numbers ---------- */
+const sel=()=>DS.filter(d=>V.cust==='all'||d.name===V.cust);
+const allMonths=()=>[...new Set(DS.flatMap(d=>d.inv.map(i=>i.month)))].sort();
+const inRange=m=>(!V.from||m>=V.from)&&(!V.to||m<=V.to);
+function stat(list,filter){ // average of every indicator over the chosen invoices
+  const n=5,sum=Array(n).fill(0),cnt=Array(n).fill(0),mix=Array.from({length:n},()=>[0,0,0,0,0]);let inv=0;
+  list.forEach(d=>d.inv.forEach(i=>{if(!filter(i))return;inv++;i.s.forEach((v,k)=>{if(v!=null){sum[k]+=v;cnt[k]++;mix[k][Math.round(v)-1]++}})}));
+  const avg=sum.map((s,k)=>cnt[k]?s/cnt[k]:null),have=avg.filter(x=>x!=null);
+  return{avg,cnt,mix,inv,overall:have.length?have.reduce((a,b)=>a+b,0)/have.length:null};
+}
+const QS=()=>(DS[0]&&DS[0].qs)||[];
+const qshort=q=>q.replace(/^Are they /,'').replace(/\?$/,'').replace(/^Are you satisfy with /,'Satisfaction with ').replace(/^Did you get /,'Got ');
+const band=v=>v==null?'cn':v<=V.kpi-1?'c1':v<=V.kpi?'c2':v<V.obj?'c3':v<4.5?'c4':'c5';
+function destroy(){CH.forEach(c=>c.destroy());CH=[]}
+const mk=(id,cfg)=>{if(typeof Chart==='undefined'||!$(id))return;CH.push(new Chart($(id),cfg))};
+const tline=(label,val,n,color)=>({type:'line',label:label,data:Array(n).fill(val),borderColor:color||'#1D2127',borderDash:[7,5],borderWidth:2,pointRadius:0,fill:false,order:0});
+
+/* ---------- screen ---------- */
+function render(){
+  destroy();const has=DS.length;$('app').hidden=!has;$('dropzone').hidden=!!has;$('xl').disabled=$('clr').disabled=!has;if(!has)return;
+  const ms=allMonths();if(!V.from||!ms.includes(V.from))V.from=ms[0];if(!V.to||!ms.includes(V.to))V.to=ms[ms.length-1];if(V.from>V.to)V.to=V.from;
+  const S=sel(),rm=ms.filter(m=>m>=V.from&&m<=V.to&&S.some(d=>d.inv.some(i=>i.month===m))),Q=QS();
+  const per=stat(S,i=>inRange(i.month)),byM=rm.map(m=>({m,st:stat(S,i=>i.month===m)})),last=byM[byM.length-1];
+  const okM=byM.filter(x=>x.st.avg.every(a=>a!=null&&a>V.kpi)),lowAvg=per.avg.map((a,k)=>({a,k})).filter(x=>x.a!=null).sort((x,y)=>x.a-y.a)[0];
+  const marks=per.cnt.reduce((a,b)=>a+b,0),low=per.mix.reduce((a,m)=>a+m.slice(0,V.kpi).reduce((x,y)=>x+y,0),0);
+  const lastOk=last&&last.st.avg.every(a=>a!=null&&a>V.kpi);
+  let h='<div class="bar"><select id="cu"><option value="all">All customers</option>'+DS.map(d=>'<option'+(V.cust===d.name?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select>'+
+   '<label>From <select id="fm">'+ms.map(m=>'<option value="'+m+'"'+(m===V.from?' selected':'')+'>'+mlabel(m)+'</option>').join('')+'</select></label><label>To <select id="tm">'+ms.map(m=>'<option value="'+m+'"'+(m===V.to?' selected':'')+'>'+mlabel(m)+'</option>').join('')+'</select></label>'+
+   '<label>KPI: every indicator over <input type="number" id="kp" min="1" max="5" step="0.5" value="'+V.kpi+'"></label><label>Satisfaction target <input type="number" id="ob" min="1" max="5" step="0.5" value="'+V.obj+'"> or more</label></div>';
+  h+='<div class="kpis">'+
+   '<div class="card k '+(last?(lastOk?'good':'bad'):'')+'"><small>Every indicator over '+V.kpi+'? — '+(last?mlabel(last.m):'')+'</small><b>'+(last?(lastOk?'Yes':'No'):'–')+'</b><div class="t">'+(last?last.st.avg.filter(a=>a!=null&&a<=V.kpi).length+' indicator(s) at '+V.kpi+' or below in the latest month':'')+'</div></div>'+
+   '<div class="card k '+(lowAvg?(lowAvg.a>V.kpi?'good':'bad'):'')+'"><small>Lowest indicator, selected period</small><b>'+(lowAvg?f2(lowAvg.a):'–')+'</b><div class="t">'+(lowAvg?esc(qshort(Q[lowAvg.k])):'')+' · target: over '+V.kpi+'</div></div>'+
+   '<div class="card k '+(per.overall!=null?(per.overall>=V.obj?'good':'bad'):'')+'"><small>Customer satisfaction, selected period</small><b>'+f2(per.overall)+'</b><div class="t">target: '+V.obj+' or more</div></div>'+
+   '<div class="card k '+(byM.length?(okM.length===byM.length?'good':'mid'):'')+'"><small>Months with every indicator over '+V.kpi+'</small><b>'+okM.length+' of '+byM.length+'</b><div class="t">'+byM.filter(x=>!okM.includes(x)).map(x=>mlabel(x.m)).join(', ')+'</div></div>'+
+   '<div class="card k '+(low?'mid':'good')+'"><small>Marks of '+V.kpi+' or less</small><b>'+low+'</b><div class="t">of '+marks+' marks given ('+(marks?Math.round(low/marks*1000)/10:0)+' %)</div></div>'+
+   '<div class="card k"><small>Surveys (invoices) in the period</small><b>'+per.inv+'</b><div class="t">'+S.map(d=>esc(d.name)).join(' · ')+'</div></div></div>';
+  h+='<div class="grid2"><div class="card cb tall full"><canvas id="c1"></canvas></div><div class="card cb"><canvas id="c2"></canvas></div><div class="card cb"><canvas id="c3"></canvas></div><div class="card cb"><canvas id="c4"></canvas></div></div>';
+  // indicator × month table
+  h+='<div class="card pn"><h2>Average mark of every indicator, by month</h2><p class="note" style="margin:0 0 8px">Red: not over '+V.kpi+' (the KPI is missed). Amber: over '+V.kpi+' but below the '+V.obj+' target. Green: '+V.obj+' or more.</p><div class="tw"><table><thead><tr><th>Indicator</th>'+byM.map(x=>'<th>'+mlabel(x.m)+'</th>').join('')+'<th>Period</th></tr></thead><tbody>'+
+   Q.map((q,k)=>'<tr><td>'+(k+1)+'. '+esc(q)+'</td>'+byM.map(x=>'<td class="'+band(x.st.avg[k])+'">'+f2(x.st.avg[k])+'</td>').join('')+'<td class="'+band(per.avg[k])+'"><b>'+f2(per.avg[k])+'</b></td></tr>').join('')+
+   '<tr><td><b>Overall (average of the indicators)</b></td>'+byM.map(x=>'<td class="'+band(x.st.overall)+'"><b>'+f2(x.st.overall)+'</b></td>').join('')+'<td class="'+band(per.overall)+'"><b>'+f2(per.overall)+'</b></td></tr>'+
+   '<tr><td>Every indicator over '+V.kpi+'?</td>'+byM.map(x=>'<td>'+(x.st.avg.every(a=>a!=null&&a>V.kpi)?'<span class="chip ok">Yes</span>':'<span class="chip no">No</span>')+'</td>').join('')+'<td>'+(per.avg.every(a=>a!=null&&a>V.kpi)?'<span class="chip ok">Yes</span>':'<span class="chip no">No</span>')+'</td></tr></tbody></table></div></div>';
+  // customer × month table with the cross-check against the customer's own sheet
+  h+='<div class="card pn"><h2>Customer satisfaction by customer and month</h2><div class="tw"><table><thead><tr><th>Customer</th>'+rm.map(m=>'<th>'+mlabel(m)+'</th>').join('')+'<th>Surveys</th></tr></thead><tbody>'+
+   S.map(d=>{let n=0;const cells=rm.map(m=>{const st=stat([d],i=>i.month===m);n+=st.inv;const sa=d.sheetAvg&&d.sheetAvg[m],diff=st.overall!=null&&sa!=null&&Math.abs(st.overall-sa)>0.05;return'<td class="'+band(st.overall)+'" title="'+(sa!=null?'The customer sheet says '+f2(sa):'')+'">'+f2(st.overall)+(diff?' <span class="chip no" title="The sheet’s own average is '+f2(sa)+'">sheet '+f2(sa)+'</span>':'')+'</td>'});
+     return'<tr><td><b>'+esc(d.name)+'</b><div class="note">'+esc(d.file)+'</div></td>'+cells.join('')+'<td>'+n+'</td></tr>'}).join('')+'</tbody></table></div>'+
+   S.filter(d=>d.issues&&d.issues.length).map(d=>'<p class="note"><span class="warn">'+esc(d.name)+'</span> '+esc(d.issues.slice(0,3).join(' · '))+'</p>').join('')+'</div>';
+  // low marks
+  const lows=[];S.forEach(d=>d.inv.forEach(i=>{if(!inRange(i.month))return;i.s.forEach((v,k)=>{if(v!=null&&v<=V.kpi)lows.push({c:d.name,d:i.date||i.month,inv:i.inv,q:Q[k]||('Indicator '+(k+1)),v})})}));
+  lows.sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+  h+='<div class="card pn"><h2>Marks of '+V.kpi+' or less — what to follow up</h2>'+(lows.length?'<div class="tw"><table><thead><tr><th>Customer</th><th>Date</th><th>Invoice</th><th>Question</th><th>Mark</th></tr></thead><tbody>'+lows.slice(0,200).map(x=>'<tr><td>'+esc(x.c)+'</td><td>'+esc(x.d)+'</td><td>'+esc(x.inv)+'</td><td style="text-align:left;white-space:normal">'+esc(x.q)+'</td><td class="c1"><b>'+x.v+'</b></td></tr>').join('')+'</tbody></table></div>'+(lows.length>200?'<p class="note">Latest 200 of '+lows.length+' shown. The Excel download lists all.</p>':''):'<div class="empty" style="padding:20px">No mark of '+V.kpi+' or less in this period.</div>')+'</div>';
+  $('app').innerHTML=h;
+  /* ----- charts, each with its target ----- */
+  const labels=byM.map(x=>mlabel(x.m));
+  mk('c1',{type:'line',data:{labels,datasets:Q.map((q,k)=>({label:(k+1)+'. '+qshort(q),data:byM.map(x=>x.st.avg[k]),borderColor:PAL[k],backgroundColor:PAL[k],tension:.2,spanGaps:true,pointRadius:5,pointBackgroundColor:byM.map(x=>x.st.avg[k]!=null&&x.st.avg[k]<=V.kpi?'#DA1B22':PAL[k]),borderWidth:2})).concat([tline('KPI target: every indicator over '+V.kpi,V.kpi,labels.length,'#DA1B22')])},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'KPI — keeping every indicator over '+V.kpi+' (average mark by month)',font:{size:16}},legend:{position:'bottom'}},scales:{y:{min:1,max:5,title:{display:true,text:'average mark (1–5)'}}}}});
+  const lastAvg=last?last.st.avg:[];
+  mk('c2',{type:'bar',data:{labels:Q.map((q,k)=>(k+1)+'. '+qshort(q).slice(0,26)),datasets:[{label:'Selected period',data:per.avg,backgroundColor:per.avg.map(a=>a!=null&&a<=V.kpi?'#DA1B22':'#1F3A5F'),order:2},{label:'Latest month'+(last?' ('+mlabel(last.m)+')':''),data:lastAvg,backgroundColor:'#9CB4D6',order:2},tline('KPI target: over '+V.kpi,V.kpi,Q.length,'#DA1B22')]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Each indicator against the KPI',font:{size:15}},legend:{position:'bottom'}},scales:{y:{min:1,max:5}}}});
+  const cm=rm;const cs=S.map((d,i)=>({label:d.name,data:cm.map(m=>stat([d],x=>x.month===m).overall),borderColor:CPAL[i%5],backgroundColor:CPAL[i%5],tension:.2,spanGaps:true,pointRadius:4}));
+  if(S.length===1&&S[0].prev){const yrs=Object.keys(S[0].prev).filter(y=>cm.some(m=>m.slice(0,4)!==y)||true).sort();const py=yrs.find(y=>y<(cm[0]||'9999').slice(0,4));if(py)cs.push({label:py+' (from the customer sheet)',data:cm.map(m=>S[0].prev[py][+m.slice(5)-1]),borderColor:'#9AA3AF',borderDash:[3,3],pointRadius:2,spanGaps:true})}
+  mk('c3',{type:'line',data:{labels:cm.map(mlabel),datasets:cs.concat([tline('Target: '+V.obj+' or more',V.obj,cm.length,'#1D2127')])},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Customer satisfaction by customer',font:{size:15}},legend:{position:'bottom'}},scales:{y:{min:1,max:5}}}});
+  mk('c4',{type:'bar',data:{labels:Q.map((q,k)=>(k+1)+'. '+qshort(q).slice(0,26)),datasets:[1,2,3,4,5].map(m=>({label:'Mark '+m,data:per.mix.map(x=>x[m-1]),backgroundColor:MARK[m-1],stack:'s'}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Marks given, selected period (number of answers)',font:{size:15}},legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}});
+}
+
+/* ---------- actions ---------- */
+async function load(files){
+  if(!files.length)return;const ok=[],bad=[];
+  for(const f of files){$('st').textContent='Reading '+f.name+' …';
+    try{const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array',cellDates:true}),d=parseWorkbook(wb,f.name),i=DS.findIndex(x=>x.name.toLowerCase()===d.name.toLowerCase());
+      if(i>=0)DS[i]=d;else DS.push(d);ok.push(d.name+' — '+d.inv.length+' surveys, '+[...new Set(d.inv.map(x=>x.month))].length+' month(s)')}
+    catch(e){bad.push(f.name+': '+e.message)}}
+  if(ok.length){DS.sort((a,b)=>a.name.localeCompare(b.name));V.from=V.to='';save()}
+  $('st').innerHTML=(ok.length?'<b>'+ok.map(esc).join(' · ')+'</b>':'Nothing was added')+(bad.length?' <span class="warn">'+bad.map(esc).join(' · ')+'</span>':'');render();
+}
+$('f').onchange=e=>{const fs=[...e.target.files];e.target.value='';load(fs)};
+const dz=$('dropzone');['dragover','dragenter'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('over')}));['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('over')}));dz.addEventListener('drop',e=>load([...e.dataTransfer.files]));
+document.addEventListener('change',e=>{const i=e.target.id;
+  if(i==='cu'){V.cust=e.target.value;render()}else if(i==='fm'){V.from=e.target.value;render()}else if(i==='tm'){V.to=e.target.value;render()}
+  else if(i==='kp'){const v=parseFloat(e.target.value);V.kpi=v>=1&&v<=5?v:3;save();render()}else if(i==='ob'){const v=parseFloat(e.target.value);V.obj=v>=1&&v<=5?v:4;save();render()}});
+$('clr').onclick=()=>{if(confirm('Remove all uploaded customer satisfaction data from this browser?')){DS=[];try{localStorage.removeItem(KEY)}catch(_){}$('st').textContent='Data cleared. Upload the survey files again to see the dashboard.';render()}};
+$('xl').onclick=()=>{const wb=XLSX.utils.book_new(),S=sel(),Q=QS(),ms=allMonths().filter(inRange);
+  const A=[];S.forEach(d=>ms.forEach(m=>{const st=stat([d],i=>i.month===m);if(!st.inv)return;const o={Customer:d.name,Month:m,Surveys:st.inv};Q.forEach((q,k)=>o[(k+1)+'. '+q]=st.avg[k]==null?'':+st.avg[k].toFixed(2));o['Overall']=st.overall==null?'':+st.overall.toFixed(2);o['Every indicator over '+V.kpi]=st.avg.every(a=>a!=null&&a>V.kpi)?'Yes':'No';A.push(o)}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(A),'Averages by month');
+  const L=[];S.forEach(d=>d.inv.forEach(i=>{if(!inRange(i.month))return;i.s.forEach((v,k)=>{if(v!=null&&v<=V.kpi)L.push({Customer:d.name,Date:i.date,Invoice:i.inv,Question:Q[k],Mark:v})})}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L),'Marks of '+V.kpi+' or less');
+  const R=[];S.forEach(d=>d.inv.forEach(i=>{if(!inRange(i.month))return;const o={Customer:d.name,Month:i.month,Date:i.date,Invoice:i.inv};Q.forEach((q,k)=>o[(k+1)+'. '+q]=i.s[k]==null?'':i.s[k]);R.push(o)}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(R),'All survey marks');
+  XLSX.writeFile(wb,'Customer_satisfaction_'+(V.cust==='all'?'all_customers':V.cust.replace(/[^\w]+/g,'_'))+'.xlsx')};
+render();
+})();
+</script>
+</body>
+</html>

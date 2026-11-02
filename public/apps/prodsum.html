@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Summary — FITL</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F3F4F7;--card:#fff;--ink:#1B2230;--soft:#5F6B7B;--line:#DCE0E7;--navy:#1F3A5F;--A:#2B6CB0;--B:#D69E2E;--C:#2E9E6B;--U:#9AA3AF;--day:#E0A526;--night:#1F3A5F;--scrap:#C53030;--head:'Barlow Condensed','Arial Narrow',sans-serif}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,select,input{font:inherit;color:inherit}
+  header{background:var(--card);border-bottom:3px solid var(--navy);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:36px;width:auto;border-radius:4px}
+  h1{font:600 26px/1 var(--head);text-transform:uppercase;margin:0}
+  .sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#aab3c0}.btn:disabled{opacity:.45;cursor:not-allowed}
+  main{padding:16px 22px 50px;max-width:1500px;margin:0 auto}
+  .src{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-bottom:14px}
+  .s{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .s small{display:block;color:var(--soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+  .s .v{font-size:13px;margin-top:2px}.ok{color:#1F7A4D}.wait{color:#8A5A00}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .bar select{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:#fff}
+  .seg button{border:none;background:none;padding:6px 14px;cursor:pointer;font-weight:500}.seg button.on{background:var(--navy);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .k{padding:12px 14px}.k small{display:block;color:var(--soft);font-size:12px}.k b{font:600 30px/1.1 var(--head)}.k b.red{color:var(--scrap)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}
+  .cb{padding:12px 14px;height:340px;position:relative}.cb.tall{grid-column:1/-1;height:360px}
+  .tw{max-height:560px;overflow:auto;border-radius:10px;margin-bottom:14px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid #EEF0F4;text-align:right;white-space:nowrap}
+  th{background:#F7F8FA;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0;z-index:1}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff}th:first-child{background:#F7F8FA;z-index:2}
+  tr.tot td{font-weight:600;background:#F7F8FA}
+  th.gA{border-bottom:3px solid var(--A)}th.gB{border-bottom:3px solid var(--B)}th.gC{border-bottom:3px solid var(--C)}th.gU{border-bottom:3px solid var(--U)}th.sD{border-bottom:3px solid var(--day)}th.sN{border-bottom:3px solid var(--night)}th.tT{border-bottom:3px solid var(--ink)}
+  .empty{padding:44px 20px;text-align:center;color:var(--soft);line-height:1.7}
+  details{padding:12px 16px;margin-bottom:14px}summary{cursor:pointer;font-weight:600}
+  .note{color:var(--soft);font-size:12.5px;margin:8px 0 0;line-height:1.55}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.chip{padding:2px 10px;border-radius:10px;background:#EEF1F6;font-size:12.5px}.chip.w{background:#FFF3D6;color:#8A5A00}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Production Summary</h1><div class="sub">Production and scrap tyre weight — daily, weekly and monthly, by production group and by shift</div></div><label class="btn" style="margin:0;background:#DA1B22;border-color:#DA1B22;color:#fff;cursor:pointer">Upload report<input id="rf" type="file" accept=".xlsx,.xls" multiple hidden></label><button class="btn" id="xl" disabled>Download Excel</button></header>
+<main>
+<div class="src"><div class="s"><small>1 · Production summary report (Daily Tyres Production + Daily Quality)</small><div class="v wait" id="s1">Waiting: press “Upload report” above and choose the production summary report</div></div>
+<div class="s"><small>2 · Shift roster (SHIFT_CHANGE)</small><div class="v wait" id="s2">Optional: choose SHIFT_CHANGE.xlsx together with the report</div></div>
+<div class="s"><small>3 · Down time report</small><div class="v wait" id="s3">Waiting: import the production_down_time_report on the Press Downtime Dashboard tab</div></div></div>
+<div class="note" id="up" style="margin:-4px 0 10px;min-height:18px"></div>
+<div class="card empty" id="em">No data yet.<br>Press <b>Upload report</b> and choose the production summary report (RPT_PRODUCTION_SUMMARY_REPORT …). Its <b>Daily Tyres Production</b> and <b>Daily Quality</b> sheets feed this page <u>and the QC Department</u> (Tyre QC and Defect Analyser) — nothing is imported in the QC Department any more.<br>The shift groups are matched with the Daily Quality sheet, the shift roster and the down time report.</div>
+<div id="app" hidden></div>
+</main>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const KEY='fitl_prodsum_v1',MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Math.round(n).toLocaleString();
+const pad=n=>String(n).padStart(2,'0');
+const dt=d=>new Date(Math.round((d-25569)*864e5));
+const iso=d=>dt(d).toISOString().slice(0,10);
+const dnum=v=>typeof v==='number'&&v>40000?Math.floor(v):null;
+const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0};
+/* same relationships as the other dashboards: shift words, executive -> production group, loaded shift letters */
+const shiftOf=s=>{s=String(s||'').toUpperCase();if(s.includes('/'))return null;return s.includes('NIGHT')?'NIGHT':s.includes('DAY')?'DAY':null};
+const grpOf=e=>{e=String(e||'').trim().toUpperCase();if(/^(SUD|SUG)/.test(e))return 'A';if(/^(CHA|CAT)/.test(e))return 'B';if(/^PRA/.test(e))return 'C';return null};
+const qShift=s=>{s=String(s||'').trim().toUpperCase();return s[0]==='N'?'NIGHT':s[0]==='D'?'DAY':null};
+const gl=v=>{v=String(v||'').trim().toUpperCase();return v==='A'||v==='B'||v==='C'?v:null};
+
+let P={},S={},QG={},DX={},ROS=[],SRC={p:'',r:'',d:''};      // what was received
+let CELLS=new Map(),DATES=[],CHK={ros:0,q:0,x:0,none:0,dis:[]};  // what was worked out
+const V={period:'day',metric:'pw',from:null,to:null,touched:false};
+let TG=0.2;   // scrap KPI target, % of production weight (the 0.2 % quoted in the CAPA issue register); editable
+try{const t=parseFloat(localStorage.getItem('fitl_prodsum_target'));if(isFinite(t)&&t>=0)TG=t}catch(_){}
+const sheetNames=buf=>XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames;
+
+/* ---------- reading ---------- */
+function loadWorkbook(f){
+  const names=sheetNames(f.buffer),notes=[];
+  const ps=names.includes('Daily Tyres Production')?'Daily Tyres Production':names.includes('Production')?'Production':null,hasQ=names.includes('Daily Quality');
+  if(ps){P={};let n=0;const ws=XLSX.read(f.buffer,{type:'array',dense:true,sheets:ps}).Sheets[ps];
+    for(const r of XLSX.utils.sheet_to_json(ws,{raw:true})){const d=dnum(r.DATE),sh=shiftOf(r.Shift);if(d==null||!sh)continue;const k=d+'|'+sh,o=P[k]||(P[k]=[0,0]);o[0]+=num(r.QTY);o[1]+=num(r['NET WEIGHT / kg']);n++}
+    notes.push(nf(n)+' production rows')}
+  if(hasQ){S={};QG={};let n=0,sc=0;const ws=XLSX.read(f.buffer,{type:'array',dense:true,sheets:'Daily Quality'}).Sheets['Daily Quality'];
+    const a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true}),H=(a[0]||[]).map(h=>String(h==null?'':h).trim().toUpperCase()),ix=x=>H.indexOf(x);
+    const iD=ix('DATE LOADED'),iS=ix('SHIFT LOADED'),iG=ix('GROUP'),iC=ix('CLASSIFICATION'),iQ=ix('QUANTITY'),iK=ix("SCRAP'S KG");
+    if(iD<0||iS<0||iG<0||iC<0)throw new Error('the Daily Quality sheet needs DATE LOADED, SHIFT LOADED, GROUP and CLASSIFICATION columns');
+    for(let i=1;i<a.length;i++){const r=a[i]||[],d=dnum(r[iD]),sh=qShift(r[iS]);if(d==null||!sh)continue;const k=d+'|'+sh,g=gl(r[iG]);n++;
+      if(g){const o=QG[k]||(QG[k]={});o[g]=(o[g]||0)+1}
+      if(String(r[iC]).trim().toUpperCase()==='SCRAP'){const q=num(r[iQ]),o=S[k]||(S[k]=[0,0]);o[0]+=q>0?q:1;o[1]+=iK>=0?num(r[iK]):0;sc++}}
+    notes.push(nf(n)+' Daily Quality rows ('+nf(sc)+' scrap)')}
+  if(notes.length){SRC.p=f.name+' · '+notes.join(' · ');return true}
+  // a small file with Date / Shift / Shift Group columns is the shift roster
+  const wb=XLSX.read(f.buffer,{type:'array'});
+  for(const sn of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true});if(!a.length)continue;
+    const H=a[0].map(h=>String(h==null?'':h).trim().toUpperCase()),iD=H.indexOf('DATE'),iS=H.indexOf('SHIFT'),iG=H.indexOf('SHIFT GROUP');if(iD<0||iS<0||iG<0)continue;
+    const e=[];for(let i=1;i<a.length;i++){const r=a[i]||[],d=dnum(r[iD]),sh=qShift(r[iS]),g=gl(r[iG]);if(d!=null&&sh&&g)e.push([d-25569,sh,g])}
+    if(e.length){ROS=e;SRC.r=f.name+' · '+e.length+' shifts';return true}}
+  return false;
+}
+function loadDowntime(f){
+  if(!sheetNames(f.buffer).includes('Daily down time'))return false;
+  const ws=XLSX.read(f.buffer,{type:'array',dense:true,sheets:'Daily down time'}).Sheets['Daily down time'];DX={};let n=0;
+  for(const r of XLSX.utils.sheet_to_json(ws,{raw:true})){const d=dnum(r.DATE),sh=shiftOf(r.SHIFT);if(d==null||!sh)continue;const k=d+'|'+sh,o=DX[k]||(DX[k]={m:0,g:{}});
+    if(typeof r.TIME==='number')o.m+=r.TIME;const g=grpOf(r.EXECUTIVE);if(g)o.g[g]=(o.g[g]||0)+1;n++}
+  SRC.d=f.name+' · '+nf(n)+' rows';return true;
+}
+function incoming(m){
+  if(!m||!Array.isArray(m.files))return;
+  try{let ok=false;
+    if(m.type==='fitl-workbook')m.files.forEach(f=>{if(loadWorkbook(f))ok=true});
+    else if(m.type==='fitl-downtime-workbook')m.files.forEach(f=>{if(loadDowntime(f))ok=true});
+    if(ok){compute();save();render()}
+  }catch(x){$('s1').className='v wait';$('s1').textContent='Could not read the received workbook: '+x.message}}
+addEventListener('message',ev=>{if(ev.source!==parent)return;incoming(ev.data)});
+
+/* ---------- uploading the production summary report ----------
+   The report is a very large workbook (30+ sheets). It is opened once, in a background worker so this page stays usable,
+   and only the two sheets the system needs are kept — Daily Tyres Production and Daily Quality — as a small workbook that
+   the host page hands to this page and to the QC Department (Tyre QC and Defect Analyser) and the Production KPI Dashboard. */
+async function core(XLSX,file){
+  /* Reads only the sheets the system needs from a (possibly huge) workbook by streaming it: the .xlsx is a zip file, so the
+     needed sheet parts are inflated chunk by chunk and only the needed columns are kept. Nothing like the whole 170 MB of sheet
+     text is ever held in memory. The kept rows are written out as a small workbook. */
+  const TARGETS=['Daily Quality','Daily Tyres Production','Production','Total Waste'];
+  const KEEP=['DESCRIPTION','QTY','NET WEIGHT / KG','DATE','YEAR','WEEK','MONTH','SHIFT'];
+  const up=h=>String(h==null?'':h).trim().replace(/\s+/g,' ').toUpperCase();
+  const unesc=s=>s.indexOf('&')<0?s:s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi,(m,e)=>e[0]==='#'?String.fromCodePoint(e[1]==='x'||e[1]==='X'?parseInt(e.slice(2),16):parseInt(e.slice(1),10)):({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"})[e.toLowerCase()]);
+  const passThrough=async()=>({kind:'pass',buf:await file.arrayBuffer(),info:[]});
+  // ---- the zip directory ----
+  let idx;
+  try{
+    const size=file.size,tl=Math.min(size,66000),tail=new DataView(await file.slice(size-tl,size).arrayBuffer());
+    let e=-1;for(let i=tl-22;i>=0;i--){if(tail.getUint32(i,true)===0x06054b50){e=i;break}}
+    if(e<0)return passThrough();
+    const total=tail.getUint16(e+10,true),cdSize=tail.getUint32(e+12,true),cdOff=tail.getUint32(e+16,true);
+    const cd=new DataView(await file.slice(cdOff,cdOff+cdSize).arrayBuffer()),dec=new TextDecoder();let p=0;idx={};
+    for(let i=0;i<total;i++){if(cd.getUint32(p,true)!==0x02014b50)break;
+      const nl=cd.getUint16(p+28,true),el=cd.getUint16(p+30,true),cl=cd.getUint16(p+32,true);
+      idx[dec.decode(new Uint8Array(cd.buffer,p+46,nl))]={m:cd.getUint16(p+10,true),cs:cd.getUint32(p+20,true),off:cd.getUint32(p+42,true)};p+=46+nl+el+cl}
+  }catch(_){return passThrough()}
+  const stream=async n=>{const ent=idx[n];if(!ent)return null;
+    const lh=new DataView(await file.slice(ent.off,ent.off+30).arrayBuffer()),st=ent.off+30+lh.getUint16(26,true)+lh.getUint16(28,true),raw=file.slice(st,st+ent.cs).stream();
+    return ent.m===0?raw:raw.pipeThrough(new DecompressionStream('deflate-raw'))};
+  const text=async n=>{const s=await stream(n);return s?await new Response(s).text():''};
+  // ---- which part is which sheet ----
+  const wbx=await text('xl/workbook.xml'),rels=await text('xl/_rels/workbook.xml.rels'),rid={};
+  rels.replace(/<Relationship\b[^>]*>/g,t=>{const i=/\bId="([^"]+)"/.exec(t),g=/\bTarget="([^"]+)"/.exec(t);if(i&&g)rid[i[1]]=g[1].replace(/^\//,'').replace(/^(?!xl\/)/,'xl/');return t});
+  const sheets={};wbx.replace(/<sheet\b[^>]*>/g,t=>{const n=/\bname="([^"]*)"/.exec(t),r=/\br:id="([^"]+)"/.exec(t);if(n&&r)sheets[unesc(n[1])]=rid[r[1]];return t});
+  const have=TARGETS.filter(n=>sheets[n]&&idx[sheets[n]]);
+  if(!have.length)return passThrough();
+  // ---- shared strings ----
+  const ss=[];(await text('xl/sharedStrings.xml')).replace(/<si\b[^>]*>([\s\S]*?)<\/si>/g,(m,b)=>{let s='';b.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g,(x,t)=>{s+=t;return x});ss.push(unesc(s));return m});
+  // one cell's value, whatever the way it is stored (shared string, inline, formula text, number)
+  const cellVal=(at,inner)=>{const tt=/\bt="(\w+)"/.exec(at),v=/<v\b[^>]*>([\s\S]*?)<\/v>/.exec(inner);let val=null;
+    if(tt&&tt[1]==='s'){val=v?ss[+v[1]]:null}else if(tt&&tt[1]==='inlineStr'){const q=/<t\b[^>]*>([\s\S]*?)<\/t>/.exec(inner);val=q?unesc(q[1]):null}
+    else if(tt&&tt[1]==='str'){val=v?unesc(v[1]):null}else if(tt&&(tt[1]==='e')){val=null}else if(v&&v[1]!==''){val=+v[1];if(!isFinite(val))val=null}
+    return val};
+  // a sheet that is a layout, not a table (Total Waste): every cell kept at its own row and column
+  async function readGrid(name){
+    const rd=(await stream(sheets[name])).getReader(),td=new TextDecoder(),cre=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g,grid=[];let buf='';
+    const colIx=L=>{let n=0;for(const ch of L)n=n*26+ch.charCodeAt(0)-64;return n-1};
+    for(;;){const r=await rd.read();if(r.value)buf+=td.decode(r.value,{stream:true});
+      let i;while((i=buf.indexOf('</row>'))>=0){const j=buf.lastIndexOf('<row',i);const seg=j>=0?buf.slice(j,i+6):'';buf=buf.slice(i+6);if(!seg)continue;
+        const rn=+((/\br="(\d+)"/.exec(seg.slice(0,seg.indexOf('>')))||[0,0])[1]);if(!rn)continue;cre.lastIndex=0;let m;
+        while((m=cre.exec(seg))){const inner=m[2];if(!inner)continue;const ref=/\br="([A-Z]+)\d+"/.exec(m[1]);if(!ref)continue;const val=cellVal(m[1],inner);if(val!==null){(grid[rn-1]||(grid[rn-1]=[]))[colIx(ref[1])]=val}}}
+      if(r.done)break}
+    for(let r=0;r<grid.length;r++)if(!grid[r])grid[r]=[];
+    return grid}
+  // ---- stream one sheet: every row's wanted cells ----
+  async function readSheet(name,pickCols){
+    const rd=(await stream(sheets[name])).getReader(),td=new TextDecoder();let buf='',head=null,keep=null,order=null;const out=[];
+    const cre=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    const row=seg=>{const cells={};cre.lastIndex=0;let m;
+      while((m=cre.exec(seg))){const inner=m[2];if(!inner)continue;const at=m[1],ref=/\br="([A-Z]+)\d+"/.exec(at);if(!ref)continue;const col=ref[1];
+        if(keep&&!keep.has(col))continue;
+        const val=cellVal(at,inner);if(val!==null)cells[col]=val}
+      return cells};
+    for(;;){const r=await rd.read();if(r.value)buf+=td.decode(r.value,{stream:true});
+      let i;while((i=buf.indexOf('</row>'))>=0){const j=buf.lastIndexOf('<row',i);const seg=j>=0?buf.slice(j,i+6):'';buf=buf.slice(i+6);if(!seg)continue;
+        const cells=row(seg);
+        if(!head){head=cells;const cols=Object.keys(cells);
+          if(pickCols){const seen={};order=[];KEEP.forEach(k=>{const c=cols.find(c=>up(cells[c])===k);if(c&&!seen[c]){seen[c]=1;order.push(c)}})}
+          else order=cols.sort((a,b)=>(a.length-b.length)||(a<b?-1:1));
+          keep=new Set(order);out.push(order.map(c=>cells[c]==null?null:cells[c]));continue}
+        let any=false;const a=order.map(c=>{const v=cells[c];if(v!==undefined)any=true;return v===undefined?null:v});
+        if(any)out.push(a)}
+      if(r.done)break}
+    return out}
+  const book=XLSX.utils.book_new(),info=[];
+  for(const n of have){
+    if(n==='Total Waste'){XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(await readGrid(n)),n);info.push('Total Waste');continue}
+    const rows=await readSheet(n,n!=='Daily Quality'),ws=XLSX.utils.aoa_to_sheet(rows);
+    (rows[0]||[]).map(up).forEach((h,c)=>{if(h.indexOf('DATE')>=0)for(let r=1;r<rows.length;r++){const cell=ws[XLSX.utils.encode_cell({r:r,c:c})];if(cell&&cell.t==='n')cell.z='yyyy-mm-dd'}});
+    XLSX.utils.book_append_sheet(book,ws,n);info.push(n+': '+(rows.length-1).toLocaleString()+' rows')}
+  const x=XLSX.write(book,{type:'array',bookType:'xlsx',compression:true});
+  return{kind:'slim',buf:x instanceof ArrayBuffer?x:x.buffer.slice(x.byteOffset,x.byteOffset+x.byteLength),info:info}
+}
+const WSRC='importScripts("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");'+core.toString()+';onmessage=function(e){core(self.XLSX,e.data.file).then(function(r){postMessage({kind:r.kind,buf:r.buf,info:r.info},[r.buf])}).catch(function(x){postMessage({err:String(x&&x.message||x)})})};';
+function extract(file){return new Promise((res,rej)=>{
+  let w=null;try{w=new Worker(URL.createObjectURL(new Blob([WSRC],{type:'text/javascript'})))}catch(_){}
+  const here=()=>core(XLSX,file).then(res,rej);
+  if(!w)return here();
+  w.onmessage=e=>{w.terminate();e.data.err?rej(new Error(e.data.err)):res(e.data)};
+  w.onerror=()=>{w.terminate();here()};
+  w.postMessage({file:file})})}
+$('rf').onchange=async e=>{
+  const files=[...e.target.files];e.target.value='';if(!files.length)return;
+  const up=$('up'),t0=Date.now();let cur='';const tick=setInterval(()=>{up.textContent=cur+' … '+Math.round((Date.now()-t0)/1000)+' s (a large report takes under a minute)'},400);
+  try{
+    const out=[],notes=[];
+    const rosterLike=buf=>{try{const wb=XLSX.read(buf,{type:'array'});return wb.SheetNames.some(n=>{const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,sheetRows:3});const H=(a[0]||[]).map(h=>String(h==null?'':h).trim().toUpperCase());return H.includes('DATE')&&H.includes('SHIFT')&&(H.includes('SHIFT GROUP')||H.includes('GROUP'))})}catch(_){return false}};
+    for(const f of files){cur='Reading '+f.name;const r=await extract(f);
+      if(r.kind==='pass'&&!rosterLike(r.buf))throw new Error('“'+f.name+'” has no Daily Quality, Daily Tyres Production or Total Waste sheet and is not a shift roster (Date, Shift, Shift Group). Choose the production summary report.');
+      out.push({name:f.name,buffer:r.buf});if(r.info&&r.info.length)notes.push(r.info.join(' · '))}
+    clearInterval(tick);
+    const m={type:'fitl-workbook',files:out};
+    if(parent!==window)parent.postMessage(m,'*',out.map(o=>o.buffer));else incoming(m);
+    up.textContent='Report read in '+Math.round((Date.now()-t0)/1000)+' s'+(notes.length?' — '+notes.join(' · '):'')+'. Sent to this page, the QC Department (Tyre QC and Defect Analyser) and the Production KPI Dashboard.';
+  }catch(x){clearInterval(tick);up.textContent='The report could not be read: '+(x&&x.message||x)}};
+
+/* ---------- deciding the production group of every shift ---------- */
+function pattern(){
+  if(!ROS.length)return null;const by={};let mn=1e9,mx=-1e9;
+  ROS.forEach(e=>{by[e[0]+'|'+e[1]]=e[2];if(e[0]<mn)mn=e[0];if(e[0]>mx)mx=e[0]});
+  let period=null;
+  for(let p=1;p<=mx-mn&&!period;p++){let ok=true,saw=false;for(let d=mn;d+p<=mx&&ok;d++)for(const s of ['DAY','NIGHT']){const a=by[d+'|'+s],b=by[(d+p)+'|'+s];if(a&&b){saw=true;if(a!==b)ok=false}}if(ok&&saw)period=p}
+  return{by,mn,mx,period};
+}
+const fromRoster=(pt,d,sh)=>{if(!pt)return null;const e=d-25569,x=pt.by[e+'|'+sh];if(x)return x;if(e<pt.mn||!pt.period)return null;return pt.by[(pt.mn+(e-pt.mn)%pt.period)+'|'+sh]||null};
+const maj=o=>{let b=null,n=0;for(const g in o)if(o[g]>n){n=o[g];b=g}return b};
+const z=()=>({pq:0,pw:0,sq:0,sw:0,dm:0});
+function compute(){
+  const pt=pattern();CELLS=new Map();CHK={ros:0,q:0,x:0,none:0,dis:[]};
+  const keys=new Set([...Object.keys(P),...Object.keys(S),...Object.keys(DX)]);
+  keys.forEach(k=>{const [ds,sh]=k.split('|'),d=+ds;
+    const a=fromRoster(pt,d,sh),b=QG[k]?maj(QG[k]):null,c=DX[k]&&DX[k].g?maj(DX[k].g):null;
+    let g,src;if(a){g=a;src='ros'}else if(b){g=b;src='q'}else if(c){g=c;src='x'}else{g='U';src='none'}
+    CHK[src]++;if(new Set([a,b,c].filter(Boolean)).size>1)CHK.dis.push({d,sh,a,b,c,use:g});
+    const ck=d+'|'+sh+'|'+g;let cell=CELLS.get(ck);if(!cell){cell=Object.assign(z(),{d,sh,g});CELLS.set(ck,cell)}
+    const p=P[k]||[0,0],s=S[k]||[0,0];cell.pq+=p[0];cell.pw+=p[1];cell.sq+=s[0];cell.sw+=s[1];cell.dm+=DX[k]?DX[k].m:0});
+  DATES=[...new Set([...CELLS.values()].map(c=>c.d))].sort((a,b)=>a-b);
+  // the range follows the data until you pick one yourself
+  if(DATES.length&&(!V.touched||V.from==null||V.from<DATES[0]||V.from>DATES[DATES.length-1]||V.to==null||V.to>DATES[DATES.length-1]||V.to<DATES[0])){V.from=DATES[0];V.to=DATES[DATES.length-1];V.touched=false}
+}
+
+/* ---------- periods: factory week runs Sunday Day shift to Saturday Night shift ---------- */
+function pkey(d){
+  const t=dt(d);
+  if(V.period==='day')return{key:String(d),ord:d,label:DOW[t.getUTCDay()]+' '+t.getUTCDate()+' '+MONS[t.getUTCMonth()]+' '+t.getUTCFullYear()};
+  if(V.period==='month')return{key:t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1),ord:t.getUTCFullYear()*100+t.getUTCMonth(),label:MONS[t.getUTCMonth()]+' '+t.getUTCFullYear()};
+  const y=t.getUTCFullYear(),jan1=Date.UTC(y,0,1)/864e5+25569,w=Math.floor(((d-jan1+1)+new Date(Date.UTC(y,0,1)).getUTCDay()-1)/7)+1,s=d-t.getUTCDay(),a=dt(s),b=dt(s+6);
+  return{key:y+'-W'+pad(w),ord:s,label:'Wk '+w+' · '+a.getUTCDate()+' '+MONS[a.getUTCMonth()]+' – '+b.getUTCDate()+' '+MONS[b.getUTCMonth()]+' '+b.getUTCFullYear()};
+}
+function aggregate(){
+  const rows=new Map();
+  CELLS.forEach(c=>{if(c.d<V.from||c.d>V.to)return;const p=pkey(c.d);let r=rows.get(p.key);
+    if(!r){r={label:p.label,ord:p.ord,tot:z(),g:{A:z(),B:z(),C:z(),U:z()},s:{DAY:z(),NIGHT:z()}};rows.set(p.key,r)}
+    [r.tot,r.g[c.g],r.s[c.sh]].forEach(t=>{t.pq+=c.pq;t.pw+=c.pw;t.sq+=c.sq;t.sw+=c.sw;t.dm+=c.dm})});
+  return[...rows.values()].sort((a,b)=>a.ord-b.ord);
+}
+const METRICS=[['pw','Production weight (kg)'],['pq','Production (tyres)'],['sw','Scrap tyre weight (kg)'],['sq','Scrap (tyres)'],['spct','Scrap % of production weight']];
+const val=(o,m)=>m==='spct'?(o.pw>0?o.sw/o.pw*100:null):o[m];
+const fmt=(v,m)=>v==null?'–':m==='spct'?v.toFixed(2)+' %':nf(v);
+
+/* ---------- screen ---------- */
+let CH=[];
+function srcLine(){
+  const set=(id,t,ok)=>{$(id).textContent=t;$(id).className='v '+(ok?'ok':'wait')};
+  set('s1',SRC.p||'Waiting: press “Upload report” above and choose the production summary report',!!SRC.p);
+  set('s2',SRC.r||'Optional: choose SHIFT_CHANGE.xlsx together with the report',!!SRC.r);
+  set('s3',SRC.d||'Waiting: import the production_down_time_report on the Press Downtime Dashboard tab',!!SRC.d);
+}
+function render(){
+  srcLine();
+  if(!DATES.length){$('app').hidden=true;$('em').hidden=false;$('xl').disabled=true;return}
+  $('em').hidden=true;$('app').hidden=false;$('xl').disabled=false;
+  const rows=aggregate(),tot=rows.reduce((a,r)=>{['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=r.tot[k]);return a},z());
+  const hasU=rows.some(r=>r.g.U.pq||r.g.U.pw||r.g.U.sq||r.g.U.sw);
+  const dims=[['tot','Total','tT'],['A','Group A','gA'],['B','Group B','gB'],['C','Group C','gC']].concat(hasU?[['U','Unmatched','gU']]:[]).concat([['DAY','Day shift','sD'],['NIGHT','Night shift','sN']]);
+  const get=(r,k)=>k==='tot'?r.tot:(k==='DAY'||k==='NIGHT')?r.s[k]:r.g[k];
+  const dl=a=>iso(a);
+  let h='<div class="bar"><span class="seg" id="sp">'+[['day','Daily'],['week','Weekly'],['month','Monthly']].map(o=>'<button data-p="'+o[0]+'"'+(V.period===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</span>'+
+    '<select id="sm">'+METRICS.map(o=>'<option value="'+o[0]+'"'+(V.metric===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'+
+    '<label>From <select id="sf">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.from?' selected':'')+'>'+dl(d)+'</option>').join('')+'</select></label><label>To <select id="st">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.to?' selected':'')+'>'+dl(d)+'</option>').join('')+'</select></label>'+
+    '<span class="seg" id="sr"><button data-r="all">Whole range</button><button data-r="month">Latest month</button><button data-r="4w">Latest 4 weeks</button></span><label>Scrap KPI target <input id="tg" type="number" min="0" step="0.05" value="'+TG+'" style="width:76px;border:1px solid var(--line);border-radius:6px;padding:6px 8px"> % of production weight</label></div>';
+  h+='<div class="kpis"><div class="card k"><small>Production (tyres)</small><b>'+nf(tot.pq)+'</b></div><div class="card k"><small>Production weight (kg)</small><b>'+nf(tot.pw)+'</b></div><div class="card k"><small>Scrap tyres</small><b class="red">'+nf(tot.sq)+'</b></div><div class="card k"><small>Scrap tyre weight (kg)</small><b class="red">'+nf(tot.sw)+'</b></div><div class="card k"><small>Scrap % of production weight</small><b class="red">'+(tot.pw>0?(tot.sw/tot.pw*100).toFixed(2)+' %':'–')+'</b></div>'+(SRC.d?'<div class="card k"><small>Down time (press-hours)</small><b>'+(tot.dm/60).toFixed(0)+'</b></div>':'')+'</div>';
+  h+='<div class="grid2"><div class="card cb tall"><canvas id="c1"></canvas></div><div class="card cb"><canvas id="c2"></canvas></div><div class="card cb"><canvas id="c3"></canvas></div></div>';
+  h+='<div class="card tw"><table><thead><tr><th>'+(V.period==='day'?'Day':V.period==='week'?'Week':'Month')+' · '+esc(METRICS.find(m=>m[0]===V.metric)[1])+'</th>'+dims.map(d=>'<th class="'+d[2]+'">'+d[1]+'</th>').join('')+'</tr></thead><tbody>'+
+    rows.map(r=>'<tr><td>'+esc(r.label)+'</td>'+dims.map(d=>'<td>'+fmt(val(get(r,d[0]),V.metric),V.metric)+'</td>').join('')+'</tr>').join('')+
+    '<tr class="tot"><td>Total</td>'+dims.map(d=>{const a=z();rows.forEach(r=>{const o=get(r,d[0]);['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=o[k])});return'<td>'+fmt(val(a,V.metric),V.metric)+'</td>'}).join('')+'</tr></tbody></table></div>';
+  h+='<details class="card"><summary>How the production group of each shift was decided</summary><div class="chips"><span class="chip">Shift roster pattern: '+CHK.ros+' shifts</span><span class="chip">Daily Quality sheet (loaded group): '+CHK.q+'</span><span class="chip">Down time report (executive): '+CHK.x+'</span>'+(CHK.none?'<span class="chip w">Not matched to any group: '+CHK.none+'</span>':'')+(CHK.dis.length?'<span class="chip w">Sources disagree on '+CHK.dis.length+' shifts</span>':'<span class="chip">No disagreements between sources</span>')+'</div>'+
+    '<p class="note">Order of preference: the shift roster pattern (SHIFT_CHANGE) from its first date on, then the group recorded in the Daily Quality sheet for that loaded date and shift, then the executive in the down time report (Sudath = A, Chathura = B, Prasanna = C). Scrap tyres are counted on the date and shift they were <b>loaded</b>, so scrap and production of the same shift line up. Factory week runs Sunday Day shift to Saturday Night shift.</p>'+
+    (CHK.dis.length?'<div class="tw" style="max-height:260px;margin:8px 0 0"><table><thead><tr><th>Date</th><th>Shift</th><th>Roster</th><th>Daily Quality</th><th>Down time exec.</th><th>Used</th></tr></thead><tbody>'+CHK.dis.sort((a,b)=>b.d-a.d).slice(0,60).map(x=>'<tr><td>'+iso(x.d)+'</td><td>'+(x.sh==='DAY'?'Day':'Night')+'</td><td>'+(x.a||'–')+'</td><td>'+(x.b||'–')+'</td><td>'+(x.c||'–')+'</td><td><b>'+x.use+'</b></td></tr>').join('')+'</tbody></table></div>':'')+'</details>';
+  $('app').innerHTML=h;
+  charts(rows,dims,get);
+}
+function charts(rows,dims,get){
+  CH.forEach(c=>c.destroy());CH=[];if(typeof Chart==='undefined'||!$('c1'))return;
+  Chart.defaults.font.family="Inter,system-ui,sans-serif";
+  const COL={A:'#2B6CB0',B:'#D69E2E',C:'#2E9E6B',U:'#9AA3AF',DAY:'#E0A526',NIGHT:'#1F3A5F'},lab=rows.map(r=>r.label),M=V.metric,mt=METRICS.find(m=>m[0]===M)[1];
+  const mk=(id,type,ds,title,opt)=>CH.push(new Chart($(id),{type,data:{labels:lab,datasets:ds},options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:title,font:{size:14}},legend:{position:'bottom'}}},opt||{})}));
+  const pct=M==='spct',gs=['A','B','C'].concat(rows.some(r=>r.g.U.pw||r.g.U.pq||r.g.U.sw||r.g.U.sq)?['U']:[]);
+  mk('c1',pct?'line':'bar',(pct?[{label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0}]:[]).concat(gs.map(g=>({label:g==='U'?'Unmatched':'Group '+g,data:rows.map(r=>val(r.g[g],M)),backgroundColor:COL[g],borderColor:COL[g],stack:'g',tension:.25,spanGaps:true}))),mt+' — by production group',pct?{}:{scales:{x:{stacked:true},y:{stacked:true}}});
+  mk('c2',pct?'line':'bar',(pct?[{label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0}]:[]).concat(['DAY','NIGHT'].map(s=>({label:s==='DAY'?'Day shift':'Night shift',data:rows.map(r=>val(r.s[s],M)),backgroundColor:COL[s],borderColor:COL[s],tension:.25,spanGaps:true}))),mt+' — Day vs Night');
+  CH.push(new Chart($('c3'),{data:{labels:lab,datasets:[{type:'bar',label:'Production weight (kg)',data:rows.map(r=>r.tot.pw),backgroundColor:'#9CB4D6',yAxisID:'y'},{type:'line',label:'Scrap % of production weight',data:rows.map(r=>val(r.tot,'spct')),borderColor:'#C53030',backgroundColor:'#C53030',yAxisID:'y1',tension:.25,spanGaps:true},{type:'line',label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0,yAxisID:'y1'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Production weight and scrap % — total',font:{size:14}},legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'kg'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'scrap %'},suggestedMin:0}}}}));
+}
+document.addEventListener('click',e=>{
+  const p=e.target.closest('#sp button');if(p){V.period=p.dataset.p;render();return}
+  const r=e.target.closest('#sr button');if(r&&DATES.length){const last=DATES[DATES.length-1];
+    V.touched=r.dataset.r!=='all';
+    if(r.dataset.r==='all'){V.from=DATES[0];V.to=last}
+    else if(r.dataset.r==='month'){const t=dt(last),s=Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),1)/864e5+25569;V.from=DATES.find(d=>d>=s)||DATES[0];V.to=last}
+    else{V.from=DATES.find(d=>d>=last-27)||DATES[0];V.to=last}
+    render()}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='tg'){const v=parseFloat(e.target.value);TG=isFinite(v)&&v>=0?v:0;try{localStorage.setItem('fitl_prodsum_target',String(TG))}catch(_){}render()}
+  else if(e.target.id==='sm'){V.metric=e.target.value;render()}
+  else if(e.target.id==='sf'){V.touched=true;V.from=+e.target.value;if(V.to<V.from)V.to=V.from;render()}
+  else if(e.target.id==='st'){V.touched=true;V.to=+e.target.value;if(V.from>V.to)V.from=V.to;render()}
+});
+
+/* ---------- Excel ---------- */
+$('xl').onclick=()=>{
+  const rows=aggregate(),dims=[['tot','Total'],['A','Group A'],['B','Group B'],['C','Group C'],['U','Unmatched'],['DAY','Day shift'],['NIGHT','Night shift']],get=(r,k)=>k==='tot'?r.tot:(k==='DAY'||k==='NIGHT')?r.s[k]:r.g[k];
+  const wide=rows.map(r=>{const o={Period:r.label};METRICS.forEach(m=>dims.forEach(d=>{const v=val(get(r,d[0]),m[0]);o[m[1]+' · '+d[1]]=v==null?'':(m[0]==='spct'?+v.toFixed(2):Math.round(v))}));return o});
+  const tidy=[];CELLS.forEach(c=>{if(c.d<V.from||c.d>V.to)return;tidy.push({Date:iso(c.d),Period:pkey(c.d).label,Shift:c.sh==='DAY'?'Day':'Night',Group:c.g==='U'?'Unmatched':c.g,'Production tyres':Math.round(c.pq),'Production kg':Math.round(c.pw),'Scrap tyres':Math.round(c.sq),'Scrap kg':Math.round(c.sw),'Scrap % (weight)':c.pw>0?+(c.sw/c.pw*100).toFixed(2):'','Down time (press-hours)':+(c.dm/60).toFixed(1)})});
+  tidy.sort((a,b)=>a.Date<b.Date?-1:a.Date>b.Date?1:(a.Shift<b.Shift?1:-1));
+  const chk=CHK.dis.map(x=>({Date:iso(x.d),Shift:x.sh==='DAY'?'Day':'Night','Shift roster':x.a||'','Daily Quality':x.b||'','Down time executive':x.c||'',Used:x.use}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(wide),V.period==='day'?'Daily':V.period==='week'?'Weekly':'Monthly');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tidy),'Date x shift x group');if(chk.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(chk),'Group source check');
+  XLSX.writeFile(wb,'Production_Summary_'+iso(V.from)+'_to_'+iso(V.to)+'.xlsx');
+};
+
+/* ---------- keep what was received ---------- */
+function save(){try{localStorage.setItem(KEY,JSON.stringify({P,S,QG,DX,ROS,SRC}))}catch(_){}}
+function restore(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return;P=s.P||{};S=s.S||{};QG=s.QG||{};DX=s.DX||{};ROS=s.ROS||[];SRC=Object.assign({p:'',r:'',d:''},s.SRC);compute();render()}catch(_){}}
+restore();srcLine();
+try{parent.postMessage({type:'fitl-prodsum-ready'},'*')}catch(_){}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Attendance — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--navy:#1F3A5F;--head:'Barlow Condensed','Arial Narrow',sans-serif;
+    --Day:#E0A526;--Night:#1F3A5F;--General:#2E9E6B;--Office:#7B61C9;--Other:#9AA3AF}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select{font:inherit;color:inherit}
+  h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}
+  h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#B9B2A6}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn:disabled{opacity:.45;cursor:not-allowed}
+  main{padding:16px 22px 50px;max-width:1500px;margin:0 auto}
+  .status{font-size:12.5px;color:var(--soft);margin:0 0 12px}.status b{color:var(--ink)}.warn{color:#8A5A00;background:#FFF3D6;padding:1px 8px;border-radius:9px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
+  .tab{border:none;background:none;padding:9px 16px;font-weight:600;color:var(--soft);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}.tab.on{color:var(--ink);border-bottom-color:var(--red)}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .bar select,.bar input{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .t{padding:12px 14px}.t small{display:block;color:var(--soft);font-size:12px}.t b{font:600 30px/1.1 var(--head)}
+  .cb{padding:12px 14px;height:330px;position:relative;margin-bottom:14px}
+  .tw{overflow:auto;max-height:560px;margin-bottom:14px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
+  th{background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0;z-index:1}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1}th:first-child{background:#F7F4EE;z-index:2}
+  td.l,th.l{text-align:left}tr.tot td{font-weight:600;background:#F7F4EE}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+  .empty{padding:44px 20px;text-align:center;color:var(--soft);line-height:1.7}
+  details{padding:12px 16px;margin-bottom:14px}summary{cursor:pointer;font-weight:600}
+  .codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}.codes label{display:flex;gap:8px;align-items:center}
+  .codes select{border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+  .note{color:var(--soft);font-size:12.5px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Daily Attendance</h1><div class="sub">Upload the daily attendance report (crViewer PDF) — see attendance by location, day by day, week by week and month by month</div></div>
+<label class="btn red" style="margin:0">Upload attendance report(s)<input id="f" type="file" accept=".pdf,application/pdf" multiple hidden></label><button class="btn" id="xl" disabled>Download Excel</button><button class="btn" id="bk" disabled>Backup</button><label class="btn" style="margin:0">Restore<input id="rs" type="file" accept=".json" hidden></label></header>
+<main>
+<p class="status" id="st">Upload one or more “Daily Attendance Report” PDFs (one per day). Each upload replaces that day’s figures for the locations it contains.</p>
+<div id="app" hidden>
+ <div class="tabs"><button class="tab on" data-v="day">Daily</button><button class="tab" data-v="week">Weekly</button><button class="tab" data-v="month">Monthly</button><button class="tab" data-v="people">People</button></div>
+ <div id="v"></div>
+ <details class="card"><summary>Shift codes — which kind of shift each code is</summary><div class="note">Used for the Day / Night / General / Office split. Change a code here and the recent days are recounted.</div><div class="codes" id="codes"></div></details>
+</div>
+<div class="card empty" id="em">No attendance uploaded yet.<br>Choose the PDF(s) printed from the attendance viewer (“Daily Attendance Report”).</div>
+</main>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const KEY='fitl_attendance_v1',KEEP=90,CLASSES=['Day','Night','General','Office','Off shift','Other'];
+const COL={Day:'#E0A526',Night:'#1F3A5F',General:'#2E9E6B',Office:'#7B61C9',Other:'#9AA3AF','Off shift':'#C2410C'},PAL=['#1F3A5F','#DA1B22','#2E9E6B','#E0A526','#7B61C9','#00A6C8','#C2410C','#6B7280'];
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),nf=n=>Math.round(n).toLocaleString();
+const U=iso=>Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10)),fromU=t=>new Date(t).toISOString().slice(0,10);
+const lab=iso=>{const t=new Date(U(iso));return DOW[t.getUTCDay()]+' '+t.getUTCDate()+' '+MONS[t.getUTCMonth()]+' '+t.getUTCFullYear()};
+const hm=m=>m==null?'–':pad(Math.floor(m/60)%24)+':'+pad(m%60);
+const weekStart=iso=>fromU(U(iso)-new Date(U(iso)).getUTCDay()*864e5);
+
+const GN={A:'Group A',B:'Group B',C:'Group C',MIX:'Mixing',BASE:'Base Building'};
+let DAYS={},AGGS={},NAMES={},EMPLOC={},ASSIGN={},GRPD={},G43={},CLS={PDS:'Day',PNS:'Night','M-2ND':'Night',GS:'General',MGS8:'General',OS:'Office',OFF20:'Off shift'};
+const V={view:'day',date:null,week:null,month:null,loc:'',q:''};let CH=[];
+const classOf=c=>CLS[c]||(/^OFF/i.test(c)?'Off shift':'Other');
+
+/* ---------- reading the crViewer PDF ---------- */
+function lineify(items){
+  const its=items.filter(i=>i.str.trim()).map(i=>({x:i.transform[4],y:i.transform[5],s:i.str.trim()})).sort((a,b)=>b.y-a.y||a.x-b.x),lines=[];
+  its.forEach(i=>{const l=lines[lines.length-1];if(l&&Math.abs(l.y-i.y)<=3)l.items.push(i);else lines.push({y:i.y,items:[i]})});
+  return lines.map(l=>l.items.sort((a,b)=>a.x-b.x));
+}
+const tmin=s=>{const m=/^(\d{1,2})\.(\d{2})$/.exec(s||'');return m?(+m[1])*60+(+m[2]):null};
+const dmy=s=>{const m=/(\d{2})\/(\d{2})\/(\d{4})/.exec(s||'');return m?m[3]+'-'+m[2]+'-'+m[1]:''};
+async function parsePdf(file){
+  if(typeof pdfjsLib==='undefined')throw new Error('the PDF reader (pdf.js) did not load — an internet connection is needed the first time');
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,blocks=new Map();let total=null;
+  for(let p=1;p<=doc.numPages;p++){
+    const lines=lineify((await(await doc.getPage(p)).getTextContent()).items);let loc='',dept='',date='',cols=null;
+    for(const L of lines){const txt=L.map(i=>i.s).join(' ');
+      if(/Sub Location/i.test(txt)){const lab_=L.find(i=>/^Department$/i.test(i.s));if(lab_){loc=L.filter(i=>i.x>128&&i.x<lab_.x-2&&i.s!==':').map(i=>i.s).join(' ');dept=L.filter(i=>i.x>lab_.x+30&&i.s!==':').map(i=>i.s).join(' ')}}
+      else if(/In Time/.test(txt)){const f=n=>(L.find(i=>i.s===n)||{}).x;cols={sh:f('Shift'),in:f('In Time'),out:f('Out Time'),dt:f('Out Date')}}
+      else if(/\bDate\b/.test(txt)&&/\d{2}\/\d{2}\/\d{4}/.test(txt)&&!/Out Date/.test(txt)){date=dmy(txt)}
+      else if(cols&&/^[A-Za-z]\d{4,}$/.test(L[0].s)){
+        const R=(a,b)=>L.filter(i=>i.x>=a&&i.x<b).map(i=>i.s).join('');
+        const key=date+'|'+loc+'|'+dept,b=blocks.get(key)||{date,loc:loc||'(no location)',dept:dept||'',rows:[]};blocks.set(key,b);
+        b.rows.push({no:L[0].s.toUpperCase(),name:L.filter(i=>i.x>80&&i.x<cols.sh-8).map(i=>i.s).join(' '),shift:R(cols.sh-8,cols.in-25).toUpperCase(),tin:tmin(R(cols.in-25,cols.out-15)),tout:tmin(R(cols.out-15,cols.dt-12)),od:dmy(R(cols.dt-12,9999))})}
+      else if(/Total Employee Count/i.test(txt)){const m=/(\d+)\s*$/.exec(txt);if(m)total=(total||0)+ +m[1]}
+    }
+  }
+  const out=[...blocks.values()].filter(b=>b.date);
+  return{blocks:out,total,rows:out.reduce((s,b)=>s+b.rows.length,0)};
+}
+
+/* ---------- storing ---------- */
+function hoursOf(date,r){
+  if(r[2]==null||r[3]==null)return null;let end=r[3];
+  if(r[4]&&r[4]>date)end=r[3]+1440*Math.round((U(r[4])-U(date))/864e5);else if(r[3]<r[2])end=r[3]+1440;
+  const h=(end-r[2])/60;return h>0&&h<=20?h:null;
+}
+function aggOf(date,b){
+  const a={loc:b.loc,dept:b.dept,n:b.rows.length,cls:{Day:0,Night:0,General:0,Office:0,Other:0,'Off shift':0},hrs:0,nh:0,noOut:0};
+  b.rows.forEach(r=>{a.cls[classOf(r[1])]++;const h=hoursOf(date,r);if(h!=null){a.hrs+=h;a.nh++}else if(r[3]==null)a.noOut++});return a;
+}
+function addBlocks(blocks){
+  blocks.forEach(b=>{const day=DAYS[b.date]||(DAYS[b.date]={}),key=b.loc+'||'+b.dept;
+    day[key]={loc:b.loc,dept:b.dept,rows:b.rows.map(r=>[r.no,r.shift,r.tin,r.tout,r.od||''])};
+    (AGGS[b.date]=AGGS[b.date]||{})[key]=aggOf(b.date,day[key]);
+    b.rows.forEach(r=>{NAMES[r.no]=r.name;const e=EMPLOC[r.no];if(!e||e.last<=b.date)EMPLOC[r.no]={loc:b.loc,dept:b.dept,last:b.date}})});
+}
+/* how many of the people assigned to each group (Shift Groups tab) were present, day by day */
+const inBucket=m=>m==null||(m>=300&&m<780)?'Day':'Night';
+function computeGroups(){Object.keys(DAYS).forEach(d=>{const c={},o={};Object.values(DAYS[d]).forEach(b=>b.rows.forEach(r=>{const g=(ASSIGN[r[0]]||{}).g;if(!g)return;c[g]=(c[g]||0)+1;
+  const cl=classOf(r[1]),off=cl==='Off shift',st=(cl==='Day'||cl==='Night')?cl:(cl==='General'||cl==='Office')?'General':inBucket(r[2]);
+  const x=((o[g]=o[g]||{})[st]=o[g][st]||{reg:0,off:0});x[off?'off':'reg']++}));GRPD[d]=c;G43[d]=o})}
+function rebuild(){Object.keys(DAYS).forEach(d=>Object.keys(DAYS[d]).forEach(k=>{AGGS[d][k]=aggOf(d,DAYS[d][k])}))}
+function prune(){const ds=Object.keys(DAYS).sort().reverse();ds.slice(KEEP).forEach(d=>delete DAYS[d])}
+function persist(){prune();try{localStorage.setItem(KEY,JSON.stringify({DAYS,AGGS,NAMES,EMPLOC,CLS,GRPD,G43}))}catch(_){$('st').textContent='Could not save — browser storage is full. Download a backup.'}}
+function save(){persist();publish()}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){DAYS=s.DAYS||{};AGGS=s.AGGS||{};NAMES=s.NAMES||{};EMPLOC=s.EMPLOC||{};GRPD=s.GRPD||{};G43=s.G43||{};CLS=Object.assign(CLS,s.CLS||{})}}catch(_){}}
+function publishAtt(){
+  if(parent===window)return;
+  try{const days={};Object.keys(AGGS).forEach(d=>{const o={};Object.values(AGGS[d]).forEach(a=>{const x=o[a.loc]||(o[a.loc]={n:0,Day:0,Night:0,General:0,Office:0,Other:0,'Off shift':0});x.n+=a.n;CLASSES.forEach(c=>x[c]+=a.cls[c]||0)});days[d]=o});
+    const assigned={};Object.values(ASSIGN).forEach(a=>{assigned[a.g]=(assigned[a.g]||0)+1});
+    parent.postMessage({type:'fitl-attendance',days,groups:GRPD,assigned,g43:G43},'*')}catch(_){}
+}
+function publishEmp(){
+  if(parent===window)return;
+  try{parent.postMessage({type:'fitl-employees',items:Object.keys(NAMES).map(no=>({no,name:NAMES[no],loc:(EMPLOC[no]||{}).loc||'',dept:(EMPLOC[no]||{}).dept||''}))},'*')}catch(_){}
+}
+function publish(){publishAtt();publishEmp()}
+
+/* ---------- views ---------- */
+const dates=()=>Object.keys(AGGS).sort();
+function byLoc(date){
+  const o={};Object.values(AGGS[date]||{}).forEach(a=>{const x=o[a.loc]||(o[a.loc]={loc:a.loc,n:0,cls:{Day:0,Night:0,General:0,Office:0,Other:0,'Off shift':0},hrs:0,nh:0,noOut:0,depts:[]});
+    x.n+=a.n;CLASSES.forEach(c=>x.cls[c]+=a.cls[c]||0);x.hrs+=a.hrs;x.nh+=a.nh;x.noOut+=a.noOut;x.depts.push(a)});
+  return Object.values(o).sort((a,b)=>b.n-a.n);
+}
+function allLocs(){const s=new Set();Object.values(AGGS).forEach(d=>Object.values(d).forEach(a=>s.add(a.loc)));return[...s].sort()}
+const count=(date,loc)=>{let n=0;Object.values(AGGS[date]||{}).forEach(a=>{if(a.loc===loc)n+=a.n});return n};
+function destroy(){CH.forEach(c=>c.destroy());CH=[]}
+const mkChart=(id,cfg)=>{if(typeof Chart==='undefined'||!$(id))return;Chart.defaults.font.family="Inter,system-ui,sans-serif";CH.push(new Chart($(id),cfg))};
+const opts=(extra)=>Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}},extra||{});
+
+function viewDay(){
+  const ds=dates().reverse();if(!ds.includes(V.date))V.date=ds[0];
+  const L=byLoc(V.date),tot=L.reduce((a,x)=>{a.n+=x.n;CLASSES.forEach(c=>a[c]+=x.cls[c]);a.hrs+=x.hrs;a.nh+=x.nh;a.noOut+=x.noOut;return a},{n:0,Day:0,Night:0,General:0,Office:0,Other:0,'Off shift':0,hrs:0,nh:0,noOut:0});
+  let h='<div class="bar"><select id="d_date">'+ds.map(d=>'<option value="'+d+'"'+(d===V.date?' selected':'')+'>'+lab(d)+'</option>').join('')+'</select></div>';
+  h+='<div class="tiles"><div class="card t"><small>Present</small><b>'+tot.n+'</b></div>'+CLASSES.filter(c=>tot[c]).map(c=>'<div class="card t"><small><i class="dot" style="background:'+COL[c]+'"></i>'+c+' shifts</small><b>'+tot[c]+'</b></div>').join('')+'<div class="card t"><small>Average hours worked</small><b>'+(tot.nh?(tot.hrs/tot.nh).toFixed(1):'–')+'</b></div>'+(tot.noOut?'<div class="card t"><small>No out-time yet</small><b>'+tot.noOut+'</b></div>':'')+'</div>';
+  const rows=DAYS[V.date]?Object.values(DAYS[V.date]).flatMap(b=>b.rows):null;
+  if(rows&&Object.keys(ASSIGN).length){const gA={},tt={};rows.forEach(r=>{const g=ASSIGN[r[0]],k=g?g.g:'—';gA[k]=(gA[k]||0)+1});Object.values(ASSIGN).forEach(a=>{tt[a.g]=(tt[a.g]||0)+1});
+    h+='<div class="card" style="padding:10px 14px;margin-bottom:14px">Present from each group: '+Object.keys(GN).filter(g=>tt[g]).map(g=>'<b>'+GN[g]+'</b> '+(gA[g]||0)+' of '+tt[g]).join(' · ')+' · not assigned to a group '+(gA['—']||0)+' <span class="note">(groups are set on the Shift Groups tab, Production Department)</span></div>'}
+  h+='<div class="card cb"><canvas id="c1"></canvas></div>';
+  h+='<div class="card tw"><table><thead><tr><th>Location</th><th>Present</th>'+CLASSES.map(c=>'<th><i class="dot" style="background:'+COL[c]+'"></i>'+c+'</th>').join('')+'<th>Avg hours</th><th>No out-time</th></tr></thead><tbody>'+
+    L.map(x=>'<tr><td><b>'+esc(x.loc)+'</b></td><td><b>'+x.n+'</b></td>'+CLASSES.map(c=>'<td>'+(x.cls[c]||'·')+'</td>').join('')+'<td>'+(x.nh?(x.hrs/x.nh).toFixed(1):'–')+'</td><td>'+(x.noOut||'·')+'</td></tr>').join('')+
+    '<tr class="tot"><td>All locations</td><td>'+tot.n+'</td>'+CLASSES.map(c=>'<td>'+(tot[c]||'·')+'</td>').join('')+'<td>'+(tot.nh?(tot.hrs/tot.nh).toFixed(1):'–')+'</td><td>'+(tot.noOut||'·')+'</td></tr></tbody></table></div>';
+  h+='<div class="card tw"><table><thead><tr><th>Location</th><th class="l">Section / department in the report</th><th>Present</th></tr></thead><tbody>'+L.flatMap(x=>x.depts.map(a=>'<tr><td>'+esc(x.loc)+'</td><td class="l">'+esc(a.dept)+'</td><td>'+a.n+'</td></tr>')).join('')+'</tbody></table></div>';
+  return{h,after:()=>mkChart('c1',{type:'bar',data:{labels:L.map(x=>x.loc),datasets:CLASSES.map(c=>({label:c,data:L.map(x=>x.cls[c]||0),backgroundColor:COL[c],stack:'s'}))},options:opts({scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'},title:{display:true,text:'Present by location — '+lab(V.date)}}})})};
+}
+function viewWeek(){
+  const ds=dates(),weeks=[...new Set(ds.map(weekStart))].sort().reverse();if(!weeks.includes(V.week))V.week=weeks[0];
+  const days=[0,1,2,3,4,5,6].map(i=>fromU(U(V.week)+i*864e5)),locs=allLocs().filter(l=>days.some(d=>count(d,l)));
+  const rep=days.map(d=>!!AGGS[d]);let h='<div class="bar"><select id="w_week">'+weeks.map(w=>'<option value="'+w+'"'+(w===V.week?' selected':'')+'>'+w+' → '+fromU(U(w)+6*864e5)+'</option>').join('')+'</select><span class="note">Weeks run Sunday to Saturday · “–” = no report uploaded for that day</span></div>';
+  const row=l=>{const v=days.map(d=>AGGS[d]?count(d,l):null),done=v.filter(x=>x!=null),sum=done.reduce((a,b)=>a+b,0);return{l,v,sum,n:done.length,avg:done.length?sum/done.length:null}};
+  const R=locs.map(row),T=days.map((d,i)=>rep[i]?R.reduce((s,r)=>s+(r.v[i]||0),0):null),ts=T.filter(x=>x!=null).reduce((a,b)=>a+b,0),tn=T.filter(x=>x!=null).length;
+  h+='<div class="card cb"><canvas id="c1"></canvas></div><div class="card tw"><table><thead><tr><th>Location</th>'+days.map(d=>'<th>'+DOW[new Date(U(d)).getUTCDay()]+' '+d.slice(8)+'</th>').join('')+'<th>Man-days</th><th>Days reported</th><th>Average per day</th></tr></thead><tbody>'+
+    R.map(r=>'<tr><td><b>'+esc(r.l)+'</b></td>'+r.v.map(x=>'<td>'+(x==null?'–':x)+'</td>').join('')+'<td><b>'+r.sum+'</b></td><td>'+r.n+'</td><td>'+(r.avg==null?'–':r.avg.toFixed(1))+'</td></tr>').join('')+
+    '<tr class="tot"><td>All locations</td>'+T.map(x=>'<td>'+(x==null?'–':x)+'</td>').join('')+'<td>'+ts+'</td><td>'+tn+'</td><td>'+(tn?(ts/tn).toFixed(1):'–')+'</td></tr></tbody></table></div>';
+  return{h,after:()=>mkChart('c1',{type:'bar',data:{labels:days.map(d=>DOW[new Date(U(d)).getUTCDay()]+' '+d.slice(8)),datasets:R.map((r,i)=>({label:r.l,data:r.v.map(x=>x==null?0:x),backgroundColor:PAL[i%PAL.length],stack:'s'}))},options:opts({scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'},title:{display:true,text:'Present by location — week of '+V.week}}})})};
+}
+function viewMonth(){
+  const ds=dates(),months=[...new Set(ds.map(d=>d.slice(0,7)))].sort().reverse();if(!months.includes(V.month))V.month=months[0];
+  const [y,m]=V.month.split('-').map(Number),nd=new Date(Date.UTC(y,m,0)).getUTCDate(),days=Array.from({length:nd},(_,i)=>V.month+'-'+pad(i+1));
+  const locs=allLocs().filter(l=>days.some(d=>count(d,l)));
+  const R=locs.map(l=>{const v=days.map(d=>AGGS[d]?count(d,l):null),done=v.filter(x=>x!=null),sum=done.reduce((a,b)=>a+b,0);return{l,v,sum,n:done.length,avg:done.length?sum/done.length:null}});
+  const T=days.map((d,i)=>AGGS[d]?R.reduce((s,r)=>s+(r.v[i]||0),0):null),ts=T.filter(x=>x!=null).reduce((a,b)=>a+b,0),tn=T.filter(x=>x!=null).length,mx=Math.max(1,...R.flatMap(r=>r.v.map(x=>x||0)));
+  let h='<div class="bar"><select id="m_month">'+months.map(x=>'<option value="'+x+'"'+(x===V.month?' selected':'')+'>'+MONS[+x.slice(5)-1]+' '+x.slice(0,4)+'</option>').join('')+'</select><span class="note">“–” = no report uploaded for that day · averages use only the days reported</span></div>';
+  h+='<div class="card cb"><canvas id="c1"></canvas></div><div class="card tw"><table><thead><tr><th>Location</th>'+days.map(d=>'<th>'+d.slice(8)+'</th>').join('')+'<th>Man-days</th><th>Days reported</th><th>Average per day</th></tr></thead><tbody>'+
+    R.map(r=>'<tr><td><b>'+esc(r.l)+'</b></td>'+r.v.map(x=>'<td style="'+(x?'background:rgba(31,58,95,'+(.08+.5*x/mx).toFixed(2)+')':'color:#aaa')+'">'+(x==null?'–':x)+'</td>').join('')+'<td><b>'+r.sum+'</b></td><td>'+r.n+'</td><td>'+(r.avg==null?'–':r.avg.toFixed(1))+'</td></tr>').join('')+
+    '<tr class="tot"><td>All locations</td>'+T.map(x=>'<td>'+(x==null?'–':x)+'</td>').join('')+'<td>'+ts+'</td><td>'+tn+'</td><td>'+(tn?(ts/tn).toFixed(1):'–')+'</td></tr></tbody></table></div>';
+  return{h,after:()=>mkChart('c1',{type:'line',data:{labels:days.map(d=>d.slice(8)),datasets:R.slice(0,8).map((r,i)=>({label:r.l,data:r.v,borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length],tension:.2,spanGaps:false,pointRadius:2}))},options:opts({scales:{y:{beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'},title:{display:true,text:'Daily headcount by location — '+MONS[m-1]+' '+y}}})})};
+}
+function viewPeople(){
+  const ds=dates().reverse().filter(d=>DAYS[d]);if(!ds.length)return{h:'<div class="card empty">Employee-level detail is kept for the latest '+KEEP+' days only; none is stored.</div>',after:()=>{}};
+  if(!ds.includes(V.date))V.date=ds[0];const q=V.q.trim().toLowerCase(),locs=[...new Set(Object.values(DAYS[V.date]).map(b=>b.loc))].sort();
+  let rows=Object.values(DAYS[V.date]).flatMap(b=>b.rows.map(r=>({no:r[0],name:NAMES[r[0]]||'',loc:b.loc,dept:b.dept,sh:r[1],cls:classOf(r[1]),tin:r[2],tout:r[3],hr:hoursOf(V.date,r),g:(ASSIGN[r[0]]||{}).g||''})));
+  rows=rows.filter(r=>(!V.loc||r.loc===V.loc)&&(!q||(r.no+' '+r.name).toLowerCase().includes(q))).sort((a,b)=>a.loc.localeCompare(b.loc)||a.name.localeCompare(b.name));
+  return{h:'<div class="bar"><select id="p_date">'+ds.map(d=>'<option value="'+d+'"'+(d===V.date?' selected':'')+'>'+lab(d)+'</option>').join('')+'</select><select id="p_loc"><option value="">All locations</option>'+locs.map(l=>'<option'+(l===V.loc?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select><input id="p_q" placeholder="Search name or employee number" value="'+esc(V.q)+'" style="min-width:260px"><span class="note">'+rows.length+' people</span></div>'+
+   '<div class="card tw"><table><thead><tr><th>Emp. no</th><th class="l">Name</th><th class="l">Location</th><th class="l">Section</th><th>Shift</th><th>Type</th><th>In</th><th>Out</th><th>Hours</th><th>Group</th></tr></thead><tbody>'+rows.slice(0,600).map(r=>'<tr><td>'+r.no+'</td><td class="l">'+esc(r.name)+'</td><td class="l">'+esc(r.loc)+'</td><td class="l">'+esc(r.dept)+'</td><td>'+esc(r.sh)+'</td><td><i class="dot" style="background:'+COL[r.cls]+'"></i>'+r.cls+'</td><td>'+hm(r.tin)+'</td><td>'+hm(r.tout)+'</td><td>'+(r.hr==null?'–':r.hr.toFixed(1))+'</td><td>'+(GN[r.g]||r.g||'–')+'</td></tr>').join('')+'</tbody></table></div>',after:()=>{}};
+}
+function render(){
+  destroy();const has=dates().length;$('app').hidden=!has;$('em').hidden=!!has;$('xl').disabled=$('bk').disabled=!has;if(!has)return;
+  const v={day:viewDay,week:viewWeek,month:viewMonth,people:viewPeople}[V.view]();$('v').innerHTML=v.h;v.after();
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.v===V.view));
+  const codes=new Set(Object.keys(CLS));Object.values(DAYS).forEach(d=>Object.values(d).forEach(b=>b.rows.forEach(r=>codes.add(r[1]))));
+  $('codes').innerHTML=[...codes].sort().map(c=>'<label><b style="min-width:62px">'+esc(c)+'</b><select data-code="'+esc(c)+'">'+CLASSES.map(k=>'<option'+(classOf(c)===k?' selected':'')+'>'+k+'</option>').join('')+'</select></label>').join('');
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){V.view=t.dataset.v;render()}});
+document.addEventListener('change',e=>{const i=e.target.id;
+  if(i==='d_date'||i==='p_date'){V.date=e.target.value;render()}else if(i==='w_week'){V.week=e.target.value;render()}else if(i==='m_month'){V.month=e.target.value;render()}
+  else if(i==='p_loc'){V.loc=e.target.value;render()}
+  else if(e.target.dataset&&e.target.dataset.code){CLS[e.target.dataset.code]=e.target.value;rebuild();save();render()}});
+document.addEventListener('input',e=>{if(e.target.id==='p_q'){V.q=e.target.value;const p=e.target.selectionStart;render();const n=$('p_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
+$('f').onchange=async e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;const notes=[],warn=[];let added=0;
+  for(const f of files){$('st').textContent='Reading '+f.name+' …';
+    try{const r=await parsePdf(f);if(!r.blocks.length){warn.push(f.name+': no attendance rows found — is it a Daily Attendance Report?');continue}
+      addBlocks(r.blocks);added+=r.rows;notes.push(lab(r.blocks[0].date)+' · '+r.rows+' people · '+new Set(r.blocks.map(b=>b.loc)).size+' location(s)');
+      if(r.total!=null&&r.total!==r.rows)warn.push(f.name+': the report says '+r.total+' employees but '+r.rows+' were read')}
+    catch(x){warn.push(f.name+': '+x.message)}}
+  if(added){const ds=dates();V.date=V.week=V.month=null;if(ds.length){V.date=ds[ds.length-1]}save()}
+  $('st').innerHTML=(added?'<b>'+notes.join('; ')+'</b>':'Nothing was added')+(warn.length?' · <span class="warn">'+warn.map(esc).join(' · ')+'</span>':'');render()};
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
+$('bk').onclick=()=>dl(new Blob([JSON.stringify({DAYS,AGGS,NAMES,EMPLOC,CLS,GRPD,G43})],{type:'application/json'}),'Attendance_backup_'+new Date().toISOString().slice(0,10)+'.json');
+$('rs').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const s=JSON.parse(r.result);if(!s.AGGS)throw 0;if(!confirm('Restoring replaces the attendance currently stored. Continue?'))return;DAYS=s.DAYS||{};AGGS=s.AGGS;NAMES=s.NAMES||{};EMPLOC=s.EMPLOC||{};GRPD=s.GRPD||{};G43=s.G43||{};CLS=Object.assign(CLS,s.CLS||{});V.date=V.week=V.month=null;computeGroups();save();render();$('st').textContent='Backup restored.'}catch(_){$('st').textContent='That is not an attendance backup.'}};r.readAsText(f);e.target.value=''};
+$('xl').onclick=()=>{const wb=XLSX.utils.book_new(),ds=dates();let sheets=0;
+  const mat=(name,days)=>{const locs=allLocs();const rows=locs.map(l=>{const o={Location:l};let s=0,n=0;days.forEach(d=>{const x=AGGS[d]?count(d,l):null;o[d]=x==null?'':x;if(x!=null){s+=x;n++}});o['Man-days']=s;o['Days reported']=n;o['Average per day']=n?+(s/n).toFixed(1):'';return o}).filter(o=>o['Man-days']);XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),name)};
+  if(V.view==='week'&&V.week){mat('Week '+V.week,[0,1,2,3,4,5,6].map(i=>fromU(U(V.week)+i*864e5)))}
+  else if(V.view==='month'&&V.month){const [y,m]=V.month.split('-').map(Number);mat(MONS[m-1]+' '+y,Array.from({length:new Date(Date.UTC(y,m,0)).getUTCDate()},(_,i)=>V.month+'-'+pad(i+1)))}
+  else{const d=V.date||ds[ds.length-1];XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(byLoc(d).map(x=>Object.assign({Location:x.loc,Present:x.n},x.cls,{'Average hours':x.nh?+(x.hrs/x.nh).toFixed(1):'','No out-time':x.noOut}))),'Locations '+d);
+    if(DAYS[d])XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(Object.values(DAYS[d]).flatMap(b=>b.rows.map(r=>({Date:d,'Emp. no':r[0],Name:NAMES[r[0]]||'',Location:b.loc,Section:b.dept,Shift:r[1],Type:classOf(r[1]),In:hm(r[2]),Out:hm(r[3]),'Out date':r[4],Hours:hoursOf(d,r)==null?'':+hoursOf(d,r).toFixed(2),Group:GN[(ASSIGN[r[0]]||{}).g]||''})))),'People '+d)}
+  XLSX.writeFile(wb,'Attendance_'+(V.view==='week'?V.week:V.view==='month'?V.month:(V.date||ds[ds.length-1]))+'.xlsx')};
+addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
+  if(m&&m.type==='fitl-shiftgroups'&&m.assign){ASSIGN=m.assign;try{localStorage.setItem('fitl_attendance_groups',JSON.stringify(ASSIGN))}catch(_){}computeGroups();persist();publishAtt();render()}});
+try{ASSIGN=JSON.parse(localStorage.getItem('fitl_attendance_groups')||'{}')}catch(_){}
+load();if(CLS.OFF20==='Other')CLS.OFF20='Off shift';rebuild();computeGroups();render();publish();
+try{parent.postMessage({type:'fitl-attendance-ready'},'*')}catch(_){}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RCA Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --canvas:#EEF0EA;
+    --surface:#FFFFFF;
+    --ink:#1B1D1B;
+    --ink-soft:#5B5D57;
+    --line:#DADCD3;
+    --steel:#2E4057;
+    --steel-dark:#1B2838;
+    --amber:#D98E04;
+    --amber-ink:#5C3B02;
+    --amber-bg:#FBEBCB;
+    --men:#B5502C;
+    --men-bg:#F5E1D7;
+    --men-ink:#6E2E15;
+    --machine:#2E6E8E;
+    --machine-bg:#DCEAF1;
+    --machine-ink:#154356;
+    --material:#4B7F52;
+    --material-bg:#E1EDE0;
+    --material-ink:#274A2B;
+    --method:#6E5A9E;
+    --method-bg:#E7E2F2;
+    --method-ink:#3C305C;
+    --good:#2F8F4E;
+    --good-bg:#DEEEE2;
+    --bad:#B23A34;
+    --bad-bg:#F5DEDC;
+    --pending:#C98A1D;
+    --pending-bg:#F5E7CC;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;
+    letter-spacing:0.01em;
+    text-transform:uppercase;
+    color:var(--steel-dark);
+  }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  #app{ max-width:1180px; margin:0 auto; padding:28px 24px 80px; }
+
+  /* ---- Top bar ---- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; margin-bottom:22px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px; background:var(--steel-dark);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .brand-mark svg{ width:22px; height:22px; }
+  .brand h1{ font-size:24px; margin:0; line-height:1; }
+  .brand p{ margin:2px 0 0; font-size:14px; color:var(--ink-soft); font-family:'Inter'; text-transform:none; letter-spacing:0; }
+
+  .project-controls{ display:flex; align-items:center; gap:8px; }
+  select, input[type=text], input[type=date], textarea{
+    font-family:'Inter'; font-size:15px; color:var(--ink);
+    border:1px solid var(--line); border-radius:7px; background:var(--surface);
+    padding:8px 10px;
+  }
+  select:focus, input:focus, textarea:focus{ outline:2px solid var(--steel); outline-offset:1px; }
+  button{
+    font-family:'Inter'; font-size:15px; font-weight:500; cursor:pointer;
+    border-radius:7px; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink); padding:8px 14px; transition:background .12s ease;
+  }
+  button:hover{ background:var(--canvas); }
+  button.primary{ background:var(--steel); border-color:var(--steel); color:#fff; }
+  button.primary:hover{ background:var(--steel-dark); }
+  button.amber{ background:var(--amber); border-color:var(--amber); color:#3A2500; }
+  button.amber:hover{ background:#C17F00; }
+  button.ghost{ border-color:transparent; background:transparent; padding:6px 8px; }
+  button.backup-btn{ background:var(--machine-bg); border-color:var(--machine); color:var(--machine-ink); padding:8px 10px; }
+  button.backup-btn:hover{ background:var(--machine); color:#fff; }
+  button.restore-btn{ background:var(--material-bg); border-color:var(--material); color:var(--material-ink); padding:8px 10px; }
+  button.restore-btn:hover{ background:var(--material); color:#fff; }
+  button.ghost:hover{ background:var(--canvas); }
+  button.danger-ghost{ border-color:transparent; background:transparent; color:var(--bad); padding:6px 8px; }
+  button.danger-ghost:hover{ background:var(--bad-bg); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+
+  /* ---- Stepper ---- */
+  .stepper{
+    display:flex; gap:6px; margin-bottom:24px; border-bottom:2px solid var(--line);
+    overflow-x:auto;
+  }
+  .step-btn{
+    border:none; background:none; padding:10px 16px 12px; font-family:'Barlow Condensed';
+    font-size:17px; font-weight:600; text-transform:uppercase; letter-spacing:.02em;
+    color:var(--ink-soft); border-bottom:3px solid transparent; margin-bottom:-2px;
+    white-space:nowrap; border-radius:0;
+  }
+  .step-btn:hover{ color:var(--ink); background:none; }
+  .step-btn.active{ color:var(--steel-dark); border-bottom-color:var(--amber); }
+  .step-num{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; border-radius:50%; background:var(--line); color:var(--surface);
+    font-size:13px; margin-right:6px; font-family:'Inter'; font-weight:600;
+  }
+  .step-btn.active .step-num{ background:var(--amber); color:#3A2500; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px 22px; margin-bottom:18px;
+  }
+  .card h2{ font-size:19px; margin:0 0 4px; }
+  .card .hint{ font-size:14.5px; color:var(--ink-soft); margin:0 0 16px; font-family:'Inter'; }
+  label.field-label{
+    display:block; font-size:13.5px; font-weight:600; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px; font-family:'Inter';
+  }
+  .field{ margin-bottom:14px; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  textarea{ width:100%; resize:vertical; min-height:64px; font-size:16px; line-height:1.5; }
+  input[type=text]{ width:100%; }
+
+  /* ---- Fishbone visual ---- */
+  .spine-wrap{ overflow-x:auto; margin-bottom:6px; }
+  .spine-wrap svg{ display:block; min-width:640px; }
+
+  /* ---- Category grid ---- */
+  .cat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px){ .cat-grid{ grid-template-columns:1fr; } .grid-2{ grid-template-columns:1fr; } }
+  .cat-card{ border-radius:var(--radius); padding:16px 16px 14px; border:1px solid var(--line); }
+  .cat-card.men{ background:var(--men-bg); }
+  .cat-card.machine{ background:var(--machine-bg); }
+  .cat-card.material{ background:var(--material-bg); }
+  .cat-card.method{ background:var(--method-bg); }
+  .cat-title{
+    font-family:'Barlow Condensed'; font-weight:700; font-size:18px; text-transform:uppercase;
+    margin:0 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .cat-title .dot{ width:10px; height:10px; border-radius:50%; }
+  .men .dot{ background:var(--men); } .men .cat-title{ color:var(--men-ink); }
+  .machine .dot{ background:var(--machine); } .machine .cat-title{ color:var(--machine-ink); }
+  .material .dot{ background:var(--material); } .material .cat-title{ color:var(--material-ink); }
+  .method .dot{ background:var(--method); } .method .cat-title{ color:var(--method-ink); }
+
+  .cause-item{
+    background:var(--surface); border:1px solid rgba(0,0,0,0.08); border-radius:8px;
+    padding:9px 11px; margin-bottom:8px; font-size:15.5px; line-height:1.4;
+  }
+  .cause-item .cause-top{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .cause-item .cause-text{ flex:1; }
+  .cause-text-input{
+    flex:1; border:1px solid transparent; background:transparent; padding:2px 4px;
+    font-family:'Inter'; font-size:15.5px; line-height:1.4; color:var(--ink); border-radius:5px;
+    min-width:0;
+  }
+  .cause-text-input:hover{ border-color:var(--line); }
+  .cause-text-input:focus{ border-color:var(--steel); background:var(--surface); outline:none; }
+  .cause-meta{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .badge{
+    font-size:12.5px; font-weight:600; padding:2px 8px; border-radius:20px;
+    text-transform:uppercase; letter-spacing:.02em; font-family:'Inter';
+  }
+  .badge.new{ background:var(--line); color:var(--ink-soft); }
+  .badge.confirmed{ background:var(--good-bg); color:var(--good); }
+  .badge.rejected{ background:var(--bad-bg); color:var(--bad); }
+  .badge.pending{ background:var(--pending-bg); color:var(--pending); }
+  .badge.analyzed{ background:var(--amber-bg); color:var(--amber-ink); }
+
+  .add-row{ display:flex; gap:6px; margin-top:8px; }
+  .add-row input{ flex:1; background:var(--surface); font-size:15px; }
+
+  /* ---- Validation table ---- */
+  table{ width:100%; border-collapse:collapse; font-size:15.5px; }
+  th{
+    text-align:left; font-family:'Inter'; font-size:13px; font-weight:600; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:.03em; padding:8px 8px; border-bottom:1px solid var(--line);
+  }
+  td{ padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  td input[type=text], td input[type=number]{ width:100%; font-size:15px; padding:6px 8px; }
+  select.status-select{ font-size:14.5px; padding:5px 8px; }
+  .num-input{ width:64px !important; }
+
+  .empty{
+    text-align:center; padding:36px 20px; color:var(--ink-soft); font-size:15.5px;
+  }
+  .empty .ti{ font-size:28px; display:block; margin-bottom:8px; opacity:.5; }
+
+  /* ---- Five whys ---- */
+  .why-chain{ display:flex; flex-direction:column; gap:10px; }
+  .why-row{ display:flex; gap:12px; align-items:flex-start; }
+  .why-num{
+    width:26px; height:26px; border-radius:50%; background:var(--steel); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600;
+    flex-shrink:0; margin-top:4px; font-family:'Inter';
+  }
+  .why-row:last-child .why-num{ background:var(--amber); color:#3A2500; }
+  .why-row textarea{ flex:1; min-height:44px; }
+  .cause-picker{ display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+
+  /* ---- Action plan ---- */
+  .status-pill{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:14px; font-weight:500; }
+
+  /* ---- Summary ---- */
+  .summary-block{ margin-bottom:22px; }
+  .summary-block h3{ font-size:16px; margin:0 0 8px; }
+  .kpi-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+  .kpi{ background:var(--canvas); border-radius:8px; padding:12px 16px; min-width:120px; }
+  .kpi .kpi-label{ font-size:13px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.02em; }
+  .kpi .kpi-val{ font-family:'IBM Plex Mono'; font-size:22px; font-weight:500; margin-top:2px; }
+
+  .toolbar{ display:flex; gap:8px; justify-content:flex-end; margin-bottom:14px; }
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  .loading-msg{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:16px; }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--steel-dark); color:#fff; padding:9px 18px; border-radius:8px;
+    font-size:15px; opacity:0; pointer-events:none; transition:opacity .25s ease;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading-msg" id="loading">Loading your RCA workspace…</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // Outside Claude's artifact preview there is no window.storage, so cases would
+  // never be saved. Fall back to the browser's localStorage with the same interface.
+  if(!window.storage){
+    try{
+      window.storage = {
+        get: function(k){ var v = localStorage.getItem("fitl-rca::" + k); return Promise.resolve(v === null ? null : { key:k, value:v }); },
+        set: function(k, v){ localStorage.setItem("fitl-rca::" + k, v); return Promise.resolve({ key:k, value:v }); }
+      };
+    }catch(e){}
+  }
+
+  var STORAGE_KEY = "rca-workbench-data";
+  var state = null;      // { activeId, projects: { id: project } }
+  var version = null;
+  var activeTab = "problem";
+
+  var CATEGORIES = [
+    { id:"men", label:"Men" },
+    { id:"machine", label:"Machine" },
+    { id:"material", label:"Material" },
+    { id:"method", label:"Method" }
+  ];
+
+  var STEPS = [
+    { id:"problem", label:"Problem" },
+    { id:"fishbone", label:"Fishbone" },
+    { id:"validate", label:"Validate" },
+    { id:"whys", label:"5 Whys" },
+    { id:"actions", label:"Actions" },
+    { id:"summary", label:"Summary" }
+  ];
+
+  function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+  function defaultProject(name){
+    return {
+      id: uid(),
+      name: name || "New RCA",
+      createdAt: Date.now(),
+      problem: { defect:"", statement:"", target:"" },
+      causes: [],
+      fiveWhys: {},
+      actions: [],
+      attachments: [],
+      validationCriteria: ["Frequency","Scrap qty"]
+    };
+  }
+
+  function normalizeState(){
+    Object.keys(state.projects).forEach(function(id){
+      var p = state.projects[id];
+      if(!p.attachments) p.attachments = [];
+      if(!p.fiveWhys) p.fiveWhys = {};
+      if(!p.actions) p.actions = [];
+      if(!p.causes) p.causes = [];
+      if(!p.validationCriteria || !p.validationCriteria.length) p.validationCriteria = ["Frequency","Scrap qty"];
+      p.causes.forEach(function(c){
+        if(!c.scores){
+          c.scores = {};
+          if(c.frequency !== undefined){ c.scores["Frequency"] = c.frequency; delete c.frequency; }
+          if(c.scrapCount !== undefined){ c.scores["Scrap qty"] = c.scrapCount; delete c.scrapCount; }
+        }
+      });
+    });
+  }
+
+  function seedData(){
+    var p = defaultProject("Pressure drop — July");
+    p.problem = {
+      defect: "Pressure drops (press defect)",
+      statement: "Scrap tyre rate was about 0.6% in July, exceeding the 0.2% KPI target. Pressure drops accounted for 18 of the month's scrap tyres (15.5% of total scrap), tied for the largest single reason alongside deformed / under-filling tread.",
+      target: "Reduce pressure-drop scrap to under 5% of total monthly scrap within one quarter."
+    };
+    var data = { activeId: p.id, projects: {} };
+    data.projects[p.id] = p;
+    return data;
+  }
+
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._tm);
+    toast._tm = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  function activeProject(){
+    return state.projects[state.activeId];
+  }
+
+  var saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 400);
+  }
+
+  function save(){
+    if(!window.storage){ return; }
+    window.storage.set(STORAGE_KEY, JSON.stringify(state), false).then(function(res){
+      if(res && res.value !== undefined){
+        // keep going, no version tracking needed for set-only flow
+      }
+    }).catch(function(err){
+      console.error("Save failed", err);
+      toast("Could not save — check connection");
+    });
+  }
+
+  function load(){
+    if(!window.storage){
+      state = seedData();
+      render();
+      return;
+    }
+    window.storage.get(STORAGE_KEY, false).then(function(res){
+      if(res && res.value){
+        try{ state = JSON.parse(res.value); }
+        catch(e){ state = seedData(); }
+      } else {
+        state = seedData();
+      }
+      normalizeState();
+      render();
+    }).catch(function(){
+      state = seedData();
+      normalizeState();
+      render();
+    });
+  }
+
+  /* ---------------- render root ---------------- */
+
+  /* ---------------- imports from other tabs ---------------- */
+  // Press Monitoring flagged risks and Management Agenda "RCA required" issues arrive
+  // here (via the host page). Each becomes its own case, once — keyed so re-sends are ignored.
+  var pendingImports = [];
+  function mergeCandidates(items){
+    if(!state.imported) state.imported = {};
+    var added = 0, fromPress = 0, fromAgenda = 0, fromCapa = 0;
+    items.forEach(function(it){
+      if(!it || !it.key || state.imported[it.key]) return;
+      var p = defaultProject(it.name);
+      p.problem = { defect: it.defect || "", statement: it.statement || "", target: it.target || "" };
+      p.source = { type: it.source, key: it.key };
+      state.projects[p.id] = p;
+      state.imported[it.key] = p.id;
+      added++;
+      if(it.source === "press") fromPress++; else if(it.source === "capa") fromCapa++; else fromAgenda++;
+    });
+    if(added){
+      scheduleSave();
+      var parts = [];
+      if(fromPress) parts.push(fromPress + " from Press Monitoring");
+      if(fromAgenda) parts.push(fromAgenda + " from Management Agenda");
+      if(fromCapa) parts.push(fromCapa + " from CAPA");
+      toast(added + " new RCA case" + (added === 1 ? "" : "s") + " added (" + parts.join(", ") + ")");
+    }
+    return added;
+  }
+  function importCandidates(items){
+    if(!state){ pendingImports = pendingImports.concat(items); return; }
+    if(mergeCandidates(items)) render();
+  }
+  window.addEventListener("message", function(ev){
+    if(ev.source !== window.parent) return;
+    var m = ev.data;
+    if(m && (m.type === "fitl-rca-candidates" || m.type === "fitl-rca-import") && Array.isArray(m.items)) importCandidates(m.items);
+  });
+
+
+  /* ---------------- remove / manage cases ---------------- */
+  var SOURCE_LABEL = { press:"Press Monitoring", agenda:"Management Agenda", capa:"CAPA" };
+  function caseSource(p){ return p.source && SOURCE_LABEL[p.source.type] ? SOURCE_LABEL[p.source.type] : "Created here"; }
+  // Removed cases stay recorded in state.imported, so an automatic feed never brings them back.
+  function removeCases(ids){
+    ids.forEach(function(id){ delete state.projects[id]; });
+    var left = Object.keys(state.projects);
+    if(!left.length){
+      var blank = defaultProject("New RCA");
+      state.projects[blank.id] = blank;
+      left = [blank.id];
+    }
+    if(!state.projects[state.activeId]) state.activeId = left[0];
+    scheduleSave();
+    render();
+    toast(ids.length + " case" + (ids.length === 1 ? "" : "s") + " removed");
+  }
+  function openManageCases(){
+    var old = document.getElementById("manageVeil"); if(old) old.remove();
+    var veil = document.createElement("div");
+    veil.id = "manageVeil";
+    veil.style.cssText = "position:fixed;inset:0;background:rgba(27,40,56,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;";
+    var box = document.createElement("div");
+    box.style.cssText = "background:#fff;border-radius:12px;width:min(720px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);";
+    veil.appendChild(box);
+    var filter = "all", picked = {};
+    function visible(){
+      return Object.keys(state.projects).filter(function(id){
+        var p = state.projects[id];
+        return filter === "all" || caseSource(p) === filter;
+      });
+    }
+    function draw(){
+      var ids = visible();
+      var sources = ["all"].concat(Array.from(new Set(Object.keys(state.projects).map(function(id){ return caseSource(state.projects[id]); }))));
+      var nPicked = Object.keys(picked).filter(function(id){ return picked[id] && state.projects[id]; }).length;
+      var h = '<div style="padding:18px 22px 10px"><h2 style="margin:0 0 4px;font-size:24px">Manage cases</h2>' +
+        '<div style="color:var(--ink-soft);font-size:13px">' + Object.keys(state.projects).length + ' cases. Tick the ones you do not need and remove them. Removed cases are not brought back by the automatic feeds.</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">' +
+        sources.map(function(s){ return '<button data-f="' + s + '" style="' + (s === filter ? "background:var(--steel);color:#fff;border-color:var(--steel);" : "") + '">' + (s === "all" ? "All" : s) + '</button>'; }).join("") + '</div></div>' +
+        '<div style="overflow:auto;padding:0 22px;flex:1;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">' +
+        (ids.length ? ids.map(function(id){
+          var p = state.projects[id];
+          return '<label style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer">' +
+            '<input type="checkbox" data-id="' + id + '"' + (picked[id] ? " checked" : "") + ' style="width:17px;height:17px">' +
+            '<span style="flex:1;min-width:0"><span style="display:block;font-weight:500">' + escapeHtmlSafe(p.name || "Untitled RCA") + '</span>' +
+            '<span style="display:block;font-size:12px;color:var(--ink-soft)">' + caseSource(p) + (id === state.activeId ? " · open now" : "") + '</span></span>' +
+            '<button data-open="' + id + '" style="font-size:12px;padding:3px 10px">Open</button></label>';
+        }).join("") : '<div style="padding:30px 0;text-align:center;color:var(--ink-soft)">No cases here.</div>') + '</div>' +
+        '<div style="padding:14px 22px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+        '<button data-all="1">Select all shown</button><button data-none="1">Clear</button><span style="flex:1"></span>' +
+        '<button data-close="1">Close</button>' +
+        '<button data-remove="1" style="background:var(--bad);border-color:var(--bad);color:#fff"' + (nPicked ? "" : " disabled") + '>Remove selected (' + nPicked + ')</button></div>';
+      box.innerHTML = h;
+      Array.prototype.forEach.call(box.querySelectorAll("[data-f]"), function(b){ b.onclick = function(){ filter = b.getAttribute("data-f"); draw(); }; });
+      Array.prototype.forEach.call(box.querySelectorAll("input[data-id]"), function(c){ c.onchange = function(){ picked[c.getAttribute("data-id")] = c.checked; draw(); }; });
+      Array.prototype.forEach.call(box.querySelectorAll("[data-open]"), function(b){ b.onclick = function(e){ e.preventDefault(); state.activeId = b.getAttribute("data-open"); scheduleSave(); veil.remove(); render(); }; });
+      box.querySelector("[data-all]").onclick = function(){ visible().forEach(function(id){ picked[id] = true; }); draw(); };
+      box.querySelector("[data-none]").onclick = function(){ picked = {}; draw(); };
+      box.querySelector("[data-close]").onclick = function(){ veil.remove(); };
+      box.querySelector("[data-remove]").onclick = function(){
+        var ids2 = Object.keys(picked).filter(function(id){ return picked[id] && state.projects[id]; });
+        if(!ids2.length) return;
+        if(!confirm("Remove " + ids2.length + " case" + (ids2.length === 1 ? "" : "s") + "? This cannot be undone.")) return;
+        removeCases(ids2); picked = {}; draw();
+      };
+    }
+    veil.addEventListener("mousedown", function(e){ if(e.target === veil) veil.remove(); });
+    document.body.appendChild(veil);
+    draw();
+  }
+  function escapeHtmlSafe(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  function render(){
+    if(state && pendingImports.length){ var queued = pendingImports; pendingImports = []; mergeCandidates(queued); }
+    var app = document.getElementById("app");
+    app.innerHTML = "";
+    app.appendChild(renderTopbar());
+    app.appendChild(renderStepper());
+    var panelWrap = document.createElement("div");
+    panelWrap.appendChild(renderPanel("problem", renderProblemPanel));
+    panelWrap.appendChild(renderPanel("fishbone", renderFishbonePanel));
+    panelWrap.appendChild(renderPanel("validate", renderValidatePanel));
+    panelWrap.appendChild(renderPanel("whys", renderWhysPanel));
+    panelWrap.appendChild(renderPanel("actions", renderActionsPanel));
+    panelWrap.appendChild(renderPanel("summary", renderSummaryPanel));
+    app.appendChild(panelWrap);
+  }
+
+  function renderPanel(id, fn){
+    var div = document.createElement("div");
+    div.className = "panel" + (activeTab === id ? " active" : "");
+    div.id = "panel-" + id;
+    div.appendChild(fn());
+    return div;
+  }
+
+  function setTab(id){
+    activeTab = id;
+    render();
+  }
+
+  /* ---------------- topbar ---------------- */
+
+  function renderTopbar(){
+    var bar = document.createElement("div");
+    bar.className = "topbar";
+
+    var brand = document.createElement("div");
+    brand.className = "brand";
+    brand.innerHTML =
+      '<div class="brand-mark" style="background:#fff;padding:3px;overflow:hidden;"><img src="data:image/jpeg;base64,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" alt="Ferentino" style="width:100%;height:100%;object-fit:contain;"></div>' +
+      '<div><h1>RCA Workbench</h1><p>Fishbone &rarr; validation &rarr; five whys &rarr; action plan</p></div>';
+    bar.appendChild(brand);
+
+    var controls = document.createElement("div");
+    controls.className = "project-controls";
+
+    var select = document.createElement("select");
+    Object.keys(state.projects).forEach(function(id){
+      var opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = state.projects[id].name || "Untitled RCA";
+      if(id === state.activeId) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", function(){
+      state.activeId = select.value;
+      scheduleSave();
+      render();
+    });
+    controls.appendChild(select);
+
+    var newBtn = document.createElement("button");
+    newBtn.textContent = "+ New RCA";
+    newBtn.addEventListener("click", function(){
+      var name = prompt("Name this RCA (e.g. Under weight — August)");
+      if(!name) return;
+      var p = defaultProject(name);
+      state.projects[p.id] = p;
+      state.activeId = p.id;
+      scheduleSave();
+      render();
+    });
+    controls.appendChild(newBtn);
+
+    var delBtn = document.createElement("button");
+    delBtn.className = "ghost";
+    delBtn.title = "Remove this case";
+    delBtn.innerHTML = '<i class="ti ti-trash"></i> Remove';
+    delBtn.addEventListener("click", function(){
+      if(!confirm("Remove \"" + activeProject().name + "\"?\nThis cannot be undone, and it will not be re-imported automatically.")) return;
+      removeCases([state.activeId]);
+    });
+    controls.appendChild(delBtn);
+
+    var manageBtn = document.createElement("button");
+    manageBtn.title = "Review and remove several cases at once";
+    manageBtn.textContent = "Manage cases";
+    manageBtn.addEventListener("click", openManageCases);
+    controls.appendChild(manageBtn);
+
+    var divider = document.createElement("span");
+    divider.style.cssText = "width:1px;height:22px;background:var(--line);margin:0 2px;";
+    controls.appendChild(divider);
+
+    var backupBtn = document.createElement("button");
+    backupBtn.className = "backup-btn";
+    backupBtn.title = "Download a backup of all RCAs";
+    backupBtn.innerHTML = '<i class="ti ti-download"></i>';
+    backupBtn.addEventListener("click", downloadBackup);
+    controls.appendChild(backupBtn);
+
+    var restoreInput = document.createElement("input");
+    restoreInput.type = "file";
+    restoreInput.accept = ".json,application/json";
+    restoreInput.style.display = "none";
+    restoreInput.addEventListener("change", function(){
+      var file = restoreInput.files[0];
+      if(file) uploadBackup(file);
+      restoreInput.value = "";
+    });
+    var restoreBtn = document.createElement("button");
+    restoreBtn.className = "restore-btn";
+    restoreBtn.title = "Restore from a backup file";
+    restoreBtn.innerHTML = '<i class="ti ti-upload"></i>';
+    restoreBtn.addEventListener("click", function(){ restoreInput.click(); });
+    controls.appendChild(restoreBtn);
+    controls.appendChild(restoreInput);
+
+    bar.appendChild(controls);
+    return bar;
+  }
+
+  function downloadBackup(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "rca-workbench-backup_" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast("Backup downloaded");
+  }
+
+  function uploadBackup(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var parsed;
+      try{ parsed = JSON.parse(e.target.result); }
+      catch(err){ toast("Could not read that file"); return; }
+      if(!parsed || typeof parsed.projects !== "object" || !parsed.projects){
+        toast("That file doesn't look like a valid backup");
+        return;
+      }
+      if(!confirm("Restoring this backup will replace everything currently in the app. Continue?")) return;
+      state = parsed;
+      if(!state.activeId || !state.projects[state.activeId]){
+        var ids = Object.keys(state.projects);
+        state.activeId = ids.length ? ids[0] : null;
+      }
+      if(!state.activeId){ state = seedData(); }
+      normalizeState();
+      scheduleSave();
+      render();
+      toast("Backup restored");
+    };
+    reader.onerror = function(){ toast("Could not read that file"); };
+    reader.readAsText(file);
+  }
+
+  /* ---------------- stepper ---------------- */
+
+  function renderStepper(){
+    var wrap = document.createElement("div");
+    wrap.className = "stepper";
+    STEPS.forEach(function(s, i){
+      var btn = document.createElement("button");
+      btn.className = "step-btn" + (activeTab === s.id ? " active" : "");
+      btn.innerHTML = '<span class="step-num">' + (i+1) + '</span>' + s.label;
+      btn.addEventListener("click", function(){ setTab(s.id); });
+      wrap.appendChild(btn);
+    });
+    return wrap;
+  }
+
+  /* ---------------- causes status pipeline ---------------- */
+
+  function causeStatusBadge(c){
+    if(c.validation === "confirmed"){
+      if(c.actionAdded) return {cls:"analyzed", label:"Action planned"};
+      if(fiveWhysComplete(c.id)) return {cls:"analyzed", label:"Root cause found"};
+      return {cls:"confirmed", label:"Confirmed"};
+    }
+    if(c.validation === "rejected") return {cls:"rejected", label:"Rejected"};
+    if(c.validation === "pending") return {cls:"pending", label:"Reviewing"};
+    return {cls:"new", label:"New"};
+  }
+
+  function fiveWhysComplete(causeId){
+    var p = activeProject();
+    var chain = p.fiveWhys[causeId];
+    return !!(chain && chain[4] && chain[4].trim().length > 0);
+  }
+
+  /* ---------------- 1. PROBLEM PANEL ---------------- */
+
+  function renderProblemPanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Problem statement</h2><p class="hint">Define what is wrong, how big it is, and the target — before collecting causes.</p>';
+
+    var nameField = fieldBlock("RCA name", "text", p.name, function(v){
+      p.name = v; scheduleSave();
+    });
+    card.appendChild(nameField);
+
+    var grid = document.createElement("div");
+    grid.className = "grid-2";
+    grid.appendChild(fieldBlock("Defect / issue", "text", p.problem.defect, function(v){
+      p.problem.defect = v; scheduleSave();
+    }));
+    grid.appendChild(fieldBlock("Target", "text", p.problem.target, function(v){
+      p.problem.target = v; scheduleSave();
+    }));
+    card.appendChild(grid);
+
+    card.appendChild(fieldBlock("What is wrong, where, when, and how big", "textarea", p.problem.statement, function(v){
+      p.problem.statement = v; scheduleSave();
+    }));
+
+    wrap.appendChild(card);
+    wrap.appendChild(renderAttachmentsSection(p));
+
+    var nextCard = document.createElement("div");
+    nextCard.style.textAlign = "right";
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "primary";
+    nextBtn.innerHTML = "Continue to fishbone &rarr;";
+    nextBtn.addEventListener("click", function(){ setTab("fishbone"); });
+    nextCard.appendChild(nextBtn);
+    wrap.appendChild(nextCard);
+
+    return wrap;
+  }
+
+  function readImageResized(file, callback){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var maxW = 900;
+        var scale = Math.min(1, maxW / img.width);
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = function(){ toast("Could not read that image"); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ toast("Could not read that file"); };
+    reader.readAsDataURL(file);
+  }
+
+  function renderAttachmentsSection(p){
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Supporting data</h2><p class="hint">Attach tables or charts and graphs that back up the problem statement. These carry through to the summary and the PDF report.</p>';
+
+    var toolbar = document.createElement("div");
+    toolbar.style.cssText = "display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;";
+
+    var addTableBtn = document.createElement("button");
+    addTableBtn.innerHTML = '<i class="ti ti-table-plus"></i> Add table';
+    addTableBtn.addEventListener("click", function(){
+      p.attachments.push({ id: uid(), type:"table", name:"New table", headers:["Column 1","Column 2"], rows:[["",""]] });
+      scheduleSave();
+      render();
+    });
+    toolbar.appendChild(addTableBtn);
+
+    var fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.style.display = "none";
+    fileInput.addEventListener("change", function(){
+      var file = fileInput.files[0];
+      if(!file) return;
+      readImageResized(file, function(dataUrl){
+        p.attachments.push({ id: uid(), type:"image", name: file.name.replace(/\.[^.]+$/,""), dataUrl: dataUrl });
+        scheduleSave();
+        render();
+      });
+      fileInput.value = "";
+    });
+    var addImageBtn = document.createElement("button");
+    addImageBtn.innerHTML = '<i class="ti ti-photo-plus"></i> Add graph or image';
+    addImageBtn.addEventListener("click", function(){ fileInput.click(); });
+    toolbar.appendChild(addImageBtn);
+    toolbar.appendChild(fileInput);
+
+    card.appendChild(toolbar);
+
+    if(p.attachments.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<i class="ti ti-chart-bar"></i>No tables or graphs attached yet.';
+      card.appendChild(empty);
+    } else {
+      p.attachments.forEach(function(a){
+        card.appendChild(a.type === "table" ? renderTableAttachment(a, p) : renderImageAttachment(a, p));
+      });
+    }
+
+    return card;
+  }
+
+  function attachmentHeader(a, p){
+    var head = document.createElement("div");
+    head.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;";
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = a.name;
+    nameInput.style.cssText = "font-weight:500;max-width:280px;";
+    nameInput.addEventListener("input", function(){ a.name = nameInput.value; scheduleSave(); });
+    var del = document.createElement("button");
+    del.className = "danger-ghost";
+    del.innerHTML = '<i class="ti ti-trash"></i>';
+    del.title = "Remove";
+    del.addEventListener("click", function(){
+      p.attachments = p.attachments.filter(function(x){ return x.id !== a.id; });
+      scheduleSave();
+      render();
+    });
+    head.appendChild(nameInput);
+    head.appendChild(del);
+    return head;
+  }
+
+  function renderTableAttachment(a, p){
+    var div = document.createElement("div");
+    div.style.cssText = "border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-bottom:14px;background:var(--canvas);";
+    div.appendChild(attachmentHeader(a, p));
+
+    var table = document.createElement("table");
+    var thead = document.createElement("thead");
+    var htr = document.createElement("tr");
+    a.headers.forEach(function(h, ci){
+      var th = document.createElement("th");
+      var input = document.createElement("input");
+      input.type = "text"; input.value = h;
+      input.style.cssText = "font-size:14px;font-weight:600;";
+      input.addEventListener("input", function(){ a.headers[ci] = input.value; scheduleSave(); });
+      th.appendChild(input);
+      htr.appendChild(th);
+    });
+    htr.appendChild(document.createElement("th"));
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    a.rows.forEach(function(row, ri){
+      var tr = document.createElement("tr");
+      row.forEach(function(cell, ci){
+        var td = document.createElement("td");
+        var input = document.createElement("input");
+        input.type = "text"; input.value = cell;
+        input.addEventListener("input", function(){ a.rows[ri][ci] = input.value; scheduleSave(); });
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      var tdDel = document.createElement("td");
+      var rowDel = document.createElement("button");
+      rowDel.className = "ghost";
+      rowDel.innerHTML = '<i class="ti ti-x"></i>';
+      rowDel.title = "Remove row";
+      rowDel.addEventListener("click", function(){ a.rows.splice(ri,1); scheduleSave(); render(); });
+      tdDel.appendChild(rowDel);
+      tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    div.appendChild(table);
+
+    var rowBtns = document.createElement("div");
+    rowBtns.style.cssText = "display:flex;gap:8px;margin-top:10px;";
+    var addRowBtn = document.createElement("button");
+    addRowBtn.textContent = "+ Row";
+    addRowBtn.addEventListener("click", function(){
+      a.rows.push(a.headers.map(function(){ return ""; }));
+      scheduleSave(); render();
+    });
+    var addColBtn = document.createElement("button");
+    addColBtn.textContent = "+ Column";
+    addColBtn.addEventListener("click", function(){
+      a.headers.push("Column " + (a.headers.length + 1));
+      a.rows.forEach(function(r){ r.push(""); });
+      scheduleSave(); render();
+    });
+    rowBtns.appendChild(addRowBtn);
+    rowBtns.appendChild(addColBtn);
+    div.appendChild(rowBtns);
+
+    return div;
+  }
+
+  function renderImageAttachment(a, p){
+    var div = document.createElement("div");
+    div.style.cssText = "border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-bottom:14px;background:var(--canvas);";
+    div.appendChild(attachmentHeader(a, p));
+    var img = document.createElement("img");
+    img.src = a.dataUrl;
+    img.alt = a.name || "Attached chart";
+    img.style.cssText = "max-width:100%;border-radius:6px;border:1px solid var(--line);display:block;";
+    div.appendChild(img);
+    return div;
+  }
+
+  function fieldBlock(label, type, value, onChange){
+    var div = document.createElement("div");
+    div.className = "field";
+    var l = document.createElement("label");
+    l.className = "field-label";
+    l.textContent = label;
+    div.appendChild(l);
+    var input = document.createElement(type === "textarea" ? "textarea" : "input");
+    if(type !== "textarea") input.type = type;
+    input.value = value || "";
+    input.addEventListener("input", function(){ onChange(input.value); });
+    div.appendChild(input);
+    return div;
+  }
+
+  /* ---------------- 2. FISHBONE PANEL ---------------- */
+
+  function renderFishbonePanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Fishbone (Ishikawa) diagram</h2><p class="hint">Brainstorm possible causes under each of the 4 M categories. Add short, specific entries — one cause per line.</p>';
+    card.appendChild(renderSpineSVG(p));
+    wrap.appendChild(card);
+
+    var grid = document.createElement("div");
+    grid.className = "cat-grid";
+
+    CATEGORIES.forEach(function(cat){
+      var cc = document.createElement("div");
+      cc.className = "cat-card " + cat.id;
+
+      var title = document.createElement("div");
+      title.className = "cat-title";
+      title.innerHTML = '<span class="dot"></span>' + cat.label;
+      cc.appendChild(title);
+
+      var causes = p.causes.filter(function(c){ return c.category === cat.id; });
+      if(causes.length === 0){
+        var empty = document.createElement("div");
+        empty.style.cssText = "font-size:14.5px;color:var(--ink-soft);margin-bottom:8px;";
+        empty.textContent = "No causes added yet.";
+        cc.appendChild(empty);
+      } else {
+        causes.forEach(function(c){
+          cc.appendChild(renderCauseItem(c));
+        });
+      }
+
+      var addRow = document.createElement("div");
+      addRow.className = "add-row";
+      var input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "Add a possible cause…";
+      var addBtn = document.createElement("button");
+      addBtn.textContent = "Add";
+      function doAdd(){
+        var v = input.value.trim();
+        if(!v) return;
+        p.causes.push({ id: uid(), category: cat.id, text: v, notes:"", scores:{}, validation:"new", actionAdded:false });
+        input.value = "";
+        scheduleSave();
+        render();
+      }
+      addBtn.addEventListener("click", doAdd);
+      input.addEventListener("keydown", function(e){ if(e.key === "Enter") doAdd(); });
+      addRow.appendChild(input);
+      addRow.appendChild(addBtn);
+      cc.appendChild(addRow);
+
+      grid.appendChild(cc);
+    });
+
+    wrap.appendChild(grid);
+
+    var nextCard = document.createElement("div");
+    nextCard.style.cssText = "text-align:right;margin-top:16px;";
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "primary";
+    nextBtn.innerHTML = "Continue to validation &rarr;";
+    nextBtn.addEventListener("click", function(){ setTab("validate"); });
+    nextCard.appendChild(nextBtn);
+    wrap.appendChild(nextCard);
+
+    return wrap;
+  }
+
+  function renderCauseItem(c){
+    var div = document.createElement("div");
+    div.className = "cause-item";
+    var top = document.createElement("div");
+    top.className = "cause-top";
+    var text = document.createElement("input");
+    text.type = "text";
+    text.className = "cause-text-input";
+    text.value = c.text;
+    text.addEventListener("input", function(){
+      c.text = text.value;
+      scheduleSave();
+    });
+    text.addEventListener("blur", function(){ render(); });
+    top.appendChild(text);
+    var del = document.createElement("button");
+    del.className = "danger-ghost";
+    del.innerHTML = '<i class="ti ti-x"></i>';
+    del.title = "Remove";
+    del.addEventListener("click", function(){
+      var p = activeProject();
+      p.causes = p.causes.filter(function(x){ return x.id !== c.id; });
+      delete p.fiveWhys[c.id];
+      p.actions = p.actions.filter(function(a){ return a.causeId !== c.id; });
+      scheduleSave();
+      render();
+    });
+    top.appendChild(del);
+    div.appendChild(top);
+
+    var meta = document.createElement("div");
+    meta.className = "cause-meta";
+    var b = causeStatusBadge(c);
+    var badge = document.createElement("span");
+    badge.className = "badge " + b.cls;
+    badge.textContent = b.label;
+    meta.appendChild(badge);
+    div.appendChild(meta);
+
+    return div;
+  }
+
+  function renderSpineSVG(p){
+    var div = document.createElement("div");
+    div.className = "spine-wrap";
+    var counts = {};
+    CATEGORIES.forEach(function(c){ counts[c.id] = p.causes.filter(function(x){return x.category===c.id;}).length; });
+    var colors = { men:"var(--men)", machine:"var(--machine)", material:"var(--material)", method:"var(--method)" };
+    div.innerHTML =
+    '<svg viewBox="0 0 640 190" role="img" aria-label="Fishbone diagram with four cause categories feeding into the problem">' +
+      '<title>Fishbone diagram</title>' +
+      '<line x1="70" y1="95" x2="520" y2="95" stroke="var(--ink-soft)" stroke-width="2"/>' +
+      '<polygon points="520,95 500,85 500,105" fill="var(--ink-soft)"/>' +
+      branchSVG(120, 95, 60, -1, "men", "Men", counts.men, colors.men) +
+      branchSVG(260, 95, 60, -1, "machine", "Machine", counts.machine, colors.machine) +
+      branchSVG(120, 95, 60, 1, "material", "Material", counts.material, colors.material) +
+      branchSVG(260, 95, 60, 1, "method", "Method", counts.method, colors.method) +
+      '<rect x="525" y="70" width="105" height="50" rx="8" fill="var(--amber-bg)" stroke="var(--amber)"/>' +
+      '<text x="577" y="91" text-anchor="middle" font-family="Barlow Condensed" font-size="14" font-weight="700" fill="var(--amber-ink)">PROBLEM</text>' +
+      '<text x="577" y="107" text-anchor="middle" font-family="Inter" font-size="10" fill="var(--amber-ink)">' + escapeXML(truncate(p.problem.defect || "Not defined", 20)) + '</text>' +
+    '</svg>';
+    return div;
+  }
+
+  function branchSVG(x, y, len, dir, id, label, count, color){
+    var y2 = y + dir * len * 0.55;
+    var lx = x - 6;
+    var ly = dir === -1 ? y2 - 10 : y2 + 22;
+    return '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + y2 + '" stroke="' + color + '" stroke-width="2.5"/>' +
+      '<circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + color + '"/>' +
+      '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" font-family="Barlow Condensed" font-size="14" font-weight="700" fill="' + color + '">' + label.toUpperCase() + '</text>' +
+      '<text x="' + lx + '" y="' + (ly + (dir===-1?12:-12)) + '" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">' + count + ' cause' + (count===1?'':'s') + '</text>';
+  }
+
+  function truncate(s, n){ return s.length > n ? s.slice(0,n-1) + "\u2026" : s; }
+  function escapeXML(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  /* ---------------- 3. VALIDATE PANEL ---------------- */
+
+  function renderValidatePanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Validate causes</h2><p class="hint">Score each cause against the criteria below, then mark it confirmed or rejected. Confirmed causes move forward to 5 Whys. Criteria are per-RCA — adjust them to fit this case.</p>';
+
+    card.appendChild(renderCriteriaEditor(p));
+
+    if(p.causes.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<i class="ti ti-list-search"></i>Add causes in the Fishbone tab first.';
+      card.appendChild(empty);
+    } else {
+      var table = document.createElement("table");
+      var thead = document.createElement("thead");
+      var htr = document.createElement("tr");
+      ["Cause","Category"].forEach(function(t){ var th=document.createElement("th"); th.textContent=t; htr.appendChild(th); });
+      p.validationCriteria.forEach(function(crit){ var th=document.createElement("th"); th.textContent=crit; htr.appendChild(th); });
+      ["Score","Status",""].forEach(function(t){ var th=document.createElement("th"); th.textContent=t; htr.appendChild(th); });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+      var tbody = document.createElement("tbody");
+
+      function causeScore(c){
+        return p.validationCriteria.reduce(function(sum, crit){ return sum + (Number(c.scores[crit]) || 0); }, 0);
+      }
+
+      var sorted = p.causes.slice().sort(function(a,b){ return causeScore(b) - causeScore(a); });
+
+      sorted.forEach(function(c){
+        if(!c.scores) c.scores = {};
+        var tr = document.createElement("tr");
+
+        var tdText = document.createElement("td");
+        tdText.textContent = c.text;
+        tdText.style.maxWidth = "200px";
+        tr.appendChild(tdText);
+
+        var tdCat = document.createElement("td");
+        var catObj = CATEGORIES.filter(function(x){return x.id===c.category;})[0];
+        tdCat.textContent = catObj ? catObj.label : c.category;
+        tr.appendChild(tdCat);
+
+        p.validationCriteria.forEach(function(crit){
+          var td = document.createElement("td");
+          var input = document.createElement("input");
+          input.type = "number"; input.min = "0"; input.className = "num-input";
+          input.value = c.scores[crit] || "";
+          input.addEventListener("input", function(){ c.scores[crit] = input.value; scheduleSave(); render(); });
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+
+        var tdScore = document.createElement("td");
+        var scoreSpan = document.createElement("span");
+        scoreSpan.className = "mono";
+        scoreSpan.style.fontWeight = "500";
+        scoreSpan.textContent = causeScore(c);
+        tdScore.appendChild(scoreSpan);
+        tr.appendChild(tdScore);
+
+        var tdStatus = document.createElement("td");
+        var sel = document.createElement("select");
+        sel.className = "status-select";
+        [["new","New"],["pending","Reviewing"],["confirmed","Confirmed"],["rejected","Rejected"]].forEach(function(o){
+          var opt = document.createElement("option");
+          opt.value = o[0]; opt.textContent = o[1];
+          if(c.validation === o[0]) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener("change", function(){ c.validation = sel.value; scheduleSave(); render(); });
+        tdStatus.appendChild(sel);
+        tr.appendChild(tdStatus);
+
+        var tdBadge = document.createElement("td");
+        var b = causeStatusBadge(c);
+        var badge = document.createElement("span");
+        badge.className = "badge " + b.cls;
+        badge.textContent = b.label;
+        tdBadge.appendChild(badge);
+        tr.appendChild(tdBadge);
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      card.appendChild(table);
+    }
+
+    wrap.appendChild(card);
+
+    var nextCard = document.createElement("div");
+    nextCard.style.textAlign = "right";
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "primary";
+    nextBtn.innerHTML = "Continue to 5 Whys &rarr;";
+    nextBtn.addEventListener("click", function(){ setTab("whys"); });
+    nextCard.appendChild(nextBtn);
+    wrap.appendChild(nextCard);
+
+    return wrap;
+  }
+
+  function renderCriteriaEditor(p){
+    var wrap = document.createElement("div");
+    wrap.style.cssText = "background:var(--canvas);border-radius:8px;padding:10px 12px;margin-bottom:16px;";
+
+    var label = document.createElement("div");
+    label.className = "field-label";
+    label.style.marginBottom = "8px";
+    label.textContent = "Validation criteria for this RCA";
+    wrap.appendChild(label);
+
+    var chipRow = document.createElement("div");
+    chipRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:center;";
+
+    p.validationCriteria.forEach(function(crit){
+      var chip = document.createElement("span");
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:5px 6px 5px 12px;font-size:14.5px;";
+      chip.textContent = crit;
+      var x = document.createElement("button");
+      x.className = "ghost";
+      x.style.cssText = "padding:2px 6px;border-radius:50%;line-height:1;";
+      x.innerHTML = '<i class="ti ti-x" style="font-size:14px;"></i>';
+      x.title = "Remove criterion";
+      x.addEventListener("click", function(){
+        if(p.validationCriteria.length <= 1){ toast("Keep at least one criterion"); return; }
+        p.validationCriteria = p.validationCriteria.filter(function(c){ return c !== crit; });
+        p.causes.forEach(function(c){ if(c.scores) delete c.scores[crit]; });
+        scheduleSave(); render();
+      });
+      chip.appendChild(x);
+      chipRow.appendChild(chip);
+    });
+
+    var addWrap = document.createElement("span");
+    addWrap.style.cssText = "display:inline-flex;gap:6px;";
+    var input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "e.g. Severity, Cost impact";
+    input.style.cssText = "width:170px;font-size:14.5px;padding:6px 10px;";
+    var addBtn = document.createElement("button");
+    addBtn.textContent = "+ Add criterion";
+    function doAdd(){
+      var v = input.value.trim();
+      if(!v) return;
+      var exists = p.validationCriteria.some(function(c){ return c.toLowerCase() === v.toLowerCase(); });
+      if(exists){ toast("That criterion already exists"); return; }
+      p.validationCriteria.push(v);
+      input.value = "";
+      scheduleSave(); render();
+    }
+    addBtn.addEventListener("click", doAdd);
+    input.addEventListener("keydown", function(e){ if(e.key === "Enter") doAdd(); });
+    addWrap.appendChild(input);
+    addWrap.appendChild(addBtn);
+    chipRow.appendChild(addWrap);
+
+    wrap.appendChild(chipRow);
+
+    var removeRow = document.createElement("div");
+    removeRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:10px;";
+    var removeLabel = document.createElement("span");
+    removeLabel.style.cssText = "font-size:12.5px;color:var(--ink-soft);";
+    removeLabel.textContent = "Remove a criterion:";
+    var removeSel = document.createElement("select");
+    removeSel.style.fontSize = "14.5px";
+    p.validationCriteria.forEach(function(crit){
+      var opt = document.createElement("option");
+      opt.value = crit; opt.textContent = crit;
+      removeSel.appendChild(opt);
+    });
+    var removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove criterion";
+    removeBtn.addEventListener("click", function(){
+      var crit = removeSel.value;
+      if(!crit) return;
+      if(p.validationCriteria.length <= 1){ toast("Keep at least one criterion"); return; }
+      p.validationCriteria = p.validationCriteria.filter(function(c){ return c !== crit; });
+      p.causes.forEach(function(c){ if(c.scores) delete c.scores[crit]; });
+      scheduleSave(); render();
+    });
+    removeRow.appendChild(removeLabel);
+    removeRow.appendChild(removeSel);
+    removeRow.appendChild(removeBtn);
+    wrap.appendChild(removeRow);
+
+    return wrap;
+  }
+
+  /* ---------------- 4. FIVE WHYS PANEL ---------------- */
+
+  function renderWhysPanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+    var confirmed = p.causes.filter(function(c){ return c.validation === "confirmed"; });
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Five whys</h2><p class="hint">Pick a confirmed cause and drill down. Stop once the answer points to something the team can act on.</p>';
+
+    if(confirmed.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<i class="ti ti-shield-check"></i>Confirm at least one cause in Validate before starting 5 Whys.';
+      card.appendChild(empty);
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    var picker = document.createElement("div");
+    picker.className = "cause-picker";
+    var label = document.createElement("label");
+    label.className = "field-label";
+    label.style.marginBottom = "0";
+    label.textContent = "Confirmed cause";
+    var sel = document.createElement("select");
+    confirmed.forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.text;
+      sel.appendChild(opt);
+    });
+    if(!renderWhysPanel._selected || confirmed.indexOf(causeById(renderWhysPanel._selected)) === -1){
+      renderWhysPanel._selected = confirmed[0].id;
+    }
+    sel.value = renderWhysPanel._selected;
+    sel.addEventListener("change", function(){
+      renderWhysPanel._selected = sel.value;
+      render();
+    });
+    picker.appendChild(label);
+    picker.appendChild(sel);
+    card.appendChild(picker);
+
+    var causeId = renderWhysPanel._selected;
+    if(!p.fiveWhys[causeId]) p.fiveWhys[causeId] = ["","","","",""];
+    var chain = p.fiveWhys[causeId];
+
+    var chainDiv = document.createElement("div");
+    chainDiv.className = "why-chain";
+    for(var i=0;i<5;i++){
+      (function(idx){
+        var row = document.createElement("div");
+        row.className = "why-row";
+        var num = document.createElement("div");
+        num.className = "why-num";
+        num.textContent = idx+1;
+        row.appendChild(num);
+        var ta = document.createElement("textarea");
+        ta.placeholder = idx === 0 ? "Why did this happen?" : "Why did that happen?";
+        ta.value = chain[idx] || "";
+        ta.addEventListener("input", function(){
+          chain[idx] = ta.value;
+          scheduleSave();
+        });
+        row.appendChild(ta);
+        chainDiv.appendChild(row);
+      })(i);
+    }
+    card.appendChild(chainDiv);
+    wrap.appendChild(card);
+
+    var nextCard = document.createElement("div");
+    nextCard.style.textAlign = "right";
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "primary";
+    nextBtn.innerHTML = "Continue to action plan &rarr;";
+    nextBtn.addEventListener("click", function(){ setTab("actions"); });
+    nextCard.appendChild(nextBtn);
+    wrap.appendChild(nextCard);
+
+    return wrap;
+  }
+
+  function causeById(id){
+    var p = activeProject();
+    return p.causes.filter(function(c){ return c.id === id; })[0];
+  }
+
+  /* ---------------- 5. ACTIONS PANEL ---------------- */
+
+  var STATUS_STYLES = {
+    "not-started": { bg:"var(--line)", fg:"var(--ink-soft)", label:"Not started" },
+    "in-progress": { bg:"var(--pending-bg)", fg:"var(--pending)", label:"In progress" },
+    "done": { bg:"var(--good-bg)", fg:"var(--good)", label:"Done" }
+  };
+
+  function renderActionsPanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+    var confirmed = p.causes.filter(function(c){ return c.validation === "confirmed"; });
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>Corrective action plan</h2><p class="hint">Turn each confirmed root cause into an owned action with a due date and a way to verify it worked.</p>';
+
+    if(confirmed.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = '<i class="ti ti-clipboard-list"></i>Confirm a cause first, then plan the action here.';
+      card.appendChild(empty);
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    var addWrap = document.createElement("div");
+    addWrap.style.cssText = "display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;";
+    var causeSel = document.createElement("select");
+    confirmed.forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.text;
+      causeSel.appendChild(opt);
+    });
+    var addBtn = document.createElement("button");
+    addBtn.className = "amber";
+    addBtn.textContent = "+ Add action for selected cause";
+    addBtn.addEventListener("click", function(){
+      var cause = causeById(causeSel.value);
+      var chain = p.fiveWhys[causeSel.value];
+      var rootCauseText = (chain && chain[4]) ? chain[4] : "";
+      p.actions.push({
+        id: uid(), causeId: causeSel.value, rootCause: rootCauseText,
+        action:"", owner:"", dueDate:"", verification:"", status:"not-started"
+      });
+      cause.actionAdded = true;
+      scheduleSave();
+      render();
+    });
+    addWrap.appendChild(causeSel);
+    addWrap.appendChild(addBtn);
+    card.appendChild(addWrap);
+
+    if(p.actions.length === 0){
+      var empty2 = document.createElement("div");
+      empty2.className = "empty";
+      empty2.innerHTML = '<i class="ti ti-checklist"></i>No actions yet — add one above.';
+      card.appendChild(empty2);
+    } else {
+      p.actions.forEach(function(a){
+        card.appendChild(renderActionCard(a));
+      });
+    }
+
+    wrap.appendChild(card);
+
+    var nextCard = document.createElement("div");
+    nextCard.style.textAlign = "right";
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "primary";
+    nextBtn.innerHTML = "View summary &rarr;";
+    nextBtn.addEventListener("click", function(){ setTab("summary"); });
+    nextCard.appendChild(nextBtn);
+    wrap.appendChild(nextCard);
+
+    return wrap;
+  }
+
+  function renderActionCard(a){
+    var p = activeProject();
+    var cause = causeById(a.causeId);
+    var div = document.createElement("div");
+    div.style.cssText = "border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-bottom:12px;background:var(--canvas);";
+
+    var head = document.createElement("div");
+    head.style.cssText = "display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;";
+    var title = document.createElement("div");
+    title.style.cssText = "font-size:15.5px;font-weight:500;";
+    title.textContent = cause ? cause.text : "(cause removed)";
+    head.appendChild(title);
+    var del = document.createElement("button");
+    del.className = "danger-ghost";
+    del.style.cssText = "display:flex;align-items:center;gap:4px;flex-shrink:0;";
+    del.innerHTML = '<i class="ti ti-x"></i> Remove';
+    del.title = "Remove this action plan";
+    del.addEventListener("click", function(){
+      if(!confirm("Remove this action plan?")) return;
+      p.actions = p.actions.filter(function(x){ return x.id !== a.id; });
+      scheduleSave();
+      render();
+    });
+    head.appendChild(del);
+    div.appendChild(head);
+
+    if(a.rootCause){
+      var rc = document.createElement("div");
+      rc.style.cssText = "font-size:14px;color:var(--ink-soft);margin-bottom:10px;font-style:italic;";
+      rc.textContent = "Root cause: " + a.rootCause;
+      div.appendChild(rc);
+    }
+
+    var grid = document.createElement("div");
+    grid.className = "grid-2";
+    grid.appendChild(smallField("Action", a.action, function(v){ a.action=v; scheduleSave(); }));
+    grid.appendChild(smallField("Owner", a.owner, function(v){ a.owner=v; scheduleSave(); }));
+    div.appendChild(grid);
+
+    var grid2 = document.createElement("div");
+    grid2.className = "grid-2";
+    var dueDiv = document.createElement("div");
+    dueDiv.className = "field";
+    var dueLabel = document.createElement("label");
+    dueLabel.className = "field-label"; dueLabel.textContent = "Due date";
+    var dueInput = document.createElement("input");
+    dueInput.type = "date"; dueInput.value = a.dueDate || "";
+    dueInput.addEventListener("input", function(){ a.dueDate = dueInput.value; scheduleSave(); });
+    dueDiv.appendChild(dueLabel); dueDiv.appendChild(dueInput);
+    grid2.appendChild(dueDiv);
+    grid2.appendChild(smallField("Verification method", a.verification, function(v){ a.verification=v; scheduleSave(); }));
+    div.appendChild(grid2);
+
+    var statusDiv = document.createElement("div");
+    statusDiv.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:4px;";
+    var statusLabel = document.createElement("span");
+    statusLabel.className = "field-label"; statusLabel.style.marginBottom = "0";
+    statusLabel.textContent = "Status";
+    var statusSel = document.createElement("select");
+    statusSel.className = "status-select";
+    Object.keys(STATUS_STYLES).forEach(function(k){
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = STATUS_STYLES[k].label;
+      if(a.status === k) opt.selected = true;
+      statusSel.appendChild(opt);
+    });
+    statusSel.addEventListener("change", function(){ a.status = statusSel.value; scheduleSave(); render(); });
+    statusDiv.appendChild(statusLabel);
+    statusDiv.appendChild(statusSel);
+    var pill = document.createElement("span");
+    var st = STATUS_STYLES[a.status];
+    pill.className = "status-pill";
+    pill.style.background = st.bg; pill.style.color = st.fg;
+    pill.textContent = st.label;
+    statusDiv.appendChild(pill);
+    div.appendChild(statusDiv);
+
+    return div;
+  }
+
+  function smallField(label, value, onChange){
+    var div = document.createElement("div");
+    div.className = "field";
+    div.style.marginBottom = "8px";
+    var l = document.createElement("label");
+    l.className = "field-label";
+    l.textContent = label;
+    div.appendChild(l);
+    var input = document.createElement("input");
+    input.type = "text";
+    input.value = value || "";
+    input.addEventListener("input", function(){ onChange(input.value); });
+    div.appendChild(input);
+    return div;
+  }
+
+  /* ---------------- 6. SUMMARY PANEL ---------------- */
+
+  function renderSummaryPanel(){
+    var wrap = document.createElement("div");
+    var p = activeProject();
+
+    var toolbar = document.createElement("div");
+    toolbar.className = "toolbar";
+    var copyBtn = document.createElement("button");
+    copyBtn.innerHTML = '<i class="ti ti-copy"></i> Copy as text';
+    copyBtn.addEventListener("click", function(){
+      var text = buildReportText(p);
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(text).then(function(){ toast("Report copied"); })
+          .catch(function(){ toast("Copy failed"); });
+      }
+    });
+    var printBtn = document.createElement("button");
+    printBtn.innerHTML = '<i class="ti ti-printer"></i> Print';
+    printBtn.addEventListener("click", function(){ window.print(); });
+    var pdfBtn = document.createElement("button");
+    pdfBtn.className = "primary";
+    pdfBtn.innerHTML = '<i class="ti ti-file-download"></i> Download PDF';
+    pdfBtn.addEventListener("click", function(){ downloadPDF(p); });
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(printBtn);
+    toolbar.appendChild(pdfBtn);
+    wrap.appendChild(toolbar);
+
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = '<h2>' + escapeXML(p.name) + '</h2>';
+
+    var confirmed = p.causes.filter(function(c){ return c.validation === "confirmed"; });
+    var rejected = p.causes.filter(function(c){ return c.validation === "rejected"; });
+    var withRoot = confirmed.filter(function(c){ return fiveWhysComplete(c.id); });
+
+    var kpis = document.createElement("div");
+    kpis.className = "kpi-row";
+    kpis.appendChild(kpi("Causes logged", p.causes.length));
+    kpis.appendChild(kpi("Confirmed", confirmed.length));
+    kpis.appendChild(kpi("Root causes found", withRoot.length));
+    kpis.appendChild(kpi("Actions planned", p.actions.length));
+    card.appendChild(kpis);
+
+    // a case that came from the weekly management meeting is finished here: the issue then goes to CAPA by itself
+    var finKey = (p.source && p.source.type === "agenda") ? p.source.key : "";
+    if(finKey){
+      var fin = document.createElement("div");
+      fin.className = "summary-block";
+      var done = !!p.finishedAt;
+      fin.innerHTML = '<h3>Finish the RCA</h3><p style="font-size:14.5px;line-height:1.55;margin:0 0 10px;">' +
+        (done ? 'Finished on ' + new Date(p.finishedAt).toLocaleDateString() + ' — the issue and its root cause' + (withRoot.length === 1 ? '' : 's') + ' were sent to CAPA. If you change the root causes, send the update below.'
+              : 'This case was raised at the Weekly Management Meeting. When the analysis is complete, finish it here: the issue then goes to CAPA by itself (Issues & Root Causes, FIT/Q/RG-QA-10) with the root causes found.') + '</p>';
+      var fb = document.createElement("button");
+      fb.className = "primary";
+      fb.innerHTML = '<i class="ti ti-send"></i> ' + (done ? 'Send the updated root causes to CAPA' : 'Finish RCA and send to CAPA');
+      fb.disabled = withRoot.length === 0;
+      fb.addEventListener("click", function(){
+        p.finishedAt = p.finishedAt || Date.now();
+        scheduleSave();
+        try{
+          window.parent.postMessage({ type: "fitl-rca-finished", key: finKey, name: p.name,
+            causes: withRoot.map(function(c){ var ch = p.fiveWhys[c.id] || []; return { cause: c.text, root: ch[4] || "", whys: ch.filter(Boolean) }; }) }, "*");
+        }catch(e){}
+        toast("RCA finished — sent to CAPA");
+        render();
+      });
+      fin.appendChild(fb);
+      if(withRoot.length === 0){
+        var hint = document.createElement("p");
+        hint.style.cssText = "font-size:13.5px;color:var(--ink-soft);margin:8px 0 0;";
+        hint.textContent = "Needs at least one confirmed cause whose 5 Whys are complete (a root cause found).";
+        fin.appendChild(hint);
+      }
+      card.appendChild(fin);
+    }
+
+    var pb = document.createElement("div");
+    pb.className = "summary-block";
+    pb.innerHTML = '<h3>Problem statement</h3><p style="font-size:15.5px;line-height:1.6;margin:0 0 6px;">' +
+      (escapeXML(p.problem.statement) || '<span style="color:var(--ink-soft)">Not yet defined.</span>') + '</p>' +
+      (p.problem.target ? '<p style="font-size:15px;color:var(--ink-soft);margin:0;"><strong>Target:</strong> ' + escapeXML(p.problem.target) + '</p>' : '');
+    card.appendChild(pb);
+
+    if(p.attachments.length){
+      var atb = document.createElement("div");
+      atb.className = "summary-block";
+      atb.innerHTML = '<h3>Supporting data</h3>';
+      p.attachments.forEach(function(a){
+        if(a.type === "table"){
+          var tWrap = document.createElement("div");
+          tWrap.style.marginBottom = "14px";
+          var tName = document.createElement("div");
+          tName.style.cssText = "font-size:14.5px;font-weight:500;margin-bottom:6px;";
+          tName.textContent = a.name;
+          tWrap.appendChild(tName);
+          var t = document.createElement("table");
+          var thead = document.createElement("thead");
+          var htr = document.createElement("tr");
+          a.headers.forEach(function(h){ var th=document.createElement("th"); th.textContent=h; htr.appendChild(th); });
+          thead.appendChild(htr); t.appendChild(thead);
+          var tbody = document.createElement("tbody");
+          a.rows.forEach(function(row){
+            var tr = document.createElement("tr");
+            row.forEach(function(cell){ var td=document.createElement("td"); td.textContent=cell; tr.appendChild(td); });
+            tbody.appendChild(tr);
+          });
+          t.appendChild(tbody);
+          tWrap.appendChild(t);
+          atb.appendChild(tWrap);
+        } else {
+          var iWrap = document.createElement("div");
+          iWrap.style.marginBottom = "14px";
+          var iName = document.createElement("div");
+          iName.style.cssText = "font-size:14.5px;font-weight:500;margin-bottom:6px;";
+          iName.textContent = a.name;
+          iWrap.appendChild(iName);
+          var img = document.createElement("img");
+          img.src = a.dataUrl; img.alt = a.name;
+          img.style.cssText = "max-width:100%;border-radius:6px;border:1px solid var(--line);";
+          iWrap.appendChild(img);
+          atb.appendChild(iWrap);
+        }
+      });
+      card.appendChild(atb);
+    }
+
+    var cb = document.createElement("div");
+    cb.className = "summary-block";
+    cb.innerHTML = '<h3>Confirmed causes and root causes</h3>';
+    if(confirmed.length === 0){
+      cb.innerHTML += '<p style="font-size:15px;color:var(--ink-soft);">None confirmed yet.</p>';
+    } else {
+      confirmed.forEach(function(c){
+        var chain = p.fiveWhys[c.id];
+        var root = chain && chain[4] ? chain[4] : null;
+        var item = document.createElement("div");
+        item.style.cssText = "border-left:3px solid var(--good);padding:6px 0 6px 12px;margin-bottom:10px;";
+        item.innerHTML = '<div style="font-size:15.5px;font-weight:500;">' + escapeXML(c.text) + '</div>' +
+          (root ? '<div style="font-size:14.5px;color:var(--ink-soft);margin-top:2px;">Root cause: ' + escapeXML(root) + '</div>'
+                : '<div style="font-size:14.5px;color:var(--pending);margin-top:2px;">5 Whys not yet completed</div>');
+        cb.appendChild(item);
+      });
+    }
+    card.appendChild(cb);
+
+    var ab = document.createElement("div");
+    ab.className = "summary-block";
+    ab.innerHTML = '<h3>Action plan</h3>';
+    if(p.actions.length === 0){
+      ab.innerHTML += '<p style="font-size:15px;color:var(--ink-soft);">No actions added yet.</p>';
+    } else {
+      var table = document.createElement("table");
+      table.innerHTML = '<thead><tr><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>';
+      var tbody = document.createElement("tbody");
+      p.actions.forEach(function(a){
+        var tr = document.createElement("tr");
+        var st = STATUS_STYLES[a.status];
+        tr.innerHTML = '<td>' + escapeXML(a.action || "\u2014") + '</td>' +
+          '<td>' + escapeXML(a.owner || "\u2014") + '</td>' +
+          '<td>' + escapeXML(a.dueDate || "\u2014") + '</td>' +
+          '<td><span class="status-pill" style="background:' + st.bg + ';color:' + st.fg + '">' + st.label + '</span></td>';
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      ab.appendChild(table);
+    }
+    card.appendChild(ab);
+
+    if(rejected.length){
+      var rb = document.createElement("div");
+      rb.className = "summary-block";
+      rb.innerHTML = '<h3>Rejected causes</h3><p style="font-size:14.5px;color:var(--ink-soft);">' +
+        rejected.map(function(c){ return escapeXML(c.text); }).join(" \u00b7 ") + '</p>';
+      card.appendChild(rb);
+    }
+
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  function kpi(label, val){
+    var div = document.createElement("div");
+    div.className = "kpi";
+    div.innerHTML = '<div class="kpi-label">' + label + '</div><div class="kpi-val">' + val + '</div>';
+    return div;
+  }
+
+  function downloadPDF(p){
+    if(!(window.jspdf && window.jspdf.jsPDF)){
+      toast("PDF tools still loading \u2014 try again in a moment");
+      return;
+    }
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit:"pt", format:"a4" });
+    var pageW = doc.internal.pageSize.getWidth();
+    var pageH = doc.internal.pageSize.getHeight();
+    var margin = 42;
+    var maxW = pageW - margin*2;
+    var y = 54;
+
+    function ensureSpace(h){
+      if(y + h > pageH - 44){ doc.addPage(); y = 54; }
+    }
+    function heading(text, size){
+      ensureSpace(size + 14);
+      doc.setFont("helvetica","bold"); doc.setFontSize(size); doc.setTextColor(27,40,56);
+      doc.text(text, margin, y);
+      y += size + 8;
+    }
+    function paragraph(text, size, color){
+      size = size || 10;
+      doc.setFont("helvetica","normal"); doc.setFontSize(size);
+      doc.setTextColor((color&&color[0])||30, (color&&color[1])||30, (color&&color[2])||30);
+      var lines = doc.splitTextToSize(text || "\u2014", maxW);
+      lines.forEach(function(line){
+        ensureSpace(size + 4);
+        doc.text(line, margin, y);
+        y += size + 4;
+      });
+      y += 4;
+    }
+
+    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(27,40,56);
+    doc.text("Root cause analysis", margin, y); y += 24;
+    doc.setFont("helvetica","normal"); doc.setFontSize(12); doc.setTextColor(95,95,95);
+    doc.text(p.name || "Untitled RCA", margin, y); y += 26;
+
+    heading("Problem statement", 13);
+    paragraph(p.problem.statement || "Not yet defined.");
+    if(p.problem.target){
+      doc.setFont("helvetica","italic"); doc.setFontSize(10); doc.setTextColor(95,95,95);
+      ensureSpace(16);
+      doc.text(doc.splitTextToSize("Target: " + p.problem.target, maxW), margin, y);
+      y += 20;
+    }
+
+    var tables = p.attachments.filter(function(a){ return a.type === "table"; });
+    tables.forEach(function(t){
+      heading(t.name || "Table", 12);
+      doc.autoTable({
+        startY: y, margin:{ left:margin, right:margin },
+        head:[t.headers], body:t.rows,
+        styles:{ fontSize:9, cellPadding:4 },
+        headStyles:{ fillColor:[46,64,87] }
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    });
+
+    heading("Fishbone \u2014 possible causes by category", 13);
+    var CAT_LABELS = { men:"Men", machine:"Machine", material:"Material", method:"Method" };
+    CATEGORIES.forEach(function(cat){
+      var inCat = p.causes.filter(function(c){ return c.category === cat.id; });
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(46,64,87);
+      ensureSpace(14);
+      doc.text(cat.label, margin, y); y += 13;
+      if(inCat.length === 0){
+        paragraph("No causes logged.", 9.5, [130,130,130]);
+      } else {
+        inCat.forEach(function(c){
+          doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(30,30,30);
+          var statusLabel = causeStatusBadge(c).label;
+          var lines = doc.splitTextToSize("\u2022 " + c.text + "  [" + statusLabel + "]", maxW - 10);
+          lines.forEach(function(line){ ensureSpace(12); doc.text(line, margin + 10, y); y += 12; });
+        });
+      }
+      y += 4;
+    });
+
+    if(p.causes.length){
+      heading("Validation summary", 13);
+      function causeScorePDF(c){
+        return p.validationCriteria.reduce(function(sum, crit){ return sum + (Number((c.scores||{})[crit]) || 0); }, 0);
+      }
+      var vHead = ["Cause","Category"].concat(p.validationCriteria).concat(["Score","Status"]);
+      var vBody = p.causes.slice().sort(function(a,b){ return causeScorePDF(b) - causeScorePDF(a); }).map(function(c){
+        var row = [c.text, CAT_LABELS[c.category] || c.category];
+        p.validationCriteria.forEach(function(crit){ row.push(String((c.scores||{})[crit] || "\u2014")); });
+        row.push(String(causeScorePDF(c)));
+        row.push(causeStatusBadge(c).label);
+        return row;
+      });
+      doc.autoTable({
+        startY: y, margin:{ left:margin, right:margin },
+        head:[vHead], body: vBody,
+        styles:{ fontSize:8.5, cellPadding:3.5 },
+        headStyles:{ fillColor:[46,64,87] }
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    }
+
+    var images = p.attachments.filter(function(a){ return a.type === "image"; });
+    images.forEach(function(im){
+      heading(im.name || "Chart", 12);
+      var props;
+      try{ props = doc.getImageProperties(im.dataUrl); } catch(e){ props = null; }
+      if(props){
+        var w = maxW;
+        var h = (props.height / props.width) * w;
+        if(h > 360){ h = 360; w = (props.width / props.height) * h; }
+        ensureSpace(h + 10);
+        doc.addImage(im.dataUrl, "JPEG", margin, y, w, h);
+        y += h + 20;
+      }
+    });
+
+    heading("Five whys \u2014 confirmed causes", 13);
+    var confirmed = p.causes.filter(function(c){ return c.validation === "confirmed"; });
+    if(confirmed.length === 0) paragraph("None confirmed yet.");
+    confirmed.forEach(function(c){
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(20,20,20);
+      ensureSpace(14);
+      doc.text(doc.splitTextToSize("\u2022 " + c.text, maxW), margin, y);
+      y += 14;
+      var chain = p.fiveWhys[c.id];
+      if(chain){
+        chain.forEach(function(w, i){
+          if(!w) return;
+          doc.setFont("helvetica", i === 4 ? "bolditalic" : "italic");
+          doc.setFontSize(9.5);
+          doc.setTextColor(i === 4 ? 92 : 95, i === 4 ? 60 : 95, i === 4 ? 10 : 95);
+          var lines = doc.splitTextToSize("Why " + (i+1) + ": " + w, maxW - 14);
+          lines.forEach(function(line){ ensureSpace(13); doc.text(line, margin + 14, y); y += 13; });
+        });
+      } else {
+        paragraph("5 Whys not started.", 9.5, [150,150,150]);
+      }
+      y += 4;
+    });
+
+    heading("Action plan", 13);
+    if(p.actions.length === 0){
+      paragraph("No actions added yet.");
+    } else {
+      var body = p.actions.map(function(a){
+        return [a.action || "\u2014", a.owner || "\u2014", a.dueDate || "\u2014", STATUS_STYLES[a.status].label];
+      });
+      doc.autoTable({
+        startY: y, margin:{ left:margin, right:margin },
+        head:[["Action","Owner","Due","Status"]], body: body,
+        styles:{ fontSize:9, cellPadding:4 },
+        headStyles:{ fillColor:[46,64,87] }
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    }
+
+    var rejected = p.causes.filter(function(c){ return c.validation === "rejected"; });
+    if(rejected.length){
+      heading("Rejected causes", 12);
+      paragraph(rejected.map(function(c){ return c.text; }).join(", "));
+    }
+
+    var filename = (p.name || "RCA").replace(/[^a-z0-9]+/gi, "_") + "_report.pdf";
+    doc.save(filename);
+    toast("PDF downloaded");
+  }
+
+  function buildReportText(p){
+    var lines = [];
+    lines.push("ROOT CAUSE ANALYSIS: " + p.name);
+    lines.push("");
+    lines.push("PROBLEM STATEMENT");
+    lines.push(p.problem.statement || "(not defined)");
+    if(p.problem.target) lines.push("Target: " + p.problem.target);
+    lines.push("");
+    lines.push("CONFIRMED CAUSES");
+    var confirmed = p.causes.filter(function(c){ return c.validation === "confirmed"; });
+    if(confirmed.length === 0) lines.push("(none confirmed)");
+    confirmed.forEach(function(c){
+      lines.push("- " + c.text);
+      var chain = p.fiveWhys[c.id];
+      if(chain){
+        chain.forEach(function(w, i){ if(w) lines.push("    Why " + (i+1) + ": " + w); });
+      }
+    });
+    lines.push("");
+    lines.push("ACTION PLAN");
+    if(p.actions.length === 0) lines.push("(no actions yet)");
+    p.actions.forEach(function(a){
+      lines.push("- " + (a.action || "(no action text)") + " | Owner: " + (a.owner||"\u2014") + " | Due: " + (a.dueDate||"\u2014") + " | Status: " + STATUS_STYLES[a.status].label);
+    });
+    return lines.join("\n");
+  }
+
+  load();
+  try{ window.parent.postMessage({ type: "fitl-rca-ready" }, "*"); }catch(e){}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Press Operation &amp; Downtime — FITL</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F3F4F7;--card:#fff;--ink:#1B2230;--soft:#5F6B7B;--line:#DCE0E7;--navy:#1F3A5F;--op:#2E9E6B;--dn:#D64545;--idle:#CDD3DC;--amber:#C98A10;--red:#DA1B22;--head:'Barlow Condensed','Arial Narrow',sans-serif;}
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,select,input{font:inherit;color:inherit}
+  header{background:var(--card);border-bottom:3px solid var(--navy);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:36px;width:auto;border-radius:4px}
+  h1{font:600 26px/1 var(--head);text-transform:uppercase;margin:0;letter-spacing:.01em}
+  .sub{color:var(--soft);font-size:12.5px;margin-top:3px}
+  .grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}
+  .btn:hover{border-color:#aab3c0} .btn.pri{background:var(--navy);border-color:var(--navy);color:#fff} .btn:disabled{opacity:.45;cursor:not-allowed}
+  main{padding:16px 22px 50px;max-width:1500px;margin:0 auto}
+  .status{font-size:12.5px;color:var(--soft);margin:0 0 12px}
+  .status b{color:var(--ink)} .warn{color:#8A5A00;background:#FFF3D6;padding:1px 7px;border-radius:9px}
+  .tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+  .tab{border:none;background:none;padding:9px 16px;font-weight:600;color:var(--soft);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--ink);border-bottom-color:var(--navy)}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .bar select,.bar input{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:#fff}
+  .seg button{border:none;background:none;padding:6px 14px;cursor:pointer;font-weight:500}
+  .seg button.on{background:var(--navy);color:#fff}
+  .legend{display:flex;gap:14px;font-size:12.5px;color:var(--soft);margin:2px 0 12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .empty{padding:44px 20px;text-align:center;color:var(--soft);line-height:1.7}
+  /* shift board */
+  .bank{margin-bottom:14px;overflow:hidden}
+  .bhead{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:10px 16px;background:#F7F8FA;border-bottom:1px solid var(--line)}
+  .bhead b{font:600 22px/1 var(--head)} .bhead .tb{color:var(--soft);font-size:12px}
+  .bsum{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px}
+  .prow{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;padding:8px 16px;border-bottom:1px solid #EEF0F4}
+  .prow:last-child{border-bottom:none}
+  .pname{font:600 17px/1 var(--head)}
+  .cols{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:18px}
+  .sbar{height:16px;border-radius:5px;background:var(--idle);display:flex;overflow:hidden}
+  .sbar i{display:block;height:100%} .sbar .o{background:var(--op)} .sbar .d{background:var(--dn)}
+  .nums{font-size:12px;color:var(--soft);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+  .nums b{color:var(--ink);font-weight:600}
+  .shl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--soft);margin-bottom:3px}
+  .nodata{color:#8A5A00;background:#FFF3D6;padding:1px 8px;border-radius:9px;font-size:12px}
+  /* summary */
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}
+  .cb{padding:12px 14px;height:340px;position:relative} .cb.tall{grid-column:1/-1;height:360px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+  .k{padding:12px 14px} .k small{display:block;color:var(--soft);font-size:12px} .k b{font:600 30px/1.1 var(--head)}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid #EEF0F4;text-align:right} th{background:#F7F8FA;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0}
+  th:nth-child(-n+2),td:nth-child(-n+2),th:last-child,td:last-child{text-align:left}
+  .tw{max-height:520px;overflow:auto;border-radius:10px}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Press Operation &amp; Downtime</h1><div class="sub">Operating time and downtime of every press, shift by shift — from the Press Trace reports of the four curing-section tablets</div></div>
+<label class="btn pri">Import Press Trace reports<input id="f" type="file" accept=".xlsx,.xlsm" multiple hidden></label><button class="btn" id="clr">Start over</button><button class="btn" id="xl" disabled>Download Excel</button></header>
+<main><p class="status" id="st">Import the “complete report” (.xlsx) from each tablet — select all four at once. If you already imported them on the Press Downtime Dashboard they arrive here by themselves.</p>
+<div id="app" hidden>
+ <div class="tabs"><button class="tab on" data-v="board">Shift board</button><button class="tab" data-v="sum">Period summary</button></div>
+ <div id="v"></div>
+</div>
+<div class="card empty" id="em">No Press Trace reports loaded yet.<br>Each tablet’s <b>History → Complete daily / weekly report</b> holds its loading report and downtime log.</div>
+</main>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';
+document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const BANKS={'1M':5,'2M':7,'3M':7,'4M':5,'5M':3,'6M':2,'7M':7};
+const TABLET_OF={'1M':'Tablet 1 — 1M & 2M','2M':'Tablet 1 — 1M & 2M','3M':'Tablet 2 — 3M & 4M','4M':'Tablet 2 — 3M & 4M','5M':'Tablet 3 — 5M & 6M','6M':'Tablet 3 — 5M & 6M','7M':'Tablet 4 — 7M'};
+const TABLETS=['Tablet 1 — 1M & 2M','Tablet 2 — 3M & 4M','Tablet 3 — 5M & 6M','Tablet 4 — 7M'];
+const PRESSES=[];Object.keys(BANKS).forEach(b=>{for(let i=1;i<=BANKS[b];i++)PRESSES.push({code:b+i,bank:b})});
+const WIN=720, KEY='fitl_opboard_v1';
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const iso=d=>new Date(Math.round((d-25569)*864e5)).toISOString().slice(0,10);
+const lab=d=>{const t=new Date(Math.round((d-25569)*864e5));return t.getUTCDate()+' '+MONS[t.getUTCMonth()]+' '+t.getUTCFullYear()+' ('+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][t.getUTCDay()]+')'};
+const nf=n=>Math.round(n).toLocaleString();
+const h1=m=>(m/60).toFixed(1);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let LOADS=[],DOWNS=[],FILES=[],seenL=new Set(),seenD=new Set(),CELLS=new Map(),DATES=[];
+const V={view:'board',date:null,shift:'both',from:null,to:null,sshift:'all',bank:'all'};
+
+/* ---------- reading a Press Trace complete report ---------- */
+const sheetNames=buf=>XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames;
+function addReport(f){
+  const names=sheetNames(f.buffer);
+  if(!names.includes('Loading report')&&!names.includes('Downtime log'))throw new Error(f.name+' is not a Press Trace complete report (no Loading report / Downtime log sheet)');
+  const wb=XLSX.read(f.buffer,{type:'array',sheets:['Summary','Loading report','Downtime log'].filter(n=>names.includes(n))});
+  let tablet='';
+  if(wb.Sheets['Summary'])XLSX.utils.sheet_to_json(wb.Sheets['Summary'],{header:1}).forEach(r=>{if(String(r[0]==null?'':r[0]).trim()==='Tablet')tablet=String(r[1]==null?'':r[1]).trim()});
+  let nl=0,nd=0;
+  const read=(name,fn)=>{if(!wb.Sheets[name])return;const a=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1});if(!a.length)return;
+    const H=a[0].map(x=>String(x==null?'':x).trim().toUpperCase()),ix=n=>H.indexOf(n);for(let i=1;i<a.length;i++)fn(a[i],ix)};
+  read('Loading report',(r,ix)=>{
+    const d=Math.floor(+r[ix('DATE')]),press=String(r[ix('PRESS')]||'').trim().toUpperCase();if(!(d>0)||!press)return;
+    const t0=+r[ix('LOADED AT (QR SCAN)')]*1440,act=+r[ix('ACTUAL (MIN)')]||0;let t1=+r[ix('UNLOADED AT')]*1440;if(!(t0>0))return;if(!(t1>t0))t1=t0+act;
+    const key=press+'|'+r[ix('PLATTERN')]+'|'+Math.round(t0);if(seenL.has(key))return;seenL.add(key);
+    LOADS.push({d,sh:/^n/i.test(String(r[ix('SHIFT')]))?'NIGHT':'DAY',press,t0,t1,act,cure:+r[ix('CURE TIME SET (MIN)')]||0,tyres:+r[ix('NO. OF TYRES')]||0,pl:String(r[ix('PLATTERN')]==null?'':r[ix('PLATTERN')]),tab:tablet||String(r[ix('TABLET')]||'')});nl++});
+  read('Downtime log',(r,ix)=>{
+    const d=Math.floor(+r[ix('DATE')]),press=String(r[ix('PRESS')]||'').trim().toUpperCase(),min=+r[ix('DOWNTIME (MIN)')];if(!(d>0)||!press||!(min>0))return;
+    const reason=String(r[ix('REASON')]||r[ix('REASON CODE')]||'Reason not recorded').trim().replace(/\s+/g,' '),key=press+'|'+r[ix('SCANNED AT')]+'|'+min+'|'+reason;
+    if(seenD.has(key))return;seenD.add(key);
+    DOWNS.push({d,sh:/^n/i.test(String(r[ix('SHIFT')]))?'NIGHT':'DAY',press,min,reason,at:String(r[ix('SCANNED AT')]),resp:String(r[ix('RESPONSIBILITY')]||'').trim(),tab:tablet||String(r[ix('TABLET')]||'')});nd++});
+  FILES=FILES.filter(x=>x.name!==f.name);FILES.push({name:f.name,tablet,nl,nd});
+}
+function build(){
+  CELLS=new Map();
+  const cell=(d,sh,p)=>{const k=d+'|'+sh+'|'+p;let c=CELLS.get(k);if(!c){c={d,sh,press:p,bank:p.slice(0,2),loads:0,tyres:0,iv:[],down:0,reasons:{}};CELLS.set(k,c)}return c};
+  LOADS.forEach(x=>{const c=cell(x.d,x.sh,x.press);c.loads++;c.tyres+=x.tyres;const ws=x.d*1440+(x.sh==='DAY'?420:1140),we=ws+WIN,a=Math.max(x.t0,ws),b=Math.min(x.t1,we);if(b>a)c.iv.push([a,b])});
+  DOWNS.forEach(x=>{const c=cell(x.d,x.sh,x.press);c.down+=x.min;c.reasons[x.reason]=(c.reasons[x.reason]||0)+x.min});
+  CELLS.forEach(c=>{c.iv.sort((p,q)=>p[0]-q[0]);let t=0,cs=null,ce=null;c.iv.forEach(([a,b])=>{if(cs==null){cs=a;ce=b}else if(a<=ce)ce=Math.max(ce,b);else{t+=ce-cs;cs=a;ce=b}});if(cs!=null)t+=ce-cs;c.op=Math.min(WIN,Math.round(t));delete c.iv;
+    c.dn=Math.min(c.down,WIN-c.op);c.top=Object.entries(c.reasons).sort((p,q)=>q[1]-p[1])[0];});
+  DATES=[...new Set([...CELLS.values()].map(c=>c.d))].sort((a,b)=>a-b);
+  if(DATES.length){if(V.date==null||!DATES.includes(V.date))V.date=DATES[DATES.length-1];if(V.from==null||V.from<DATES[0])V.from=DATES[0];if(V.to==null||V.to>DATES[DATES.length-1])V.to=DATES[DATES.length-1];}
+}
+/* a bank "has data" for a shift when its tablet reported anything for it */
+const bankHas=(d,sh,b)=>{for(let i=1;i<=BANKS[b];i++)if(CELLS.has(d+'|'+sh+'|'+b+i))return true;return false};
+const cellOf=(d,sh,p)=>CELLS.get(d+'|'+sh+'|'+p)||{loads:0,tyres:0,op:0,dn:0,down:0,top:null};
+
+/* ---------- shift board ---------- */
+function viewBoard(){
+  const shifts=V.shift==='both'?['DAY','NIGHT']:[V.shift];
+  let h='<div class="bar"><select id="bd">'+DATES.slice().reverse().map(d=>'<option value="'+d+'"'+(d===V.date?' selected':'')+'>'+lab(d)+'</option>').join('')+'</select>'+
+    '<span class="seg" id="bs">'+[['both','Day & Night'],['DAY','Day'],['NIGHT','Night']].map(o=>'<button data-s="'+o[0]+'"'+(V.shift===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</span></div>'+
+    '<div class="legend"><span><i style="background:var(--op)"></i>Operating (a tyre curing)</span><span><i style="background:var(--dn)"></i>Downtime logged</span><span><i style="background:var(--idle)"></i>Not recorded</span><span>Day 7:00–19:00 · Night 19:00–7:00</span></div>';
+  Object.keys(BANKS).forEach(b=>{
+    const sums=shifts.map(sh=>{let op=0,dn=0,lo=0;for(let i=1;i<=BANKS[b];i++){const c=cellOf(V.date,sh,b+i);op+=c.op;dn+=c.dn;lo+=c.loads}const tot=BANKS[b]*WIN;return{sh,op,dn,lo,has:bankHas(V.date,sh,b),pOp:op/tot*100,pDn:dn/tot*100}});
+    h+='<div class="card bank"><div class="bhead"><b>'+b+'</b><span class="tb">'+TABLET_OF[b]+'</span><span class="bsum">'+sums.map(s=>s.has?'<span>'+(shifts.length>1?'<b>'+(s.sh==='DAY'?'Day':'Night')+'</b> ':'')+'operating <b>'+s.pOp.toFixed(0)+'%</b> · downtime <b>'+s.pDn.toFixed(0)+'%</b> · '+s.lo+' loads</span>':'<span class="nodata">'+(shifts.length>1?(s.sh==='DAY'?'Day':'Night')+': ':'')+'no report from this tablet</span>').join('')+'</span></div>';
+    for(let i=1;i<=BANKS[b];i++){const p=b+i;
+      h+='<div class="prow"><div class="pname">'+p+'</div><div class="cols" style="--n:'+shifts.length+'">'+shifts.map(sh=>{
+        const c=cellOf(V.date,sh,p),has=bankHas(V.date,sh,b);
+        if(!has)return '<div>'+(shifts.length>1?'<div class="shl">'+(sh==='DAY'?'Day':'Night')+'</div>':'')+'<div class="sbar"></div><div class="nums">—</div></div>';
+        return '<div>'+(shifts.length>1?'<div class="shl">'+(sh==='DAY'?'Day':'Night')+'</div>':'')+'<div class="sbar" title="Operating '+c.op+' min · downtime '+c.dn+' min · not recorded '+(WIN-c.op-c.dn)+' min"><i class="o" style="width:'+(c.op/WIN*100)+'%"></i><i class="d" style="width:'+(c.dn/WIN*100)+'%"></i></div>'+
+          '<div class="nums"><span>operating <b>'+h1(c.op)+' h</b></span><span>downtime <b>'+nf(c.down)+' min</b></span><span><b>'+c.loads+'</b> loads · <b>'+c.tyres+'</b> tyres</span>'+(c.top?'<span>top reason: <b>'+esc(c.top[0])+'</b></span>':'')+'</div></div>'}).join('')+'</div></div>';}
+    h+='</div>';});
+  return h;
+}
+
+/* ---------- period summary ---------- */
+let CH=[];
+function selection(){
+  const sh=V.sshift==='all'?['DAY','NIGHT']:[V.sshift],banks=V.bank==='all'?Object.keys(BANKS):[V.bank];
+  const cells=[...CELLS.values()].filter(c=>c.d>=V.from&&c.d<=V.to&&sh.includes(c.sh)&&banks.includes(c.bank));
+  return{sh,banks,cells};
+}
+function summary(){
+  const {sh,banks,cells}=selection();
+  const per={};PRESSES.filter(p=>banks.includes(p.bank)).forEach(p=>per[p.code]={press:p.code,bank:p.bank,loads:0,tyres:0,op:0,dn:0,down:0,reasons:{},win:0});
+  const winSet={};
+  DATES.filter(d=>d>=V.from&&d<=V.to).forEach(d=>sh.forEach(s=>banks.forEach(b=>{if(bankHas(d,s,b))winSet[b]=(winSet[b]||0)+1})));
+  cells.forEach(c=>{const o=per[c.press];if(!o)return;o.loads+=c.loads;o.tyres+=c.tyres;o.op+=c.op;o.dn+=c.dn;o.down+=c.down;Object.entries(c.reasons).forEach(([r,m])=>o.reasons[r]=(o.reasons[r]||0)+m)});
+  Object.values(per).forEach(o=>{o.win=(winSet[o.bank]||0)*WIN;o.u=o.win?o.op/o.win*100:null;o.dp=o.win?o.dn/o.win*100:null;o.top=Object.entries(o.reasons).sort((a,b)=>b[1]-a[1])[0]});
+  return{per:Object.values(per),cells,sh,banks,winSet};
+}
+function viewSummary(){
+  const {per,cells,sh}=summary();
+  const tot=per.reduce((a,o)=>({op:a.op+o.op,dn:a.dn+o.dn,win:a.win+o.win,loads:a.loads+o.loads,tyres:a.tyres+o.tyres,down:a.down+o.down}),{op:0,dn:0,win:0,loads:0,tyres:0,down:0});
+  let h='<div class="bar"><label>From <select id="sf">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.from?' selected':'')+'>'+iso(d)+'</option>').join('')+'</select></label><label>To <select id="st2">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.to?' selected':'')+'>'+iso(d)+'</option>').join('')+'</select></label>'+
+    '<span class="seg" id="ss">'+[['all','Day & Night'],['DAY','Day'],['NIGHT','Night']].map(o=>'<button data-s="'+o[0]+'"'+(V.sshift===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</span>'+
+    '<select id="sb"><option value="all">All press banks</option>'+Object.keys(BANKS).map(b=>'<option value="'+b+'"'+(V.bank===b?' selected':'')+'>'+b+' bank</option>').join('')+'</select></div>';
+  h+='<div class="kpis"><div class="card k"><small>Operating utilization</small><b>'+(tot.win?(tot.op/tot.win*100).toFixed(1)+' %':'–')+'</b></div><div class="card k"><small>Downtime share</small><b>'+(tot.win?(tot.dn/tot.win*100).toFixed(1)+' %':'–')+'</b></div><div class="card k"><small>Loads</small><b>'+nf(tot.loads)+'</b></div><div class="card k"><small>Tyres loaded</small><b>'+nf(tot.tyres)+'</b></div><div class="card k"><small>Downtime logged</small><b>'+h1(tot.down)+' h</b></div></div>';
+  h+='<div class="grid2"><div class="card cb tall"><canvas id="c1"></canvas></div><div class="card cb"><canvas id="c2"></canvas></div><div class="card cb"><canvas id="c3"></canvas></div><div class="card cb tall"><canvas id="c4"></canvas></div></div>';
+  h+='<div class="card tw"><table><thead><tr><th>Bank</th><th>Press</th><th>Loads</th><th>Tyres</th><th>Operating h</th><th>Downtime h</th><th>Utilization %</th><th>Downtime %</th><th>Top downtime reason</th></tr></thead><tbody>'+
+    per.map(o=>'<tr><td>'+o.bank+'</td><td><b>'+o.press+'</b></td><td>'+o.loads+'</td><td>'+o.tyres+'</td><td>'+h1(o.op)+'</td><td>'+h1(o.down)+'</td><td>'+(o.u==null?'–':o.u.toFixed(1))+'</td><td>'+(o.dp==null?'–':o.dp.toFixed(1))+'</td><td>'+(o.top?esc(o.top[0])+' ('+nf(o.top[1])+' min)':'–')+'</td></tr>').join('')+'</tbody></table></div>';
+  return h;
+}
+function charts(){
+  if(typeof Chart==='undefined'||!$('c1'))return;CH.forEach(c=>c.destroy());CH=[];
+  Chart.defaults.font.family="Inter,system-ui,sans-serif";
+  const {per,cells,sh}=summary();
+  const mk=(id,type,labels,ds,title,opt)=>CH.push(new Chart($(id),{type,data:{labels,datasets:ds},options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:title,font:{size:14}},legend:{position:'bottom'}}},opt||{})}));
+  mk('c1','bar',per.map(o=>o.press),[{label:'Operating hours',data:per.map(o=>+(o.op/60).toFixed(1)),backgroundColor:'#2E9E6B',stack:'a'},{label:'Downtime hours',data:per.map(o=>+(o.dn/60).toFixed(1)),backgroundColor:'#D64545',stack:'a'}],'Operating and downtime hours — each press',{scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'hours'}}}});
+  const rs={};cells.forEach(c=>Object.entries(c.reasons).forEach(([r,m])=>rs[r]=(rs[r]||0)+m));const top=Object.entries(rs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mk('c2','bar',top.map(t=>t[0].length>34?t[0].slice(0,32)+'…':t[0]),[{label:'Downtime minutes',data:top.map(t=>t[1]),backgroundColor:'#D64545'}],'Top downtime reasons (minutes)',{indexAxis:'y',plugins:{legend:{display:false},title:{display:true,text:'Top downtime reasons (minutes)',font:{size:14}}}});
+  const banks=Object.keys(BANKS);
+  mk('c3','bar',banks,['DAY','NIGHT'].filter(s=>sh.includes(s)).map(s=>({label:s==='DAY'?'Day':'Night',data:banks.map(b=>+(cells.filter(c=>c.bank===b&&c.sh===s).reduce((a,c)=>a+c.down,0)/60).toFixed(1)),backgroundColor:s==='DAY'?'#E0A526':'#1F3A5F'})),'Downtime hours — press bank, Day vs Night',{scales:{y:{title:{display:true,text:'hours'}}}});
+  const ds=DATES.filter(d=>d>=V.from&&d<=V.to);
+  mk('c4','line',ds.map(iso),['DAY','NIGHT'].filter(s=>sh.includes(s)).map(s=>({label:(s==='DAY'?'Day':'Night')+' — operating %',data:ds.map(d=>{let op=0,win=0;Object.keys(BANKS).forEach(b=>{if(V.bank!=='all'&&V.bank!==b)return;if(bankHas(d,s,b)){win+=BANKS[b]*WIN;for(let i=1;i<=BANKS[b];i++)op+=cellOf(d,s,b+i).op}});return win?+(op/win*100).toFixed(1):null}),borderColor:s==='DAY'?'#E0A526':'#1F3A5F',backgroundColor:s==='DAY'?'#E0A526':'#1F3A5F',tension:.25,spanGaps:true})),'Operating utilization by day (%)',{scales:{y:{suggestedMin:0,suggestedMax:100}}});
+}
+
+/* ---------- screen ---------- */
+function render(){
+  if(!DATES.length){$('app').hidden=true;$('em').hidden=false;$('xl').disabled=true;return}
+  $('app').hidden=false;$('em').hidden=true;$('xl').disabled=false;
+  $('v').innerHTML=V.view==='board'?viewBoard():viewSummary();
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.v===V.view));
+  if(V.view==='sum')charts();
+}
+function status(){
+  const have=new Set(FILES.map(f=>f.tablet).filter(Boolean)),miss=TABLETS.filter(t=>!have.has(t));
+  $('st').innerHTML='<b>'+FILES.length+' report'+(FILES.length===1?'':'s')+'</b> · '+nf(LOADS.length)+' loads · '+nf(DOWNS.length)+' downtime entries · '+(DATES.length?iso(DATES[0])+' to '+iso(DATES[DATES.length-1]):'')+
+    (have.size?' · from '+[...have].join(', '):'')+(miss.length&&FILES.length?' · <span class="warn">not loaded yet: '+miss.join(', ')+'</span>':(FILES.length?' · all four tablets loaded':''));
+}
+function ingest(list,forward){
+  list.forEach(addReport);build();status();save();render();
+  if(forward&&parent!==window)try{parent.postMessage({type:'fitl-trace-reports',files:list.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
+}
+const readBuf=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res({name:f.name,buffer:fr.result});fr.onerror=()=>rej(new Error('Could not read '+f.name));fr.readAsArrayBuffer(f)});
+$('f').onchange=e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;$('st').textContent='Reading '+files.map(f=>f.name).join(', ')+' …';
+  Promise.all(files.map(readBuf)).then(l=>setTimeout(()=>{try{ingest(l,true)}catch(x){$('st').textContent='Could not read the report: '+x.message}},30)).catch(x=>{$('st').textContent=x.message})};
+$('clr').onclick=()=>{LOADS=[];DOWNS=[];FILES=[];seenL=new Set();seenD=new Set();CELLS=new Map();DATES=[];V.date=V.from=V.to=null;try{localStorage.removeItem(KEY)}catch(_){}
+  $('st').textContent='Everything was cleared. Import the reports again to begin.';render()};
+document.addEventListener('click',e=>{
+  const t=e.target.closest('.tab');if(t){V.view=t.dataset.v;render();return}
+  const b=e.target.closest('#bs button');if(b){V.shift=b.dataset.s;render();return}
+  const s=e.target.closest('#ss button');if(s){V.sshift=s.dataset.s;render();return}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='bd'){V.date=+e.target.value;render()}
+  else if(e.target.id==='sf'){V.from=+e.target.value;if(V.to<V.from)V.to=V.from;render()}
+  else if(e.target.id==='st2'){V.to=+e.target.value;if(V.from>V.to)V.from=V.to;render()}
+  else if(e.target.id==='sb'){V.bank=e.target.value;render()}
+});
+/* the host page hands over reports imported on the Press Downtime Dashboard */
+addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
+  if(m&&m.type==='fitl-trace-reports'&&Array.isArray(m.files))try{ingest(m.files,false)}catch(x){$('st').textContent='Could not read the report: '+x.message}});
+
+/* ---------- Excel ---------- */
+$('xl').onclick=()=>{
+  const {per,cells}=summary();
+  const rows=cells.filter(c=>c.loads||c.down).sort((a,b)=>a.d-b.d||(a.sh<b.sh?1:-1)||a.press.localeCompare(b.press,undefined,{numeric:true})).map(c=>({Date:iso(c.d),Shift:c.sh==='DAY'?'Day':'Night',Bank:c.bank,Press:c.press,Loads:c.loads,'Tyres loaded':c.tyres,'Operating min':c.op,'Downtime min':c.down,'Not recorded min':Math.max(0,WIN-c.op-c.dn),'Operating %':+(c.op/WIN*100).toFixed(1),'Downtime %':+(c.dn/WIN*100).toFixed(1),'Top downtime reason':c.top?c.top[0]:''}));
+  const sm=per.map(o=>({Bank:o.bank,Press:o.press,Loads:o.loads,'Tyres loaded':o.tyres,'Operating h':+h1(o.op),'Downtime h':+h1(o.down),'Utilization %':o.u==null?'':+o.u.toFixed(1),'Downtime %':o.dp==null?'':+o.dp.toFixed(1),'Top downtime reason':o.top?o.top[0]:''}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sm),'Press summary');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Press x shift');
+  XLSX.writeFile(wb,'Press_Operation_and_Downtime_'+iso(V.from)+'_to_'+iso(V.to)+'.xlsx');
+};
+
+/* ---------- keep the data for next time (last 45 days) ---------- */
+function save(){try{
+  const mx=Math.max(0,...LOADS.map(x=>x.d),...DOWNS.map(x=>x.d)),keep=mx-45;
+  localStorage.setItem(KEY,JSON.stringify({L:LOADS.filter(x=>x.d>=keep).map(x=>[x.d,x.sh==='DAY'?0:1,x.press,Math.round(x.t0),Math.round(x.t1),x.act,x.cure,x.tyres,x.tab,x.pl]),
+    D:DOWNS.filter(x=>x.d>=keep).map(x=>[x.d,x.sh==='DAY'?0:1,x.press,x.min,x.reason,x.resp,x.tab,x.at]),F:FILES}))}catch(_){}}
+function restore(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return;
+  LOADS=s.L.map(a=>({d:a[0],sh:a[1]?'NIGHT':'DAY',press:a[2],t0:a[3],t1:a[4],act:a[5],cure:a[6],tyres:a[7],tab:a[8],pl:a[9]}));
+  DOWNS=s.D.map(a=>({d:a[0],sh:a[1]?'NIGHT':'DAY',press:a[2],min:a[3],reason:a[4],resp:a[5],tab:a[6],at:a[7]}));FILES=s.F||[];
+  LOADS.forEach(x=>seenL.add(x.press+'|'+x.pl+'|'+Math.round(x.t0)));DOWNS.forEach(x=>seenD.add(x.press+'|'+x.at+'|'+x.min+'|'+x.reason));
+  build();status();render()}catch(_){}}
+restore();
+try{parent.postMessage({type:'fitl-opboard-ready'},'*')}catch(_){}
+})();
+</script>
+</body>
+</html>

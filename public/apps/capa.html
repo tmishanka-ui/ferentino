@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAPA Control Platform — FITL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F2F0EB; --card:#FFFFFF; --ink:#1D2127; --soft:#5E6772; --line:#DDD8CF; --line2:#ECE8E0;
+    --red:#DA1B22; --red-d:#B3151B; --red-bg:#FBE9EA;
+    --amber:#B97708; --amber-bg:#FBF0D8;
+    --green:#2C7A4B; --green-bg:#E1F0E7;
+    --blue:#2B5A8C; --blue-bg:#E3ECF6;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+    --head:'Barlow Condensed','Arial Narrow',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font:inherit;color:inherit;}
+  h1,h2,h3{font-family:var(--head);font-weight:600;letter-spacing:.01em;margin:0;}
+  .mono{font-family:var(--mono);font-size:12.5px;}
+  .muted{color:var(--soft);}
+  [hidden]{display:none !important;}
+
+  /* header */
+  .top{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand img{height:38px;width:auto;border-radius:4px;display:block;}
+  .brand h1{font-size:25px;text-transform:uppercase;line-height:1;}
+  .brand p{margin:3px 0 0;font-size:12px;color:var(--soft);}
+  .top-note{font-size:12px;color:var(--soft);text-align:right;line-height:1.45;}
+  .top-note b{color:var(--ink);font-weight:600;}
+
+  /* nav */
+  .tabs{background:var(--card);border-bottom:1px solid var(--line);padding:0 22px;display:flex;gap:2px;overflow-x:auto;}
+  .tab{background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1px;padding:11px 14px 9px;cursor:pointer;white-space:nowrap;color:var(--soft);text-align:left;}
+  .tab:hover{color:var(--ink);}
+  .tab.on{color:var(--ink);border-bottom-color:var(--red);}
+  .tab .t1{display:block;font-weight:600;font-size:13.5px;}
+  .tab .t2{display:block;font-family:var(--mono);font-size:10.5px;opacity:.75;margin-top:1px;}
+  .badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:600;line-height:18px;text-align:center;vertical-align:1px;}
+  .badge.grey{background:#8A929B;}
+
+  main{padding:20px 22px 60px;max-width:1500px;margin:0 auto;}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .page-head h2{font-size:26px;text-transform:uppercase;}
+  .page-head .docno{font-family:var(--mono);font-size:12px;color:var(--soft);margin-left:10px;text-transform:none;letter-spacing:0;}
+  .page-head p{margin:4px 0 0;color:var(--soft);max-width:78ch;line-height:1.5;}
+
+  /* controls */
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .btn{border:1px solid var(--line);background:var(--card);padding:7px 13px;border-radius:7px;cursor:pointer;font-weight:500;font-size:13px;}
+  .btn:hover{border-color:#B9B2A6;background:#FBFAF8;}
+  .btn.red{background:var(--red);border-color:var(--red);color:#fff;}
+  .btn.red:hover{background:var(--red-d);border-color:var(--red-d);}
+  .btn.sm{padding:4px 9px;font-size:12px;}
+  .btn.ghost{background:none;border-color:transparent;color:var(--soft);}
+  .btn.ghost:hover{color:var(--red);background:var(--red-bg);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  select,input[type=text],input[type=date],input[type=number],textarea{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px;width:100%;}
+  textarea{resize:vertical;min-height:54px;line-height:1.45;}
+  .bar select,.bar input[type=text]{width:auto;}
+  input:focus,select:focus,textarea:focus{outline:2px solid #E8A0A3;outline-offset:0;border-color:var(--red);}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;}
+  .empty{padding:36px 20px;text-align:center;color:var(--soft);line-height:1.6;}
+  .empty b{color:var(--ink);}
+
+  /* register tables */
+  .tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);max-height:calc(100vh - 250px);}
+  table.reg{border-collapse:separate;border-spacing:0;width:100%;min-width:880px;}
+  table.reg th{position:sticky;top:0;z-index:2;background:#F7F4EE;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);padding:9px 10px;border-bottom:1px solid var(--line);font-weight:600;}
+  table.reg th.c,table.reg td.c{text-align:center;}
+  table.reg thead tr:nth-child(2) th{top:34px;}
+  table.reg td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top;}
+  table.reg tr.shift-first td{border-top:2px solid var(--line);}
+  table.reg tr.need td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  table.reg tr.noissue td.detail{color:var(--soft);font-style:italic;}
+  .code{font-family:var(--mono);font-size:12.5px;font-weight:500;white-space:nowrap;}
+  .chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:500;white-space:nowrap;}
+  .chip.amber{background:var(--amber-bg);color:#7A4F05;}
+  .chip.green{background:var(--green-bg);color:var(--green);}
+  .chip.blue{background:var(--blue-bg);color:var(--blue);}
+  .chip.red{background:var(--red-bg);color:var(--red-d);}
+  .chip.grey{background:#ECE9E3;color:var(--soft);}
+  .meta{font-size:12px;color:var(--soft);margin-top:3px;}
+  .tick{width:18px;height:18px;accent-color:var(--red);cursor:pointer;}
+  .tick:disabled{cursor:not-allowed;opacity:.35;}
+  .none-btn{border:1px dashed #BDB6A9;background:none;border-radius:6px;padding:2px 8px;font-size:11.5px;color:var(--soft);cursor:pointer;}
+  .none-btn.on{border-style:solid;border-color:var(--green);background:var(--green-bg);color:var(--green);}
+
+  /* overview */
+  .chain{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:22px;}
+  .step{padding:15px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer;position:relative;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;}
+  .step:hover{border-color:#B9B2A6;}
+  .step .n{font-family:var(--head);font-size:13px;font-weight:600;color:var(--red);letter-spacing:.06em;text-transform:uppercase;}
+  .step h3{font-size:19px;margin:3px 0 1px;}
+  .step .doc{font-family:var(--mono);font-size:11px;color:var(--soft);}
+  .step .big{font-family:var(--head);font-size:36px;font-weight:600;line-height:1;margin:12px 0 2px;}
+  .step .big.alert{color:var(--red);}
+  .step .sub{font-size:12.5px;color:var(--soft);line-height:1.45;}
+  .two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;}
+  @media (max-width:980px){.two{grid-template-columns:1fr;}}
+  .panel{padding:16px 18px;}
+  .panel h3{font-size:19px;text-transform:uppercase;margin-bottom:10px;}
+  .qrow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line2);}
+  .qrow:first-of-type{border-top:none;}
+  .qrow .grow{flex:1;min-width:0;}
+  .flow{font-size:13px;line-height:1.7;color:var(--soft);}
+  .flow b{color:var(--ink);}
+
+  /* issue cards */
+  .icard{margin-bottom:14px;overflow:hidden;}
+  .ihead{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--line2);flex-wrap:wrap;}
+  .ihead .code{font-size:16px;font-weight:600;}
+  .ihead .grow{flex:1;min-width:260px;}
+  .ibody{padding:4px 16px 14px;}
+  table.sub{width:100%;border-collapse:collapse;margin-top:8px;}
+  table.sub th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);}
+  table.sub td{padding:5px 6px;vertical-align:top;border-bottom:1px solid var(--line2);}
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+  label.f{display:block;font-size:12px;font-weight:600;color:var(--soft);margin-bottom:4px;}
+  .checks{display:flex;flex-wrap:wrap;gap:6px 16px;}
+  .checks label{display:flex;gap:7px;align-items:center;cursor:pointer;}
+  .rchips{display:flex;gap:6px;flex-wrap:wrap;}
+  .rchips label{display:flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:2px 10px 2px 7px;cursor:pointer;background:#fff;}
+
+  /* follow-up slots */
+  .slot{width:100%;min-height:46px;border:1px dashed #CFC8BB;background:none;border-radius:6px;padding:4px 6px;cursor:pointer;text-align:left;font-size:12px;color:var(--soft);}
+  .slot:hover{border-color:var(--red);color:var(--red);}
+  .slot.has{border:1px solid var(--line);background:#FBFAF7;color:var(--ink);}
+  .slot .d{font-family:var(--mono);font-size:12px;font-weight:500;display:block;}
+
+  /* modal + toast */
+  .veil{position:fixed;inset:0;background:rgba(29,33,39,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .modal{background:#fff;border-radius:12px;width:min(520px,100%);max-height:90vh;overflow:auto;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .modal h3{font-size:22px;text-transform:uppercase;margin-bottom:12px;}
+  .modal .row{margin-bottom:12px;}
+  .modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;z-index:60;pointer-events:none;max-width:420px;}
+  #toast.show{opacity:1;transform:none;}
+
+  /* print */
+  #printArea{display:none;}
+  .dh{width:100%;border-collapse:collapse;margin-bottom:10px;font-family:Calibri,Arial,sans-serif;}
+  .dh td,.dh th{border:1px solid #444;padding:4px 7px;font-size:11px;vertical-align:middle;}
+  .dh .l{width:26%;text-align:center;} .dh .l img{height:30px;display:block;margin:0 auto 4px;}
+  .dh .m{text-align:center;} .dh .sys{font-weight:700;letter-spacing:.06em;font-size:12px;} .dh .ttl{font-weight:700;font-size:15px;margin-top:3px;}
+  .dh .r{padding:0;width:34%;} .dh .r table{width:100%;border-collapse:collapse;} .dh .r th{text-align:left;background:#eee;width:26%;}
+  .pt{width:100%;border-collapse:collapse;font-family:Calibri,Arial,sans-serif;}
+  .pt th{background:#E9E9E9;border:1px solid #444;padding:5px 6px;font-size:11px;}
+  .pt td{border:1px solid #444;padding:5px 6px;font-size:11px;vertical-align:top;}
+  .pt td.cc{text-align:center;}
+  @media print{
+    body{background:#fff;}
+    body > *:not(#printArea){display:none !important;}
+    #printArea{display:block;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modalHost"></div>
+<div id="toast"></div>
+<div id="printArea"></div>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';
+const SEED={
+ "issues": [
+  {
+   "code": "I/0126",
+   "date": "2026-07-31",
+   "issue": "Amount of Scrap Tires has been increased up to 0.75% of production which is much greater than set KPI target 0.2%",
+   "source": "imported",
+   "ref": null,
+   "rca": false,
+   "causes": [
+    {
+     "cause": "01. Loosen Limit Switch (Pressure Drop)",
+     "root": "Authorities and responsibilities has not defined and communicated properly.",
+     "r": 1
+    },
+    {
+     "cause": "02. Spare Parts Not Available (Pressure Drop)",
+     "root": "It has planned to delegate the mold changing responsibility to Shift Supervisor and to appoint a stores executive. The decisions were taken recently and they haven’t communicated properly",
+     "r": 2
+    },
+    {
+     "cause": "03. when there is higher production demand focus decreases",
+     "root": "Current company rules do not fix the habit of Unannounced or late mobile notice absenteeism because penalties are too weak or enforcement is inconsistent.",
+     "r": 3
+    },
+    {
+     "cause": "04. operators swap top and bottom molds",
+     "root": "Even when employees call in on the same day, planning fails and managers struggle to cover tasks. Current company rules do not fix this habit because penalties are too weak or enforcement is inconsistent.",
+     "r": 4
+    }
+   ]
+  },
+  {
+   "code": "I/0226",
+   "date": "2026-09-19",
+   "issue": "14 tyres in two cycles were scrapped due to temperature loss",
+   "source": "imported",
+   "ref": null,
+   "rca": false,
+   "causes": [
+    {
+     "cause": "Spew Cutter has been absent to the shift without informing.",
+     "root": "Less responsibility and accountability",
+     "r": 1
+    },
+    {
+     "cause": "Process Controller has not identified the temperature loss while his monitoring",
+     "root": "No backup alarming system for temperature loss",
+     "r": 2
+    },
+    {
+     "cause": "No actions taken for no man situation in 7M line",
+     "root": "",
+     "r": null
+    }
+   ]
+  },
+  {
+   "code": "I/0326",
+   "date": "2026-10-01",
+   "issue": "Tyre has become scrap due to the contamination of black compound retained in mold.",
+   "source": "imported",
+   "ref": null,
+   "rca": false,
+   "causes": [
+    {
+     "cause": "Mold was not cleaned well by press operator (EPF 848)",
+     "root": "Process Owner had not observed the black compound parts retained in the mold",
+     "r": 1
+    }
+   ]
+  }
+ ],
+ "actions": [
+  {
+   "code": "A/0126",
+   "issueCode": "I/0126",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Clearly define and communicate responsibilities of Shift Supervisors for Press and Mold sections. Update SOPs and display work instructions.",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-04",
+     "ref": "WMM-Issue 18"
+    },
+    {
+     "date": "2026-08-11",
+     "ref": "WMM-Issue 18"
+    }
+   ]
+  },
+  {
+   "code": "A/0226",
+   "issueCode": "I/0126",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Conduct a Training Program to all production related staff including executives to improve understanding and practice of SOP",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-19",
+     "ref": "SOP & Training"
+    }
+   ]
+  },
+  {
+   "code": "A/0326",
+   "issueCode": "I/0126",
+   "roots": [
+    2
+   ],
+   "plan": "Appoint a dedicated Stores Executive responsible for spare parts procurement and inventory management.",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-18",
+     "ref": "WMM Issue 27"
+    }
+   ]
+  },
+  {
+   "code": "A/0426",
+   "issueCode": "I/0126",
+   "roots": [
+    3
+   ],
+   "plan": "Display scrap performance by shift and monitor mills with the highest scrap generation.",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-19",
+     "ref": "WMM Issue 40"
+    }
+   ]
+  },
+  {
+   "code": "A/0526",
+   "issueCode": "I/0126",
+   "roots": [
+    3
+   ],
+   "plan": "Review incentive policy to discourage scrap generation and improve accountability",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-18",
+     "ref": "WMM Issue 40"
+    }
+   ]
+  },
+  {
+   "code": "A/0626",
+   "issueCode": "I/0126",
+   "roots": [
+    4
+   ],
+   "plan": "Reinstate the tyre tag identification system and improve mold identification markings.",
+   "closed": false,
+   "followups": []
+  },
+  {
+   "code": "A/0726",
+   "issueCode": "I/0126",
+   "roots": [
+    3,
+    4
+   ],
+   "plan": "Develop an effective method to control unannounced and late-notice absenteeism.",
+   "closed": false,
+   "followups": [
+    {
+     "date": "2026-08-18",
+     "ref": "WMM Issue 34"
+    }
+   ]
+  },
+  {
+   "code": "A/0826",
+   "issueCode": "I/0226",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Requested for production incentive deduction of process controller and press operator\nAbsent spew cutter’s leave was marked as No pay.",
+   "closed": false,
+   "followups": []
+  },
+  {
+   "code": "A/0926",
+   "issueCode": "I/0226",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Clarify Roles: Issue formal letters to all Shift Executives, Shift Supervisors and Process Controller Supervisors to remind them of their duties. Specifically, emphasize that they are fully responsible for all production activities during their shift.",
+   "closed": false,
+   "followups": []
+  },
+  {
+   "code": "A/0926",
+   "issueCode": "I/0226",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Disciplinary Reminder: Issue a letter to Mr. Soyza to remind him of his responsibilities and the high standard of accountability expected by the company.",
+   "closed": false,
+   "followups": []
+  },
+  {
+   "code": "A/0926",
+   "issueCode": "I/0226",
+   "roots": [
+    1,
+    2
+   ],
+   "plan": "Alarming System : Add an alarm to be raised for temperature drop from the lower limit",
+   "closed": false,
+   "followups": []
+  },
+  {
+   "code": "A/1026",
+   "issueCode": "I/0326",
+   "roots": [
+    1
+   ],
+   "plan": "Process Owner educated to clean the mold before loading next tyre and explained him about the follow up procedure and the actions that would taken for repeating the same issue within the follow up period",
+   "closed": false,
+   "followups": []
+  }
+ ],
+ "prevent": [
+  {
+   "issueCode": "I/0226",
+   "dateIssue": "2026-09-18",
+   "dateObserved": "2026-09-19",
+   "observedBy": "Mr. Mahesh, Mr. Rajitha",
+   "dept": "Production",
+   "observation": "During the night shift on September 18, 2026, the spew cutters on line 7M were absent. This caused a drop in temperature, resulting in two under-cured cycles. The Process Controller has recorded the temperature as 170°C and a CCTV review showed him checking the pressure gauges. As a result of this issue, 14 tires had to be scrapped. Following the weekly management meeting, we requested written explanations from the Process Controller, Shift Supervisor, Shift Executive, and the other spew cutters on duty.\nKey Observations\nLack of Backup Plan: The explanation letters confirm that the tire defects should be found during spew cutting. However, no action was taken to cover the job when the assigned spew cutters were absent.\nCommunication Gap: The letters do not clarify whether the Shift Supervisor or Shift Executive were aware that line 7M was unmanned.\nMissing Feedback: The Press Operator should have identified the under-cured tires, but no letter of explanation was taken from him. However, a post-incident training evaluation record has been completed for him as a corrective action.\nInaccurate Reporting: Mr. Soyza stated that he read the temperature gauge as 170°C but mistakenly recorded it as 140°C. This statement is contradictory, and he needs to show greater responsibility and accountability in his role",
+   "triggers": [
+    "Process drifting from normal"
+   ],
+   "triggerOther": "",
+   "responsibility": "Process Controller, Shift Supervisor, Shift Executive",
+   "containment": "Requested letters of reasoning from Process Controller, Shift Supervisor, Shift Executive, Press operator and other Spew Cutters\nRequested for production incentive deduction of process controller and press operator\nAbsent spew cutter’s leave was marked as No pay.",
+   "suggested": "Clarify Roles: Issue formal letters to all Shift Executives, Shift Supervisors and Process Controller Supervisors to remind them of their duties. Specifically, emphasize that they are fully responsible for all production activities during their shift.\nDisciplinary Reminder: Issue a letter to Mr. Soyza to remind him of his responsibilities and the high standard of accountability expected by the company.\nAlarming System : Add an alarm to be raised for temperature drop from the lower limit",
+   "submittedTo": [
+    "Department Head",
+    "Deputy Factory Manager"
+   ]
+  }
+ ]
+};
+const KEY='fitl_capa_v1';
+const ISSUE_NO='02', REV_NO='00', ISSUE_DATE='2026.04.20';
+const FORMS={
+  p09:{no:'FIT/Q/RG-QA-09',title:'Summary Record for process Controlling',orient:'landscape',file:'FIT_Q_RG-QA-09_Summary_Record_for_Process_Controlling'},
+  p10:{no:'FIT/Q/RG-QA-10',title:'Table for Issues and Root Causes',orient:'landscape',file:'FIT_Q_RG-QA-10_Table_for_Issues_and_Root_Causes'},
+  p11:{no:'FIT/Q/RG-QA-11',title:'Table for Action Plan',orient:'landscape',file:'FIT_Q_RG-QA-11_Table_for_Action_Plan'},
+  p12:{no:'FIT/Q/RG-QA-12',title:'Record for Action Plan Follow up',orient:'portrait',file:'FIT_Q_RG-QA-12_Record_for_Action_Plan_Follow_up'},
+  p26:{no:'FIT/Q/FO-QA-26',title:'PREVENTIVE ACTION / POTENTIAL ISSUE OBSERVATION FORM',orient:'portrait',file:'FIT_Q_FO-QA-26_Preventive_Action_Form'}
+};
+const TRIGGERS=['Near-miss','Trend noticed over time','Audit/inspection finding','Equipment showing early signs of wear','Process drifting from normal'];
+const SUBMIT_TO=['System Coordinator (SC)','Department Head','Deputy Factory Manager'];
+
+/* ---------- helpers ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const dot=iso=>iso?String(iso).replace(/-/g,'.'):'';
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+const yy=iso=>String(iso||todayISO()).slice(2,4);
+const nl=s=>esc(s).replace(/\n/g,'<br>');
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const monthLabel=ym=>{const [y,m]=ym.split('-');return MONTHS[+m-1]+' '+y;};
+
+/* ---------- state ---------- */
+let S=null, tab='overview';
+const V={month:null,status:'all',q:'',iq:'',ist:'all',aq:'',fq:'',fopen:false,newAct:{issue:'',roots:[],plan:''},pv:null};
+
+function bumpMax(s,k,code){const m=/^[IA]\/(\d{2})(\d{2})$/.exec(code||'');if(!m)return;s.max[k][m[2]]=Math.max(s.max[k][m[2]]||0,+m[1]);}
+function seedState(){
+  const s={v:1,max:{I:{},A:{}},shifts:[],issues:[],actions:[],prevent:[]};
+  SEED.issues.forEach(i=>s.issues.push({id:uid(),code:i.code,date:i.date,issue:i.issue,source:'imported',ref:null,rca:false,
+    causes:i.causes.map(c=>({id:uid(),cause:c.cause,root:c.root,r:c.r}))}));
+  SEED.actions.forEach(a=>s.actions.push({id:uid(),code:a.code,issueCode:a.issueCode,roots:a.roots.slice(),plan:a.plan,closed:false,
+    followups:a.followups.map(f=>({date:f.date,ref:f.ref}))}));
+  SEED.prevent.forEach(p=>s.prevent.push(Object.assign({id:uid()},p)));
+  s.issues.forEach(i=>bumpMax(s,'I',i.code));s.actions.forEach(a=>bumpMax(s,'A',a.code));
+  return s;
+}
+function shape(s){
+  s.max=s.max||{I:{},A:{}};s.max.I=s.max.I||{};s.max.A=s.max.A||{};
+  ['shifts','issues','actions','prevent'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=[];});
+  return s;
+}
+function load(){
+  try{const raw=localStorage.getItem(KEY);if(raw){const s=JSON.parse(raw);if(s&&typeof s==='object')return shape(s);}}catch(e){}
+  return seedState();
+}
+let saveFailed=false;
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));saveFailed=false;}catch(e){if(!saveFailed)toast('Could not save — browser storage is full or blocked. Download a backup from Settings.');saveFailed=true;}
+  publishRca();
+}
+function nextCode(kind,dateISO){const y=yy(dateISO);const n=(S.max[kind][y]||0)+1;S.max[kind][y]=n;return kind+'/'+pad(n)+y;}
+const rootCode=(issueCode,r)=>issueCode+'/R'+r;
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3200);}
+
+/* ---------- domain ---------- */
+const riskDetail=r=>[r.failureMode,r.cause?('Cause: '+r.cause):''].filter(Boolean).join(' — ')||r.subStep||'(no description recorded)';
+const riskMeta=r=>[r.subStep?('Sub-step: '+r.subStep):'',r.ap?('AP '+r.ap):'',r.round!=null?('Round '+r.round):''].filter(Boolean).join(' · ');
+const shiftText=s=>s.shiftCode+(s.shiftLabel?(' — '+s.shiftLabel):'');
+const decided=r=>!!(r.rca||r.training||r.instruction||r.none);
+const NO_ISSUE='No significant issue in the shift';
+const findShift=k=>S.shifts.find(s=>s.key===k);
+const findIssue=c=>S.issues.find(i=>i.code===c);
+function newIssue(o){
+  const it={id:uid(),code:nextCode('I',o.date),date:o.date,issue:o.issue,source:o.source,ref:o.ref||null,rca:!!o.rca,causes:[]};
+  S.issues.push(it);return it;
+}
+function issueState(i){
+  const hasRoot=i.causes.some(c=>c.root&&c.root.trim());
+  const acts=S.actions.filter(a=>a.issueCode===i.code);
+  if(!hasRoot)return{k:'root',label:'Root cause pending',cls:'amber'};
+  if(!acts.length)return{k:'plan',label:'Action plan pending',cls:'amber'};
+  if(acts.every(a=>a.closed))return{k:'closed',label:'Closed',cls:'green'};
+  return{k:'prog',label:'Actions in progress',cls:'blue'};
+}
+function rNumbers(i){return Array.from(new Set(i.causes.map(c=>c.r).filter(x=>x))).sort((a,b)=>a-b);}
+const codeNum=c=>{const m=/^[IA]\/(\d{2})(\d{2})/.exec(c||'');return m?(+m[2])*100+(+m[1]):0;};
+
+/* ---------- shifts coming from Press Monitoring ---------- */
+const riskKey=r=>[r.stage,r.subStep,r.failureMode,r.cause,r.round].join('||');
+function ingestShifts(items){
+  let changed=false;
+  items.forEach(it=>{
+    if(!it||!it.key)return;
+    let sh=findShift(it.key);
+    if(!sh){sh={key:it.key,date:it.date,shiftCode:it.shiftCode,shiftLabel:it.shiftLabel||'',controller:it.controller||'',risks:[]};S.shifts.push(sh);changed=true;}
+    else if(sh.controller!==(it.controller||'')||sh.shiftLabel!==(it.shiftLabel||'')){sh.controller=it.controller||'';sh.shiftLabel=it.shiftLabel||'';changed=true;}
+    const seen={};
+    (it.risks||[]).forEach(r=>{
+      const k=riskKey(r);seen[k]=1;
+      if(!sh.risks.some(x=>x.k===k)){
+        sh.risks.push({id:uid(),k,round:r.round==null?null:r.round,recordedAt:r.recordedAt||'',stage:r.stage||'',subStep:r.subStep||'',failureMode:r.failureMode||'',cause:r.cause||'',ap:r.ap||'',
+          rca:false,training:false,instruction:false,none:false,issueCode:''});changed=true;
+      }
+    });
+    const before=sh.risks.length;
+    sh.risks=sh.risks.filter(x=>seen[x.k]||decided(x)||x.issueCode);   // drop vanished risks only if nothing was decided on them
+    if(sh.risks.length!==before)changed=true;
+  });
+  if(changed){save();render();}
+}
+
+/* ---------- issues raised from other tabs (internal audit non-conformities) ---------- */
+function ingestRequests(items){
+  S.reqSeen=S.reqSeen||[];let n=0;
+  items.forEach(it=>{if(!it||!it.key||S.reqSeen.includes(it.key))return;S.reqSeen.push(it.key);
+    newIssue({date:String(it.date||todayISO()).replace(/\./g,'-'),issue:it.text||'Internal audit finding',source:'audit',rca:false});n++});
+  if(n){save();render();toast(n+' issue'+(n===1?'':'s')+' raised from the internal audit — see Issues & Root Causes')}
+}
+
+/* ---------- from the Weekly Management Meeting ---------- */
+const pressKey=(s,r)=>'press:'+s.key+':'+[r.stage,r.subStep,r.failureMode,r.cause].join('|');
+function riskByAutoKey(k){
+  if(String(k||'').indexOf('press:')!==0)return null;
+  const rest=k.slice(6),ix=rest.indexOf(':');if(ix<0)return null;
+  const sh=findShift(rest.slice(0,ix));if(!sh)return null;
+  const r=sh.risks.find(x=>[x.stage,x.subStep,x.failureMode,x.cause].join('|')===rest.slice(ix+1));
+  return r?{sh,r}:null;
+}
+function flushFU(iss,fus){
+  // the follow-ups logged at the weekly meeting go to the Follow-up table (RG-QA-12) of every action plan of the issue
+  const acts=S.actions.filter(a=>a.issueCode===iss.code);let changed=false;
+  if(fus)iss.pendingFU=fus;
+  if(!acts.length||!iss.pendingFU||!iss.pendingFU.length)return false;
+  acts.forEach(a=>{
+    iss.pendingFU.forEach(f=>{
+      const ex=a.followups.find(x=>x.meetKey===f.key);
+      if(ex){if(ex.date!==f.date||ex.ref!==f.ref){ex.date=f.date;ex.ref=f.ref;changed=true;}}
+      else{a.followups.push({date:f.date,ref:f.ref,meetKey:f.key});changed=true;}
+    });
+    // the form has five slots: keep the latest meeting follow-ups if there are more than fit
+    while(a.followups.length>5){const ix=a.followups.findIndex(x=>x.meetKey);if(ix<0)break;a.followups.splice(ix,1);changed=true;}
+    a.followups.sort((x,y)=>String(x.date).localeCompare(String(y.date)));
+  });
+  return changed;
+}
+function ingestMeeting(items){
+  S.meet=S.meet||{};let changed=false,created=[],acks=[];
+  items.forEach(it=>{
+    if(!it||!it.key)return;
+    let iss=S.meet[it.key]&&findIssue(S.meet[it.key]);
+    if(!iss){
+      const link=riskByAutoKey(it.autoKey);
+      iss=newIssue({date:String(it.date||todayISO()).replace(/\./g,'-'),issue:it.text||'Issue from the weekly management meeting',source:'meeting',ref:link?{sk:link.sh.key,rid:link.r.id}:null,rca:false});
+      S.meet[it.key]=iss.code;created.push(iss.code);changed=true;
+      if(link){link.r.issueCode=iss.code;}
+    }
+    // the root causes found by the RCA Workbench
+    (it.causes||[]).forEach((cz,i)=>{
+      const k='rca:'+i,ex=iss.causes.find(x=>x.rcaKey===k);
+      if(ex){if(ex.cause!==cz.cause||ex.root!==cz.root){ex.cause=cz.cause;ex.root=cz.root;changed=true;}}
+      else{const r=1+Math.max(0,...iss.causes.map(x=>x.r||0));iss.causes.push({id:uid(),cause:cz.cause||'',root:cz.root||'',r,rcaKey:k});changed=true;}
+    });
+    // the action plan lines written at the meeting
+    (it.actions||[]).forEach(x=>{
+      let ac=S.actions.find(a=>a.meetKey===x.key);
+      if(!ac){ac={id:uid(),code:nextCode('A',iss.date),issueCode:iss.code,roots:rNumbers(iss).slice(),plan:x.text,closed:false,followups:[],meetKey:x.key};S.actions.push(ac);changed=true;}
+      else if(ac.plan!==x.text){ac.plan=x.text;changed=true;}
+    });
+    if(flushFU(iss,it.followups||[]))changed=true;
+    acks.push({key:it.key,issueCode:iss.code,actions:S.actions.filter(a=>a.meetKey&&a.meetKey.indexOf(it.key+':')===0).map(a=>({key:a.meetKey,code:a.code}))});
+  });
+  if(changed){save();render();}
+  if(created.length)toast(created.join(', ')+' raised from the weekly management meeting — see Issues & Root Causes');
+  try{window.parent.postMessage({type:'fitl-capa-ack',items:acks},'*');}catch(e){}
+}
+// what the meeting decided about flagged press risks: shown, read-only, in the Process Control Summary
+function onMeetingStatus(items){
+  S.mstat={};let changed=false;
+  items.forEach(it=>{
+    S.mstat[it.key]=it;
+    const link=riskByAutoKey(it.key);
+    if(link){
+      if(!!link.r.rca!==!!it.rca){link.r.rca=!!it.rca;if(it.rca)link.r.none=false;changed=true;}
+      if(it.code&&link.r.issueCode!==it.code){link.r.issueCode=it.code;changed=true;}
+    }
+  });
+  if(changed)save();
+  render();
+}
+/* ---------- decisions on RG-QA-09 ---------- */
+function issueTextFromRisk(sh,r){return riskDetail(r)+' (Shift '+sh.shiftCode+', '+dot(sh.date)+(r.stage?', '+r.stage:'')+')';}
+function setTick(sk,rid,f,val){
+  if(f==='rca')return;   // decided at the weekly management meeting only
+  const sh=findShift(sk);const r=sh&&sh.risks.find(x=>x.id===rid);if(!r)return;
+  r[f]=val;if(val)r.none=false;
+  if(f==='rca'){
+    if(val){
+      let iss=r.issueCode&&findIssue(r.issueCode);
+      if(!iss){iss=newIssue({date:sh.date,issue:issueTextFromRisk(sh,r),source:'process',ref:{sk,rid}});r.issueCode=iss.code;}
+      iss.rca=true;toast(iss.code+' raised and sent to the RCA Workbench');
+    }else{
+      const iss=r.issueCode&&findIssue(r.issueCode);
+      if(iss){iss.rca=false;toast(iss.code+' stays in RG-QA-10 but is no longer sent to the RCA Workbench');}
+    }
+  }
+  save();render();
+}
+function setNone(sk,rid){
+  const sh=findShift(sk);const r=sh&&sh.risks.find(x=>x.id===rid);if(!r)return;
+  if(!r.none){
+    if(r.rca){const iss=r.issueCode&&findIssue(r.issueCode);if(iss)iss.rca=false;}
+    r.rca=r.training=r.instruction=false;r.none=true;
+  }else r.none=false;
+  save();render();
+}
+
+/* ---------- RCA ----------
+   Whether an issue needs a Root Cause Analysis is decided only at the Weekly Management Meeting (Management Agenda).
+   Nothing in CAPA sends a case to the RCA Workbench any more; when the analysis is finished its root causes arrive here
+   together with the issue (see ingestMeeting). */
+function publishRca(){}
+
+/* ================= VIEWS ================= */
+const TABS=[
+  ['overview','Overview','Where everything stands'],
+  ['p09','Process Control Summary','RG-QA-09'],
+  ['p10','Issues & Root Causes','RG-QA-10'],
+  ['p11','Action Plan','RG-QA-11'],
+  ['p12','Follow-up','RG-QA-12'],
+  ['p26','Preventive Action','FO-QA-26'],
+  ['set','Settings','Numbering · backup']
+];
+function counts(){
+  const risks=[];S.shifts.forEach(s=>s.risks.forEach(r=>risks.push({s,r})));
+  const undecided=risks.filter(x=>!decided(x.r));
+  const needRoot=S.issues.filter(i=>issueState(i).k==='root');
+  const needPlan=S.issues.filter(i=>issueState(i).k==='plan');
+  const openActs=S.actions.filter(a=>!a.closed);
+  const noFollow=openActs.filter(a=>!a.followups.length);
+  return{risks,undecided,needRoot,needPlan,openActs,noFollow,
+    clearShifts:S.shifts.filter(s=>!s.risks.length).length,
+    openIssues:S.issues.filter(i=>issueState(i).k!=='closed'),
+    inRca:S.issues.filter(i=>i.rca).length};
+}
+function renderNav(c){
+  const badge={p09:c.undecided.length?'<span class="badge">'+c.undecided.length+'</span>':'',
+    p10:(c.needRoot.length+c.needPlan.length)?'<span class="badge grey">'+(c.needRoot.length+c.needPlan.length)+'</span>':'',
+    p11:'',p12:c.noFollow.length?'<span class="badge grey">'+c.noFollow.length+'</span>':''};
+  return TABS.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-act="tab" data-t="'+t[0]+'"><span class="t1">'+t[1]+(badge[t[0]]||'')+'</span><span class="t2">'+t[2]+'</span></button>').join('');
+}
+
+function viewOverview(c){
+  const step=(t,n,title,doc,big,alert,sub)=>'<button class="step" data-act="tab" data-t="'+t+'"><div class="n">'+n+'</div><h3>'+title+'</h3><div class="doc">'+doc+'</div><div class="big'+(alert?' alert':'')+'">'+big+'</div><div class="sub">'+sub+'</div></button>';
+  let h='<div class="page-head"><div><h2>CAPA control</h2><p>Flagged risks from Press Monitoring arrive in the Summary Record by themselves. Issues reach this page only through the Weekly Management Meeting: flagged risks, repeated housekeeping findings and audit findings are reviewed there, the meeting decides whether a Root Cause Analysis is needed and whether the issue is sent to CAPA.</p></div></div>';
+  h+='<div class="chain">'+
+    step('p09','Step 1','Process Control Summary','FIT/Q/RG-QA-09',c.undecided.length,c.undecided.length>0,'risks awaiting your decision<br>'+S.shifts.length+' shifts received · '+c.clearShifts+' with no significant issue')+
+    step('p10','Step 2','Issues & Root Causes','FIT/Q/RG-QA-10',S.issues.length,false,c.needRoot.length+' need root causes · '+S.issues.filter(i=>i.source==='meeting').length+' from the weekly meeting')+
+    step('p11','Step 3','Action Plan','FIT/Q/RG-QA-11',c.openActs.length,false,'open actions · '+c.needPlan.length+' issue'+(c.needPlan.length===1?'':'s')+' still without a plan')+
+    step('p12','Step 4','Follow-up','FIT/Q/RG-QA-12',c.noFollow.length,c.noFollow.length>0,'open actions with no follow-up recorded yet')+
+    step('p26','Early warning','Preventive Action','FIT/Q/FO-QA-26',S.prevent.length,false,'observation forms · logged as issues from here')+
+  '</div>';
+  h+='<div class="two"><div class="card panel"><h3>Awaiting your decision</h3>';
+  if(!c.undecided.length){
+    h+='<div class="empty">'+(S.shifts.length?'<b>Nothing waiting.</b><br>Every flagged risk has an action decision.':'<b>No shifts received yet.</b><br>Import a shift CSV in Press Monitoring — its shifts and flagged risks appear here automatically.')+'</div>';
+  }else{
+    c.undecided.sort((a,b)=>b.s.date.localeCompare(a.s.date)).slice(0,8).forEach(x=>{
+      h+='<div class="qrow"><div class="grow"><div><span class="code">'+dot(x.s.date)+'</span> · Shift '+esc(x.s.shiftCode)+(x.r.stage?' · <b>'+esc(x.r.stage)+'</b>':'')+'</div><div class="meta">'+esc(riskDetail(x.r))+'</div></div><button class="btn sm" data-act="goRisk" data-sk="'+esc(x.s.key)+'">Decide</button></div>';
+    });
+    if(c.undecided.length>8)h+='<div class="meta" style="padding-top:8px">+ '+(c.undecided.length-8)+' more in the Process Control Summary</div>';
+  }
+  h+='</div><div class="card panel"><h3>How it flows</h3><div class="flow">'+
+    '<b>Press Monitoring</b> → every saved shift lands in <b>RG-QA-09</b>. A shift with no flagged risk reads “'+NO_ISSUE+'”.<br>'+
+    '<b>Weekly Management Meeting</b> → reviews every flagged risk and decides on Root Cause Analysis and on sending the issue to CAPA.<br>'+
+    '<b>Action Required</b> → tick Training and/or Instruction here (or mark no action needed).<br>'+
+    '<b>Sent to CAPA at the meeting</b> → an issue code is raised in <b>RG-QA-10</b>; its action plan lines go to <b>RG-QA-11</b> and its meeting follow-ups to <b>RG-QA-12</b>. Issues marked for RCA arrive here by themselves, with their root causes, once the RCA is finished.<br>'+
+    '<b>Root causes</b> → <b>RG-QA-11</b> action plans → <b>RG-QA-12</b> follow-ups.</div></div></div>';
+  return h;
+}
+
+/* ---- RG-QA-09 ---- */
+function p09Filter(){
+  const months=Array.from(new Set(S.shifts.map(s=>s.date.slice(0,7)))).sort().reverse();
+  if(V.month===null)V.month=months[0]||'all';
+  let list=S.shifts.slice();
+  if(V.month!=='all')list=list.filter(s=>s.date.slice(0,7)===V.month);
+  const q=V.q.trim().toLowerCase();
+  if(q)list=list.filter(s=>[s.controller,s.shiftCode,s.date,dot(s.date)].concat(s.risks.map(r=>[r.stage,riskDetail(r),r.issueCode].join(' '))).join(' ').toLowerCase().includes(q));
+  if(V.status==='need')list=list.filter(s=>s.risks.some(r=>!decided(r)));
+  else if(V.status==='done')list=list.filter(s=>s.risks.length&&s.risks.every(decided));
+  else if(V.status==='clear')list=list.filter(s=>!s.risks.length);
+  list.sort((a,b)=>b.date.localeCompare(a.date)||a.shiftCode.localeCompare(b.shiftCode));
+  return{months,list};
+}
+function viewP09(){
+  const {months,list}=p09Filter();
+  let h='<div class="page-head"><div><h2>Process Control Summary<span class="docno">'+FORMS.p09.no+'</span></h2><p>Fed automatically from Press Monitoring: every saved shift appears here with its flagged risks. Every flagged risk also reaches the Weekly Management Meeting. <b>Root Cause Analysis is decided there, not here</b> (the column shows the meeting’s decision), and the meeting decides whether an issue is sent to CAPA. Tick Training and/or Instruction here, or mark that no action is needed.</p></div>'+
+   '<div class="bar"><button class="btn" data-act="xlsx" data-m="p09">Export Excel</button><button class="btn" data-act="print" data-m="p09">Print / PDF</button></div></div>';
+  h+='<div class="bar" style="margin-bottom:12px"><select data-act="fMonth"><option value="all"'+(V.month==='all'?' selected':'')+'>All months</option>'+months.map(m=>'<option value="'+m+'"'+(V.month===m?' selected':'')+'>'+monthLabel(m)+'</option>').join('')+'</select>'+
+   '<select data-act="fStatus">'+[['all','All shifts'],['need','Awaiting decision'],['done','Decided'],['clear','No significant issue']].map(o=>'<option value="'+o[0]+'"'+(V.status===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'+
+   '<input type="text" data-act="fQ" placeholder="Search controller, stage, detail, code" value="'+esc(V.q)+'" style="min-width:260px"><span class="muted">'+list.length+' shift'+(list.length===1?'':'s')+'</span></div>';
+  if(!S.shifts.length){
+    return h+'<div class="card empty"><b>No shifts received yet.</b><br>Open <b>Press Monitoring</b> and import a shift CSV — the shift and its flagged risks arrive here automatically.</div>';
+  }
+  if(!list.length)return h+'<div class="card empty">No shifts match these filters.</div>';
+  h+='<div class="tbl-wrap"><table class="reg"><thead><tr><th rowspan="2" style="width:92px">Date</th><th rowspan="2" style="width:130px">Shift</th><th rowspan="2" style="width:130px">Process Controller</th><th rowspan="2" style="width:140px">Risk Stage</th><th rowspan="2">Risk Detail</th><th rowspan="2" style="width:120px">Issue Code</th><th colspan="3" class="c">Action Required</th><th rowspan="2" style="width:150px">Decision</th></tr><tr><th class="c" style="width:78px">Root Cause Analysis</th><th class="c" style="width:78px">Training</th><th class="c" style="width:84px">Instruction</th></tr></thead><tbody>';
+  list.forEach(s=>{
+    const n=s.risks.length||1;
+    const lead='<td rowspan="'+n+'" class="code">'+dot(s.date)+'</td><td rowspan="'+n+'"><b>'+esc(s.shiftCode)+'</b><div class="meta">'+esc(s.shiftLabel)+'</div></td><td rowspan="'+n+'">'+esc(s.controller||'—')+'</td>';
+    if(!s.risks.length){
+      h+='<tr class="shift-first noissue" id="sh-'+esc(s.key)+'">'+lead+'<td>—</td><td class="detail">'+NO_ISSUE+'</td><td class="code">—</td><td class="c muted">—</td><td class="c muted">—</td><td class="c muted">—</td><td><span class="chip grey">Nothing to decide</span></td></tr>';
+      return;
+    }
+    s.risks.forEach((r,idx)=>{
+      const iss=r.issueCode&&findIssue(r.issueCode);
+      const a='data-sk="'+esc(s.key)+'" data-rid="'+r.id+'"';
+      const dec=r.none?'<button class="none-btn on" data-act="none" '+a+'>No action needed ✓</button>':
+        decided(r)?'<span class="chip green">Decided</span>':'<span class="chip amber">Awaiting decision</span><div style="margin-top:6px"><button class="none-btn" data-act="none" '+a+'>No action needed</button></div>';
+      h+='<tr class="'+(idx===0?'shift-first ':'')+(!decided(r)?'need':'')+'"'+(idx===0?' id="sh-'+esc(s.key)+'"':'')+'>'+(idx===0?lead:'')+
+        '<td>'+esc(r.stage||'—')+'</td><td class="detail">'+esc(riskDetail(r))+(riskMeta(r)?'<div class="meta">'+esc(riskMeta(r))+'</div>':'')+'</td>'+
+        '<td class="code">'+(r.issueCode?esc(r.issueCode)+(iss&&iss.source==='meeting'?'<div style="margin-top:4px"><span class="chip grey">from weekly meeting</span></div>':''):'—')+'</td>'+
+        '<td class="c">'+(r.rca?'<span class="chip blue" title="Decided at the weekly management meeting">✓ meeting</span>':(S.mstat&&S.mstat[pressKey(s,r)]?'<span class="muted" title="Reviewed at the weekly meeting: no RCA">—</span>':'<span class="muted" title="Waiting for the weekly management meeting">…</span>'))+'</td>'+
+        ['training','instruction'].map(f=>'<td class="c"><input class="tick" type="checkbox" data-act="tick" data-f="'+f+'" '+a+(r[f]?' checked':'')+' aria-label="'+f+'"></td>').join('')+
+        '<td>'+dec+'</td></tr>';
+    });
+  });
+  return h+'</tbody></table></div>';
+}
+
+/* ---- RG-QA-10 ---- */
+function viewP10(){
+  let list=S.issues.slice();
+  const q=V.iq.trim().toLowerCase();
+  if(q)list=list.filter(i=>(i.code+' '+i.issue+' '+i.causes.map(c=>c.cause+' '+c.root).join(' ')).toLowerCase().includes(q));
+  if(V.ist!=='all')list=list.filter(i=>issueState(i).k===V.ist);
+  list.sort((a,b)=>b.date.localeCompare(a.date)||codeNum(b.code)-codeNum(a.code));
+  let h='<div class="page-head"><div><h2>Issues &amp; Root Causes<span class="docno">'+FORMS.p10.no+'</span></h2><p>Each issue has its own code. Record the causes found, the root cause behind each, and a root cause code (R1, R2 …). Two causes can share one root cause by giving them the same R number.</p></div>'+
+   '<div class="bar"><button class="btn red" data-act="addIssue">+ Add issue</button><button class="btn" data-act="xlsx" data-m="p10">Export Excel</button><button class="btn" data-act="print" data-m="p10">Print / PDF</button></div></div>';
+  h+='<div class="bar" style="margin-bottom:12px"><input type="text" data-act="iQ" placeholder="Search issue, cause, root cause or code" value="'+esc(V.iq)+'" style="min-width:300px"><select data-act="iSt">'+
+    [['all','All issues'],['root','Root cause pending'],['plan','Action plan pending'],['prog','Actions in progress'],['closed','Closed']].map(o=>'<option value="'+o[0]+'"'+(V.ist===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><span class="muted">'+list.length+' issue'+(list.length===1?'':'s')+'</span></div>';
+  if(!list.length)return h+'<div class="card empty">'+(S.issues.length?'No issues match these filters.':'<b>No issues yet.</b><br>They appear here when the Weekly Management Meeting sends an issue to CAPA, or add one yourself.')+'</div>';
+  list.forEach(i=>{
+    const st=issueState(i),acts=S.actions.filter(a=>a.issueCode===i.code).length;
+    const src=i.source==='process'?'<span class="chip grey">From process control</span>':i.source==='preventive'?'<span class="chip grey">From preventive form</span>':i.source==='imported'?'<span class="chip grey">Existing register</span>':i.source==='audit'?'<span class="chip grey">From internal audit</span>':i.source==='meeting'?'<span class="chip blue">From weekly meeting</span>':'<span class="chip grey">Added manually</span>';
+    h+='<div class="card icard" id="is-'+i.id+'"><div class="ihead"><div><div class="code">'+esc(i.code)+'</div><div style="margin-top:6px"><input type="date" data-act="iDate" data-id="'+i.id+'" value="'+esc(i.date)+'" style="width:150px"></div></div>'+
+      '<div class="grow"><label class="f">Issue</label><textarea data-act="iText" data-id="'+i.id+'">'+esc(i.issue)+'</textarea></div>'+
+      '<div style="min-width:210px"><div class="bar" style="margin-bottom:8px"><span class="chip '+st.cls+'">'+st.label+'</span>'+src+'</div>'+
+      '<div class="muted" style="font-size:12px">Root Cause Analysis is decided at the weekly management meeting.</div>'+
+      '<div style="margin-top:8px"><button class="btn ghost sm" data-act="delIssue" data-id="'+i.id+'">Delete issue</button></div></div></div>'+
+      '<div class="ibody"><table class="sub"><thead><tr><th style="width:36%">Cause</th><th>Root cause</th><th style="width:118px">Root cause code</th><th style="width:34px"></th></tr></thead><tbody>'+
+      (i.causes.length?i.causes.map(c=>'<tr><td><textarea data-act="cCause" data-id="'+i.id+'" data-cid="'+c.id+'">'+esc(c.cause)+'</textarea></td><td><textarea data-act="cRoot" data-id="'+i.id+'" data-cid="'+c.id+'">'+esc(c.root)+'</textarea></td>'+
+        '<td><div style="display:flex;gap:5px;align-items:center"><span class="muted">R</span><input type="number" min="1" data-act="cR" data-id="'+i.id+'" data-cid="'+c.id+'" value="'+(c.r||'')+'" style="width:64px"></div><div class="code muted" style="margin-top:4px">'+(c.r?esc(rootCode(i.code,c.r)):'—')+'</div></td>'+
+        '<td><button class="btn ghost sm" title="Remove this cause" data-act="delCause" data-id="'+i.id+'" data-cid="'+c.id+'">✕</button></td></tr>').join(''):'<tr><td colspan="4" class="muted" style="padding:14px 6px">No causes recorded yet.</td></tr>')+
+      '</tbody></table><div class="bar" style="margin-top:10px"><button class="btn sm" data-act="addCause" data-id="'+i.id+'">+ Add cause</button><span class="muted" style="margin-left:6px">'+acts+' action plan'+(acts===1?'':'s')+' · <a href="#" data-act="tab" data-t="p11" style="color:var(--red-d)">open Action Plan</a></span></div></div></div>';
+  });
+  return h;
+}
+
+/* ---- RG-QA-11 ---- */
+function viewP11(){
+  const na=V.newAct;const sel=findIssue(na.issue);
+  let h='<div class="page-head"><div><h2>Action Plan<span class="docno">'+FORMS.p11.no+'</span></h2><p>One row per action. Pick the issue, tick the root causes it answers, and describe the action. The action plan code is allocated for you.</p></div>'+
+   '<div class="bar"><button class="btn" data-act="xlsx" data-m="p11">Export Excel</button><button class="btn" data-act="print" data-m="p11">Print / PDF</button></div></div>';
+  h+='<div class="card panel" style="margin-bottom:14px"><div class="fgrid"><div><label class="f">Issue</label><select data-act="naIssue"><option value="">Select an issue…</option>'+
+    S.issues.slice().sort((a,b)=>codeNum(b.code)-codeNum(a.code)).map(i=>'<option value="'+esc(i.code)+'"'+(na.issue===i.code?' selected':'')+'>'+esc(i.code)+' — '+esc(i.issue.length>70?i.issue.slice(0,67)+'…':i.issue)+'</option>').join('')+'</select></div>'+
+    '<div><label class="f">Root causes this answers</label>'+(sel?(rNumbers(sel).length?'<div class="rchips">'+rNumbers(sel).map(n=>'<label><input type="checkbox" data-act="naRoot" data-n="'+n+'"'+(na.roots.includes(n)?' checked':'')+'> '+esc(rootCode(sel.code,n))+'</label>').join('')+'</div>':'<span class="muted">This issue has no root cause codes yet — add them in Issues &amp; Root Causes.</span>'):'<span class="muted">Choose an issue first.</span>')+'</div></div>'+
+    '<div style="margin-top:12px"><label class="f">Action plan</label><textarea data-act="naPlan" placeholder="What will be done, by whom">'+esc(na.plan)+'</textarea></div>'+
+    '<div style="margin-top:10px"><button class="btn red" data-act="addAction">Add action plan</button></div></div>';
+  let list=S.actions.slice();
+  const q=V.aq.trim().toLowerCase();
+  if(q)list=list.filter(a=>(a.code+' '+a.issueCode+' '+a.plan).toLowerCase().includes(q));
+  list.sort((a,b)=>codeNum(b.issueCode)-codeNum(a.issueCode)||codeNum(a.code)-codeNum(b.code));
+  h+='<div class="bar" style="margin-bottom:12px"><input type="text" data-act="aQ" placeholder="Search actions" value="'+esc(V.aq)+'" style="min-width:260px"><span class="muted">'+list.length+' action'+(list.length===1?'':'s')+'</span></div>';
+  if(!list.length)return h+'<div class="card empty">'+(S.actions.length?'No actions match.':'<b>No action plans yet.</b>')+'</div>';
+  h+='<div class="tbl-wrap"><table class="reg"><thead><tr><th style="width:110px">Issue Code</th><th style="width:210px">Root cause code</th><th>Action Plan</th><th style="width:120px">Action Plan Code</th><th class="c" style="width:76px">Closed</th><th style="width:44px"></th></tr></thead><tbody>';
+  list.forEach(a=>{
+    const iss=findIssue(a.issueCode);const rn=iss?rNumbers(iss):[];
+    const all=Array.from(new Set(rn.concat(a.roots))).sort((x,y)=>x-y);
+    h+='<tr><td class="code">'+esc(a.issueCode)+'</td><td>'+(all.length?'<div class="rchips">'+all.map(n=>'<label><input type="checkbox" data-act="aRoot" data-id="'+a.id+'" data-n="'+n+'"'+(a.roots.includes(n)?' checked':'')+'> '+esc(rootCode(a.issueCode,n))+'</label>').join('')+'</div>':'<span class="muted">—</span>')+'</td>'+
+      '<td><textarea data-act="aPlan" data-id="'+a.id+'">'+esc(a.plan)+'</textarea></td><td class="code">'+esc(a.code)+'</td>'+
+      '<td class="c"><input class="tick" type="checkbox" data-act="aClosed" data-id="'+a.id+'"'+(a.closed?' checked':'')+'></td>'+
+      '<td><button class="btn ghost sm" title="Delete action" data-act="delAction" data-id="'+a.id+'">✕</button></td></tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+
+/* ---- RG-QA-12 ---- */
+const ORD=['1st','2nd','3rd','4th','5th'];
+function viewP12(){
+  let list=S.actions.slice();
+  const q=V.fq.trim().toLowerCase();
+  if(q)list=list.filter(a=>(a.code+' '+a.issueCode+' '+a.followups.map(f=>f.ref).join(' ')).toLowerCase().includes(q));
+  if(V.fopen)list=list.filter(a=>!a.closed);
+  list.sort((a,b)=>codeNum(b.issueCode)-codeNum(a.issueCode)||codeNum(a.code)-codeNum(b.code));
+  let h='<div class="page-head"><div><h2>Follow-up<span class="docno">'+FORMS.p12.no+'</span></h2><p>Record each follow-up of an action plan: the date and what it was checked against (for example a Weekly Management Meeting issue number). Up to five follow-ups per action.</p></div>'+
+   '<div class="bar"><button class="btn" data-act="xlsx" data-m="p12">Export Excel</button><button class="btn" data-act="print" data-m="p12">Print / PDF</button></div></div>';
+  h+='<div class="bar" style="margin-bottom:12px"><input type="text" data-act="fQ2" placeholder="Search action or issue code" value="'+esc(V.fq)+'" style="min-width:260px"><label style="display:flex;gap:7px;align-items:center;cursor:pointer"><input class="tick" type="checkbox" data-act="fOpen"'+(V.fopen?' checked':'')+'> Open actions only</label><span class="muted">'+list.length+' action'+(list.length===1?'':'s')+'</span></div>';
+  if(!list.length)return h+'<div class="card empty">'+(S.actions.length?'No actions match.':'<b>No action plans to follow up yet.</b>')+'</div>';
+  h+='<div class="tbl-wrap"><table class="reg"><thead><tr><th style="width:100px">Issue Code</th><th style="width:110px">Action Plan code</th>'+ORD.map(o=>'<th>'+o+' follow up date</th>').join('')+'<th class="c" style="width:70px">Closed</th></tr></thead><tbody>';
+  list.forEach(a=>{
+    h+='<tr><td class="code">'+esc(a.issueCode)+'</td><td class="code">'+esc(a.code)+'</td>';
+    for(let k=0;k<5;k++){
+      const f=a.followups[k];
+      if(f)h+='<td><button class="slot has" data-act="slot" data-id="'+a.id+'" data-k="'+k+'"><span class="d">'+esc(dot(f.date))+'</span>'+esc(f.ref||'')+'</button></td>';
+      else if(k===a.followups.length)h+='<td><button class="slot" data-act="slot" data-id="'+a.id+'" data-k="'+k+'">+ record</button></td>';
+      else h+='<td></td>';
+    }
+    h+='<td class="c"><input class="tick" type="checkbox" data-act="aClosed" data-id="'+a.id+'"'+(a.closed?' checked':'')+'></td></tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+
+/* ---- FO-QA-26 ---- */
+function viewP26(){
+  let h='<div class="page-head"><div><h2>Preventive Action<span class="docno">'+FORMS.p26.no+'</span></h2><p>Flag something that could become a nonconformity before it does. Once received, log it as an issue in RG-QA-10 with its own issue code and it follows the normal root cause, action plan and follow-up route.</p></div>'+
+   '<div class="bar"><button class="btn red" data-act="addPrev">+ New observation</button></div></div>';
+  if(!S.prevent.length)h+='<div class="card empty"><b>No observation forms yet.</b></div>';
+  else{
+    h+='<div class="tbl-wrap" style="max-height:none;margin-bottom:16px"><table class="reg" style="min-width:700px"><thead><tr><th style="width:110px">Issue ID</th><th style="width:100px">Date observed</th><th style="width:140px">Department / Area</th><th>Observation</th><th style="width:150px"></th></tr></thead><tbody>';
+    S.prevent.slice().sort((a,b)=>(b.dateObserved||'').localeCompare(a.dateObserved||'')).forEach(p=>{
+      h+='<tr'+(V.pv===p.id?' style="background:#FBF7EF"':'')+'><td class="code">'+(p.issueCode?esc(p.issueCode):'<span class="chip amber">Not logged</span>')+'</td><td class="code">'+esc(dot(p.dateObserved))+'</td><td>'+esc(p.dept)+'</td><td>'+esc((p.observation||'').slice(0,160))+((p.observation||'').length>160?'…':'')+'</td><td><button class="btn sm" data-act="openPrev" data-id="'+p.id+'">Open</button></td></tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  const p=S.prevent.find(x=>x.id===V.pv);
+  if(p){
+    const d='data-id="'+p.id+'"';
+    h+='<div class="card panel"><div class="page-head" style="margin-bottom:10px"><h3 style="margin:0">Observation form'+(p.issueCode?' — Issue ID '+esc(p.issueCode):'')+'</h3><div class="bar">'+
+      (p.issueCode?'<span class="chip blue">Logged in RG-QA-10 as '+esc(p.issueCode)+'</span>':'<button class="btn red" data-act="logPrev" '+d+'>Log as issue in RG-QA-10</button>')+
+      '<button class="btn" data-act="print" data-m="p26" '+d+'>Print form</button><button class="btn ghost" data-act="delPrev" '+d+'>Delete</button></div></div>'+
+      '<div class="fgrid"><div><label class="f">Date of Issue</label><input type="date" data-act="pv" data-f="dateIssue" '+d+' value="'+esc(p.dateIssue)+'"></div><div><label class="f">Date Observed</label><input type="date" data-act="pv" data-f="dateObserved" '+d+' value="'+esc(p.dateObserved)+'"></div>'+
+      '<div><label class="f">Observed By</label><input type="text" data-act="pv" data-f="observedBy" '+d+' value="'+esc(p.observedBy)+'"></div><div><label class="f">Department / Area</label><input type="text" data-act="pv" data-f="dept" '+d+' value="'+esc(p.dept)+'"></div></div>'+
+      '<div style="margin-top:12px"><label class="f">Observation / Issue</label><textarea data-act="pv" data-f="observation" '+d+' style="min-height:150px">'+esc(p.observation)+'</textarea></div>'+
+      '<div style="margin-top:12px"><label class="f">What triggered this observation?</label><div class="checks">'+TRIGGERS.map(t=>'<label><input class="tick" type="checkbox" data-act="pvTrig" data-t="'+esc(t)+'" '+d+(p.triggers.includes(t)?' checked':'')+'> '+esc(t)+'</label>').join('')+
+        '<label>Other: <input type="text" data-act="pv" data-f="triggerOther" '+d+' value="'+esc(p.triggerOther)+'" style="width:220px"></label></div></div>'+
+      '<div class="fgrid" style="margin-top:12px"><div><label class="f">Responsibility</label><textarea data-act="pv" data-f="responsibility" '+d+'>'+esc(p.responsibility)+'</textarea></div><div><label class="f">Immediate Containment (if any taken)</label><textarea data-act="pv" data-f="containment" '+d+'>'+esc(p.containment)+'</textarea></div></div>'+
+      '<div style="margin-top:12px"><label class="f">Suggested Action</label><textarea data-act="pv" data-f="suggested" '+d+' style="min-height:100px">'+esc(p.suggested)+'</textarea></div>'+
+      '<div style="margin-top:12px"><label class="f">Submitted To</label><div class="checks">'+SUBMIT_TO.map(t=>'<label><input class="tick" type="checkbox" data-act="pvSub" data-t="'+esc(t)+'" '+d+(p.submittedTo.includes(t)?' checked':'')+'> '+esc(t)+'</label>').join('')+'</div></div></div>';
+  }
+  return h;
+}
+
+/* ---- settings ---- */
+function viewSet(){
+  const years=Array.from(new Set(Object.keys(S.max.I).concat(Object.keys(S.max.A),[yy()]))).sort();
+  let h='<div class="page-head"><div><h2>Settings</h2><p>Numbering, backup and reset. Everything is stored in this browser only — download a backup regularly.</p></div></div>';
+  h+='<div class="two"><div class="card panel"><h3>Code numbering</h3><p class="muted" style="margin-top:0">Issue codes look like I/0426 (issue 04 of 2026) and action plan codes like A/1126. Set the last number already used if you work from paper registers too; the next code continues from it.</p>'+
+    '<table class="sub"><thead><tr><th>Year</th><th>Last issue number</th><th>Last action number</th></tr></thead><tbody>'+
+    years.map(y=>'<tr><td class="code">20'+y+'</td><td><input type="number" min="0" data-act="maxI" data-y="'+y+'" value="'+(S.max.I[y]||0)+'" style="width:90px"></td><td><input type="number" min="0" data-act="maxA" data-y="'+y+'" value="'+(S.max.A[y]||0)+'" style="width:90px"></td></tr>').join('')+'</tbody></table></div>'+
+    '<div class="card panel"><h3>Backup &amp; reset</h3><div class="bar" style="flex-direction:column;align-items:stretch;gap:10px"><button class="btn" data-act="backup">Download backup (.json)</button>'+
+    '<label class="btn" style="text-align:center">Restore backup…<input type="file" accept=".json,application/json" data-act="restore" style="display:none"></label>'+
+    '<button class="btn" data-act="reseed">Reset to the existing registers</button><button class="btn ghost" data-act="wipe">Delete everything</button></div>'+
+    '<p class="muted" style="margin-bottom:0">“Reset to the existing registers” goes back to the issues, action plans and follow-ups from the Word registers. Shifts and the decisions made here are removed; shifts arrive again from Press Monitoring.</p></div></div>';
+  return h;
+}
+
+/* ---- render ---- */
+function render(){
+  const c=counts();
+  const y0=window.scrollY;const w=$('.tbl-wrap');const wy=w?w.scrollTop:0;
+  const body={overview:()=>viewOverview(c),p09:viewP09,p10:viewP10,p11:viewP11,p12:viewP12,p26:viewP26,set:viewSet}[tab]();
+  $('#app').innerHTML='<header class="top"><div class="brand"><img src="'+LOGO+'" alt="Ferentino"><div><h1>CAPA Control Platform</h1><p>Corrective and preventive action — from process control to follow-up</p></div></div>'+
+    '<div class="top-note"><b>Quality Management System</b><br>FIT/Q/QSP-QA-01 · RG-QA-09 · 10 · 11 · 12 · FO-QA-26</div></header><nav class="tabs">'+renderNav(c)+'</nav><main>'+body+'</main>';
+  const w2=$('.tbl-wrap');if(w2)w2.scrollTop=wy;window.scrollTo(0,y0);
+}
+
+/* ================= EXPORT / PRINT MODELS ================= */
+const H=(t,o)=>Object.assign({t},o||{});
+function model(m,opt){
+  if(m==='p09'){
+    const {list}=p09Filter();const rows=[];
+    list.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.shiftCode.localeCompare(b.shiftCode)).forEach(s=>{
+      if(!s.risks.length)rows.push([dot(s.date),shiftText(s),s.controller||'','—',NO_ISSUE,'','','','']);
+      else s.risks.forEach(r=>rows.push([dot(s.date),shiftText(s),s.controller||'',r.stage||'',[riskDetail(r),riskMeta(r)].filter(Boolean).join('\n'),r.issueCode||'',r.rca?'✓':'',r.training?'✓':'',r.instruction?'✓':'']));
+    });
+    return{widths:[11,22,16,18,56,11,12,10,11],center:[6,7,8],
+      header:[[H('Date',{rs:2}),H('Shift',{rs:2}),H('Process Controller',{rs:2}),H('Risk Stage',{rs:2}),H('Risk Detail',{rs:2}),H('Issue Code',{rs:2}),H('Action Required',{cs:3})],[H('Root Cause Analysis'),H('Training'),H('Instruction')]],rows};
+  }
+  if(m==='p10'){
+    const rows=[];S.issues.slice().sort((a,b)=>a.date.localeCompare(b.date)||codeNum(a.code)-codeNum(b.code)).forEach(i=>{
+      if(!i.causes.length)rows.push([dot(i.date),i.issue,i.code,'','','']);
+      else i.causes.forEach(c=>rows.push([dot(i.date),i.issue,i.code,c.cause,c.root,c.r?rootCode(i.code,c.r):'']));
+    });
+    return{widths:[11,40,10,34,44,13],center:[],header:[['Date','Issue','Issue Code','Cause','Root Cause','Root Cause Code'].map(t=>H(t))],rows};
+  }
+  if(m==='p11'){
+    const rows=S.actions.slice().sort((a,b)=>codeNum(a.issueCode)-codeNum(b.issueCode)||codeNum(a.code)-codeNum(b.code)).map(a=>[a.issueCode,a.roots.map(n=>rootCode(a.issueCode,n)).join('\n'),a.plan,a.code]);
+    return{widths:[11,16,80,13],center:[],header:[['Issue Code','Root cause code','Action Plan','Action Plan Code'].map(t=>H(t))],rows};
+  }
+  if(m==='p12'){
+    const rows=S.actions.slice().sort((a,b)=>codeNum(a.issueCode)-codeNum(b.issueCode)||codeNum(a.code)-codeNum(b.code)).map(a=>[a.issueCode,a.code].concat([0,1,2,3,4].map(k=>a.followups[k]?(dot(a.followups[k].date)+(a.followups[k].ref?'\n'+a.followups[k].ref:'')):'')));
+    return{widths:[11,11,19,19,19,19,19],center:[],header:[['Issue Code','Action Plan code'].concat(ORD.map(o=>o+' follow up date')).map(t=>H(t))],rows};
+  }
+  if(m==='p26'){
+    const p=S.prevent.find(x=>x.id===opt);if(!p)return null;
+    const trig=TRIGGERS.map(t=>(p.triggers.includes(t)?'☑ ':'☐ ')+t).join('  ')+'  '+(p.triggerOther?'☑ Other: '+p.triggerOther:'☐ Other: ________');
+    const sub=SUBMIT_TO.map(t=>(p.submittedTo.includes(t)?'☑ ':'☐ ')+t).join('  ');
+    return{widths:[30,100],center:[],title:FORMS.p26.title+' – (Issue ID '+(p.issueCode||'')+')',
+      header:[[H('Field'),H('Details')]],
+      rows:[['Date of Issue',dot(p.dateIssue)],['Date Observed',dot(p.dateObserved)],['Observed By',p.observedBy],['Department / Area',p.dept],['Observation/ Issue',p.observation],
+        ['What triggered this observation?',trig],['Responsibility',p.responsibility],['Immediate Containment (if any taken)',p.containment],['Suggested Action',p.suggested],['Submitted To',sub]]};
+  }
+}
+function docHeadRows(m,mod){
+  const f=FORMS[m];const title=mod.title||f.title;
+  return[['QUALITY MANAGEMENT SYSTEM','','Doc No',f.no],['FERENTINO INDUSTRIAL TIRE (PVT) LTD / SRI LANKA',title,'Issue No',ISSUE_NO,'Revision No',REV_NO],['','','Issue Date',ISSUE_DATE,'Revision Date','']];
+}
+function downloadBlob(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportXlsx(m,opt){
+  if(typeof XLSX==='undefined'){toast('Excel export needs the internet connection the first time (library not loaded)');return;}
+  const mod=model(m,opt);if(!mod)return;
+  const aoa=docHeadRows(m,mod);const merges=[];
+  const top=aoa.length+1;aoa.push([]);
+  // header rows with spans
+  const grid=mod.header.map(()=>[]);const occupied={};
+  mod.header.forEach((row,ri)=>{let ci=0;row.forEach(cell=>{
+    while(occupied[ri+','+ci])ci++;
+    grid[ri][ci]=cell.t;
+    const rs=cell.rs||1,cs=cell.cs||1;
+    for(let a=0;a<rs;a++)for(let b=0;b<cs;b++){if(a||b)occupied[(ri+a)+','+(ci+b)]=1;}
+    if(rs>1||cs>1)merges.push({s:{r:top+ri,c:ci},e:{r:top+ri+rs-1,c:ci+cs-1}});
+    ci+=cs;});});
+  grid.forEach(r=>aoa.push(r));
+  mod.rows.forEach(r=>aoa.push(r.map(v=>v==null?'':String(v).replace(/\n/g,' / '))));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=merges;ws['!cols']=mod.widths.map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,FORMS[m].no.split('/').pop());
+  const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  downloadBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),FORMS[m].file+'.xlsx');
+  toast('Excel file downloaded');
+}
+function printReg(m,opt){
+  const mod=model(m,opt);if(!mod)return;const f=FORMS[m];
+  const head='<table class="dh"><tr><td class="l"><img src="'+LOGO+'" alt="">FERENTINO INDUSTRIAL TIRE (PVT) LTD<br>SRI LANKA</td><td class="m"><div class="sys">QUALITY MANAGEMENT SYSTEM</div><div class="ttl">'+esc(mod.title||f.title)+'</div></td>'+
+    '<td class="r"><table><tr><th>Doc No</th><td colspan="3">'+f.no+'</td></tr><tr><th>Issue No</th><td>'+ISSUE_NO+'</td><th>Revision No</th><td>'+REV_NO+'</td></tr><tr><th>Issue Date</th><td>'+ISSUE_DATE+'</td><th>Revision Date</th><td></td></tr></table></td></tr></table>';
+  const thead=mod.header.map(r=>'<tr>'+r.map(c=>'<th'+(c.rs?' rowspan="'+c.rs+'"':'')+(c.cs?' colspan="'+c.cs+'"':'')+'>'+esc(c.t)+'</th>').join('')+'</tr>').join('');
+  const tbody=mod.rows.map(r=>'<tr>'+r.map((v,i)=>'<td'+(mod.center.includes(i)?' class="cc"':'')+'>'+nl(v)+'</td>').join('')+'</tr>').join('');
+  $('#printArea').innerHTML=head+'<table class="pt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+  let st=$('#pageStyle');if(!st){st=document.createElement('style');st.id='pageStyle';document.head.appendChild(st);}
+  st.textContent='@page{size:A4 '+f.orient+';margin:12mm;}';
+  setTimeout(()=>window.print(),60);
+}
+
+/* ================= MODALS ================= */
+function modal(html,bind){
+  const host=$('#modalHost');host.innerHTML='<div class="veil"><div class="modal">'+html+'</div></div>';
+  host.querySelector('.veil').addEventListener('mousedown',e=>{if(e.target.classList.contains('veil'))closeModal();});
+  if(bind)bind(host);
+}
+function closeModal(){$('#modalHost').innerHTML='';}
+
+/* ================= ACTIONS ================= */
+const byId=(arr,id)=>arr.find(x=>x.id===id);
+function onClick(e){
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const a=el.dataset.act;
+  if(a==='tab'){e.preventDefault();tab=el.dataset.t;render();window.scrollTo(0,0);return;}
+  if(a==='goRisk'){tab='p09';V.month='all';V.status='all';V.q='';render();const t=document.getElementById('sh-'+el.dataset.sk);if(t)t.scrollIntoView({block:'center'});return;}
+  if(a==='none'){setNone(el.dataset.sk,el.dataset.rid);return;}
+  if(a==='xlsx'){exportXlsx(el.dataset.m,el.dataset.id);return;}
+  if(a==='print'){printReg(el.dataset.m,el.dataset.id);return;}
+  if(a==='addIssue'){
+    modal('<h3>Add issue</h3><div class="row"><label class="f">Date</label><input type="date" id="mDate" value="'+todayISO()+'"></div><div class="row"><label class="f">Issue</label><textarea id="mText" style="min-height:90px" placeholder="What went wrong, and how it was noticed"></textarea></div><div class="foot"><button class="btn" id="mNo">Cancel</button><button class="btn red" id="mYes">Add issue</button></div>',h=>{
+      $('#mNo',h).onclick=closeModal;$('#mText',h).focus();
+      $('#mYes',h).onclick=()=>{const t=$('#mText',h).value.trim();if(!t){toast('Describe the issue first');return;}
+        const it=newIssue({date:$('#mDate',h).value||todayISO(),issue:t,source:'manual',rca:false});closeModal();save();render();toast(it.code+' added');};});return;}
+  if(a==='delIssue'){
+    const i=byId(S.issues,el.dataset.id);if(!i)return;const n=S.actions.filter(x=>x.issueCode===i.code).length;
+    if(!confirm('Delete issue '+i.code+(n?' and its '+n+' action plan'+(n===1?'':'s')+' (with their follow-ups)':'')+'?\nThis cannot be undone. A case already in the RCA Workbench is not removed.'))return;
+    S.actions=S.actions.filter(x=>x.issueCode!==i.code);
+    S.shifts.forEach(s=>s.risks.forEach(r=>{if(r.issueCode===i.code){r.issueCode='';r.rca=false;}}));
+    S.prevent.forEach(p=>{if(p.issueCode===i.code)p.issueCode='';});
+    S.issues=S.issues.filter(x=>x!==i);save();render();return;}
+  if(a==='addCause'){const i=byId(S.issues,el.dataset.id);if(i){i.causes.push({id:uid(),cause:'',root:'',r:null});save();render();}return;}
+  if(a==='delCause'){const i=byId(S.issues,el.dataset.id);if(i){i.causes=i.causes.filter(c=>c.id!==el.dataset.cid);save();render();}return;}
+  if(a==='addAction'){
+    const na=V.newAct;if(!na.issue){toast('Choose the issue first');return;}if(!na.plan.trim()){toast('Describe the action plan');return;}
+    const iss=findIssue(na.issue);const ac={id:uid(),code:nextCode('A',iss?iss.date:todayISO()),issueCode:na.issue,roots:na.roots.slice().sort((x,y)=>x-y),plan:na.plan.trim(),closed:false,followups:[]};
+    S.actions.push(ac);if(iss)flushFU(iss);V.newAct={issue:na.issue,roots:[],plan:''};save();render();toast(ac.code+' added');return;}
+  if(a==='delAction'){const x=byId(S.actions,el.dataset.id);if(x&&confirm('Delete action plan '+x.code+' and its follow-ups?')){S.actions=S.actions.filter(y=>y!==x);save();render();}return;}
+  if(a==='slot'){
+    const x=byId(S.actions,el.dataset.id);const k=+el.dataset.k;if(!x)return;const cur=x.followups[k]||{date:todayISO(),ref:''};
+    modal('<h3>'+ORD[k]+' follow-up — '+esc(x.code)+'</h3><div class="row"><label class="f">Follow-up date</label><input type="date" id="mDate" value="'+esc(cur.date)+'"></div><div class="row"><label class="f">Reference / note</label><input type="text" id="mRef" value="'+esc(cur.ref)+'" placeholder="e.g. WMM-Issue 18"></div><div class="foot">'+(x.followups[k]?'<button class="btn ghost" id="mDel" style="margin-right:auto">Remove</button>':'')+'<button class="btn" id="mNo">Cancel</button><button class="btn red" id="mYes">Save</button></div>',h=>{
+      $('#mNo',h).onclick=closeModal;
+      if($('#mDel',h))$('#mDel',h).onclick=()=>{x.followups.splice(k,1);closeModal();save();render();};
+      $('#mYes',h).onclick=()=>{const d=$('#mDate',h).value;if(!d){toast('Pick the follow-up date');return;}x.followups[k]={date:d,ref:$('#mRef',h).value.trim()};closeModal();save();render();};});return;}
+  if(a==='addPrev'){const p={id:uid(),issueCode:'',dateIssue:todayISO(),dateObserved:todayISO(),observedBy:'',dept:'',observation:'',triggers:[],triggerOther:'',responsibility:'',containment:'',suggested:'',submittedTo:[]};S.prevent.push(p);V.pv=p.id;save();render();return;}
+  if(a==='openPrev'){V.pv=el.dataset.id;render();setTimeout(()=>{const c=$('.card.panel');if(c)c.scrollIntoView({block:'start'});},0);return;}
+  if(a==='delPrev'){const p=byId(S.prevent,el.dataset.id);if(p&&confirm('Delete this observation form?')){S.prevent=S.prevent.filter(x=>x!==p);V.pv=null;save();render();}return;}
+  if(a==='logPrev'){
+    const p=byId(S.prevent,el.dataset.id);if(!p)return;
+    if(!(p.observation||'').trim()){toast('Fill in the observation first');return;}
+    const first=(p.observation.split(/\n/)[0]||'').trim();
+    modal('<h3>Log as issue</h3><p class="muted" style="margin-top:0">Creates an issue in RG-QA-10 with its own issue code, exactly as an actual nonconformity would be logged.</p><div class="row"><label class="f">Issue statement</label><textarea id="mText" style="min-height:90px">'+esc(first.length>300?first.slice(0,297)+'…':first)+'</textarea></div><div class="foot"><button class="btn" id="mNo">Cancel</button><button class="btn red" id="mYes">Log issue</button></div>',h=>{
+      $('#mNo',h).onclick=closeModal;
+      $('#mYes',h).onclick=()=>{const t=$('#mText',h).value.trim();if(!t){toast('Write the issue statement');return;}
+        const it=newIssue({date:p.dateObserved||todayISO(),issue:t,source:'preventive',rca:false});p.issueCode=it.code;closeModal();save();render();toast('Logged as '+it.code);};});return;}
+  if(a==='backup'){downloadBlob(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),'CAPA_backup_'+todayISO()+'.json');return;}
+  if(a==='reseed'){if(confirm('Reset to the existing registers?\nShifts received and every decision made here will be removed.')){S=seedState();save();render();toast('Reset');}return;}
+  if(a==='wipe'){if(confirm('Delete ALL CAPA data, including the existing registers?\nThis cannot be undone.')){S=shape({max:{I:{},A:{}}});save();render();toast('All data deleted');}return;}
+}
+function onChange(e){
+  const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+  if(a==='tick'){setTick(el.dataset.sk,el.dataset.rid,el.dataset.f,el.checked);return;}
+  if(a==='fMonth'){V.month=el.value;render();return;}
+  if(a==='fStatus'){V.status=el.value;render();return;}
+  if(a==='iSt'){V.ist=el.value;render();return;}
+  if(a==='fOpen'){V.fopen=el.checked;render();return;}
+  if(a==='iDate'){const i=byId(S.issues,el.dataset.id);if(i&&el.value){i.date=el.value;save();}return;}
+  if(a==='iText'){const i=byId(S.issues,el.dataset.id);if(i){i.issue=el.value.trim();save();}return;}
+  if(a==='iRca'){const i=byId(S.issues,el.dataset.id);if(i){i.rca=el.checked;save();render();toast(el.checked?i.code+' sent to the RCA Workbench':i.code+' will no longer be sent');}return;}
+  if(a==='cCause'||a==='cRoot'||a==='cR'){
+    const i=byId(S.issues,el.dataset.id);const c=i&&i.causes.find(x=>x.id===el.dataset.cid);if(!c)return;
+    if(a==='cCause')c.cause=el.value.trim();
+    else if(a==='cRoot'){c.root=el.value.trim();if(c.root&&!c.r){c.r=Math.max(0,...i.causes.map(x=>x.r||0))+1;}}
+    else{const n=parseInt(el.value,10);c.r=n>0?n:null;}
+    save();render();return;}
+  if(a==='naIssue'){V.newAct={issue:el.value,roots:[],plan:V.newAct.plan};render();return;}
+  if(a==='naRoot'){const n=+el.dataset.n;const r=V.newAct.roots;if(el.checked&&!r.includes(n))r.push(n);if(!el.checked)V.newAct.roots=r.filter(x=>x!==n);return;}
+  if(a==='aRoot'){const x=byId(S.actions,el.dataset.id);if(x){const n=+el.dataset.n;x.roots=el.checked?Array.from(new Set(x.roots.concat(n))).sort((p,q)=>p-q):x.roots.filter(v=>v!==n);save();}return;}
+  if(a==='aPlan'){const x=byId(S.actions,el.dataset.id);if(x){x.plan=el.value.trim();save();}return;}
+  if(a==='aClosed'){const x=byId(S.actions,el.dataset.id);if(x){x.closed=el.checked;save();render();}return;}
+  if(a==='pv'){const p=byId(S.prevent,el.dataset.id);if(p){p[el.dataset.f]=el.value;save();}return;}
+  if(a==='pvTrig'||a==='pvSub'){const p=byId(S.prevent,el.dataset.id);if(p){const k=a==='pvTrig'?'triggers':'submittedTo';const t=el.dataset.t;p[k]=el.checked?Array.from(new Set(p[k].concat(t))):p[k].filter(v=>v!==t);save();}return;}
+  if(a==='maxI'||a==='maxA'){const k=a==='maxI'?'I':'A';S.max[k][el.dataset.y]=Math.max(0,parseInt(el.value,10)||0);save();toast('Numbering updated');return;}
+  if(a==='restore'){
+    const f=el.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>{try{const s=JSON.parse(rd.result);if(!s||!Array.isArray(s.issues)||!Array.isArray(s.actions))throw 0;
+      if(!confirm('Restoring replaces everything currently in CAPA. Continue?'))return;S=shape(s);save();render();toast('Backup restored');}catch(err){toast('That file is not a CAPA backup');}};
+    rd.readAsText(f);el.value='';return;}
+}
+function onInput(e){
+  const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+  // search boxes re-render the page, so keep the caret where it was
+  const map={fQ:'q',iQ:'iq',aQ:'aq',fQ2:'fq'};
+  if(map[a]){V[map[a]]=el.value;const pos=el.selectionStart;render();const n=$('[data-act="'+a+'"]');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(_){}}return;}
+  if(a==='naPlan'){V.newAct.plan=el.value;}
+}
+
+/* ================= MESSAGES + START ================= */
+window.addEventListener('message',ev=>{
+  if(ev.source!==window.parent)return;
+  const m=ev.data;
+  if(m&&m.type==='fitl-shifts'&&Array.isArray(m.items))ingestShifts(m.items);
+  if(m&&m.type==='fitl-capa-requests'&&Array.isArray(m.items))ingestRequests(m.items);
+  if(m&&m.type==='fitl-meeting-to-capa'&&Array.isArray(m.items))ingestMeeting(m.items);
+  if(m&&m.type==='fitl-meeting-status'&&Array.isArray(m.items))onMeetingStatus(m.items);
+});
+document.addEventListener('click',onClick);
+document.addEventListener('change',onChange);
+document.addEventListener('input',onInput);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+S=load();
+render();
+publishRca();
+try{window.parent.postMessage({type:'fitl-capa-ready'},'*');}catch(e){}
+})();
+</script>
+</body>
+</html>

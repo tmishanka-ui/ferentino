@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Press Downtime Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#1d2733;--mut:#667385;--gr:#e3e8ee;--bd:#d5dce4;--ac:#4361ee;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161c;--card:#1b222b;--tx:#e6ebf1;--mut:#9aa7b6;--gr:#2d3744;--bd:#33404f;--ac:#7b93ff}}
+:root[data-theme="dark"]{--bg:#12161c;--card:#1b222b;--tx:#e6ebf1;--mut:#9aa7b6;--gr:#2d3744;--bd:#33404f;--ac:#7b93ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:14px;max-width:1300px;margin-inline:auto}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{font-size:20px;margin:0}h3{font-size:14px;margin:0}
+.mut{color:var(--mut);font-size:12.5px}
+.btn,select{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.tabs{display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.tabs button{border:0;background:var(--card);color:var(--tx);padding:7px 14px;cursor:pointer;font:inherit}
+.tabs button.on{background:var(--ac);color:#fff}
+#per{min-width:240px;max-width:100%}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.k,.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.k b{display:block;font-size:22px;margin:2px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:14px}
+.card.w{grid-column:1/-1}
+.ch{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ch .dl{padding:3px 9px;font-size:12px}
+.cv{position:relative}
+.lg{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--mut)}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.tw{overflow-x:auto;margin-top:14px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 9px;border-bottom:1px solid var(--gr);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+tfoot td{font-weight:700}
+input.hq{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;min-width:210px}
+.hx{max-height:520px;overflow:auto;border:1px solid var(--bd);border-radius:12px;margin-top:14px}.hx table{min-width:100%}
+.hx th{position:sticky;top:0;background:var(--card);z-index:2;font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.hx th:first-child,.hx td:first-child{position:sticky;left:0;background:var(--card);z-index:1;min-width:230px;max-width:300px}
+.hx th:first-child{z-index:3}.hx tr.sel td{outline:0;box-shadow:inset 0 0 0 9999px rgba(67,97,238,.10)}.hx tbody tr{cursor:pointer}
+.hdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:14px;margin-top:14px}
+.hk{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0 10px}.hk div b{display:block;font-size:20px}
+.empty{padding:40px 20px;text-align:center;background:var(--card);border:1px dashed var(--bd);border-radius:12px;margin-top:14px}
+</style></head><body>
+<header>
+<div style="display:flex;align-items:center;gap:12px"><img src="data:image/jpeg;base64,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" alt="Ferentino" style="height:36px;width:auto;background:#fff;padding:3px 7px;border-radius:5px;flex-shrink:0"><div><h1>Press Downtime Dashboard</h1><div class="mut" id="st">Import the production down time workbook (sheet “Daily down time”) to begin.</div></div></div>
+<div><label class="btn pri">Import Excel<input id="f" type="file" accept=".xlsx,.xlsm" multiple hidden></label> <button class="btn" id="clr" title="Remove everything loaded so far">Start over</button>
+<button class="btn" id="bx" disabled>Excel report</button> <button class="btn" id="bp" disabled>PDF report</button></div>
+</header>
+<div class="empty" id="em">Click <b>Import Excel</b> and choose the <b>Press Trace reports from the curing-section tablets</b> — select all four at once, or add them one after another.<br><span class="mut">Each is the “complete report” (.xlsx) downloaded from the Press Trace History tab. A <i>production_down_time_report</i> workbook (“Daily down time” + “db press line” sheets) also works. Weeks run Sunday to Saturday.</span></div>
+<main id="app" hidden>
+<div class="bar"><div class="tabs" id="modes"><button data-m="dash" class="on">Dashboard</button><button data-m="hist">History · cause wise &amp; press wise</button></div></div>
+<div id="dash">
+<div class="bar"><div class="tabs" id="tabs"></div><button class="btn" id="pv">◀</button><select id="per"></select><button class="btn" id="nx">▶</button></div>
+<div class="lg" id="lg" style="margin-bottom:10px"></div>
+<div class="kpis" id="kpi"></div>
+<div class="grid" id="grid"></div>
+<div class="card tw"><h3 id="tt"></h3><table id="tb"></table></div>
+</div>
+<div id="hist" hidden></div>
+</main>
+<script>
+const $=s=>document.querySelector(s),RC={Man:'#2a9d8f',Machine:'#e76f51',Method:'#4361ee',Material:'#e9c46a',Unrecognised:'#8d99ae'},RS=Object.keys(RC);
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'],DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const TN={day:'Daily',week:'Weekly',month:'Monthly',year:'Yearly'},PN={day:'day',week:'week',month:'month',year:'year'};
+let R=[],K=[],S={t:'day',k:null},CH={},D={},light=false,FN='';
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const T=()=>light?{tx:'#1d2733',gr:'#e3e8ee'}:{tx:css('--tx'),gr:css('--gr')};
+const dt=s=>new Date(Math.round((s-25569)*864e5)),j1=y=>Date.UTC(y,0,1)/864e5+25569;
+const fd=(s,o)=>dt(s).toLocaleDateString('en-GB',{timeZone:'UTC',...o});
+const nf=n=>Math.round(n).toLocaleString('en-US'),hf=m=>(m/60).toFixed(1)+' h',pc=(v,t)=>(t?v/t*100:0).toFixed(1)+'%';
+const sum=a=>a.reduce((s,r)=>s+r.n,0),sh=(s,n=34)=>s.length>n?s.slice(0,n-1)+'…':s;
+const grp=(a,f)=>{const m=new Map();a.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+r.n)});return m};
+const srt=m=>[...m].sort((a,b)=>b[1]-a[1]);
+const kf=(r,t)=>t=='day'?r.s:t=='week'?r.y*100+r.w:t=='month'?r.y*100+r.m:r.y;
+function kl(k,t){if(t=='day')return fd(k,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+ if(t=='week'){const y=Math.floor(k/100),w=k%100,st=j1(y)-new Date(Date.UTC(y,0,1)).getUTCDay()+(w-1)*7;return `Week ${w} · ${fd(st,{day:'numeric',month:'short'})} – ${fd(st+6,{day:'numeric',month:'short',year:'numeric'})}`}
+ if(t=='month')return MN[k%100-1]+' '+Math.floor(k/100);return String(k)}
+/* ---------- import ---------- */
+const TABLET_NAMES=['Tablet 1 — 1M & 2M','Tablet 2 — 3M & 4M','Tablet 3 — 5M & 6M','Tablet 4 — 7M'];
+let PRW=[],PRWname='',TR=[],TRF=[],trSeen=new Set(),prodBad={n:0,codes:new Map()};
+const readBuf=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res({name:f.name,buffer:fr.result});fr.onerror=()=>rej(new Error('Could not read '+f.name));fr.readAsArrayBuffer(f)});
+$('#f').onchange=e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;
+ $('#st').textContent='Reading '+files.map(f=>f.name).join(', ')+' …';
+ Promise.all(files.map(readBuf)).then(list=>setTimeout(()=>{try{ingest(list,true)}catch(x){$('#st').textContent='Could not read the workbook: '+x.message}},30)).catch(x=>{$('#st').textContent=x.message})};
+$('#clr').onclick=()=>{PRW=[];PRWname='';TR=[];TRF=[];trSeen=new Set();R=[];FN='';prodBad={n:0,codes:new Map()};$('#st').textContent='Everything was cleared. Import the reports again to begin.';$('#app').hidden=true;$('#em').hidden=false;$('#bx').disabled=$('#bp').disabled=true};
+const dparts=s=>{const d=dt(s),y=d.getUTCFullYear(),doy=s-Math.floor(j1(y))+1;return{y,m:d.getUTCMonth()+1,w:Math.floor((doy+new Date(Date.UTC(y,0,1)).getUTCDay()-1)/7)+1,dw:d.getUTCDay(),dd:d.getUTCDate()}};
+const sheetNames=buf=>XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames;
+/* Press Trace "complete report": its Downtime log sheet becomes the down-time records; reports from
+   several tablets are merged, and an entry that appears in two reports (daily + weekly) is counted once. */
+function addTrace(f,names){
+ const wb=XLSX.read(f.buffer,{type:'array',sheets:['Downtime log','Summary'].filter(n=>names.includes(n))});
+ let tablet='';
+ if(wb.Sheets['Summary'])XLSX.utils.sheet_to_json(wb.Sheets['Summary'],{header:1}).forEach(r=>{if(String(r[0]??'').trim()==='Tablet')tablet=String(r[1]??'').trim()});
+ const a=XLSX.utils.sheet_to_json(wb.Sheets['Downtime log'],{header:1}),H=a[0].map(x=>String(x??'').trim().toUpperCase()),ix=n=>H.indexOf(n);
+ const iD=ix('DATE'),iP=ix('PRESS'),iN=ix('DOWNTIME (MIN)'),iS=ix('SHIFT'),iR=ix('REASON'),iRC=ix('REASON CODE'),iRs=ix('RESPONSIBILITY'),iT=ix('TABLET'),iA=ix('SCANNED AT');
+ if([iD,iP,iN].some(i=>i<0))throw new Error(f.name+': the Downtime log sheet needs Date, Press and Downtime (min) columns');
+ let added=0,dup=0;
+ for(let i=1;i<a.length;i++){const r=a[i],s=Math.floor(+r[iD]),n=+r[iN];if(!(s>0)||!(n>0))continue;
+  const press=String(r[iP]??'').trim().toUpperCase(),key=s+'|'+press+'|'+(iA>=0?r[iA]:'')+'|'+n+'|'+(iR>=0?r[iR]:'');
+  if(trSeen.has(key)){dup++;continue}trSeen.add(key);
+  const lm=press.match(/^(\d+)M\d+$/),resp=String(iRs>=0?r[iRs]:'').trim();
+  let rs=resp?resp.charAt(0).toUpperCase()+resp.slice(1).toLowerCase():'';if(!RC[rs])rs='Unrecognised';
+  const cause=String((iR>=0?r[iR]:'')||(iRC>=0?r[iRC]:'')||'').trim().replace(/\s+/g,' ')||'Reason not recorded',shf=String(iS>=0?r[iS]:'').trim();
+  TR.push(Object.assign(dparts(s),{s,c:cause,r:rs,l:lm?'Line '+lm[1]:'Unknown',p:'S3A'+press,sh:/^n/i.test(shf)?'Night':/^d/i.test(shf)?'Day':'Unspecified',n,tab:tablet||String(iT>=0?r[iT]:'')||''}));added++}
+ TRF.push({name:f.name,tablet,added,dup});
+}
+function ingest(list,forward){
+ const trace=[],prodFiles=[];
+ list.forEach(f=>{const names=sheetNames(f.buffer);
+  if(names.includes('Downtime log')){addTrace(f,names);trace.push(f)}
+  else{const r=parseProduction(f.buffer);PRW=r.out;PRWname=f.name;prodBad={n:r.badN,codes:r.bad};prodFiles.push(f)}});
+ R=PRW.concat(TR);
+ if(!R.length)throw new Error(trace.length?'these Press Trace reports have no downtime entries yet':'no valid rows found');
+ const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s)),dd=x=>fd(x,{day:'numeric',month:'short',year:'numeric'}),parts=[];
+ if(TRF.length){const have=new Set(TRF.map(x=>x.tablet).filter(Boolean)),miss=TABLET_NAMES.filter(t=>!have.has(t));
+  parts.push(`Press Trace: ${TRF.length} report${TRF.length==1?'':'s'} · ${nf(TR.length)} downtime records`+(have.size?` · from ${[...have].join(', ')}`:'')+(miss.length?` · <b>not loaded yet: ${miss.join(', ')}</b>`:' · all four tablets loaded'));}
+ if(PRW.length)parts.push(`${PRWname} · ${nf(PRW.length)} records`);
+ FN=TRF.length&&!PRW.length?`Press Trace reports (${TRF.length})`:PRWname||FN;
+ $('#st').innerHTML=parts.join(' | ')+` · ${dd(mn)} – ${dd(mx)}`+(prodBad.n?` · ${prodBad.n} records have a down-time code not found in “db press line” (${[...prodBad.codes.keys()].slice(0,12).join(', ')}) and are shown as “Unrecognised code”`:'');
+ $('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
+ if(forward&&trace.length&&parent!==window)try{parent.postMessage({type:'fitl-trace-reports',files:trace.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
+ /* the production_down_time_report itself also feeds the Production KPI Dashboard */
+ if(forward&&prodFiles.length&&parent!==window)try{parent.postMessage({type:'fitl-downtime-workbook',files:prodFiles.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
+}
+/* the host page hands over reports uploaded in the other Production dashboard */
+addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
+ if(m&&m.type==='fitl-trace-reports'&&Array.isArray(m.files))try{ingest(m.files,false)}catch(x){$('#st').textContent='Could not read the workbook: '+x.message}});
+function parseProduction(buf){
+ const names=XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames,sd=names.find(n=>/daily/i.test(n)),sp=names.find(n=>/db\s*press/i.test(n));
+ if(!sd)throw new Error('sheet “Daily down time” not found');
+ const wb=XLSX.read(buf,{type:'array',sheets:[sd,sp].filter(Boolean)}),DB={},PL={};
+ if(sp)XLSX.utils.sheet_to_json(wb.Sheets[sp],{header:1}).forEach(r=>{const c=String(r[9]??'').trim().toUpperCase();
+  if(c&&r[10]&&c!='EFF')DB[c]=[String(r[10]).trim().replace(/\s+/g,' '),String(r[11]||'').trim()];
+  const p=String(r[0]??'').trim().toUpperCase(),m=String(r[1]??'').match(/(\d+)/);if(/^S3A\d+M\d+$/.test(p)&&m)PL[p]='Line '+m[1]});
+ const a=XLSX.utils.sheet_to_json(wb.Sheets[sd],{header:1}),H=a[0].map(x=>String(x??'').trim().toUpperCase()),ix=n=>H.indexOf(n);
+ const iD=ix('DATE'),iP=ix('CODE PRESS'),iC=ix('CODE DOWN TIME'),iT=ix('TIME'),iS=ix('SHIFT');
+ if([iD,iP,iC,iT].some(i=>i<0))throw new Error('columns DATE, CODE PRESS, CODE DOWN TIME and TIME are required');
+ const out=[],bad=new Map();let badN=0;
+ for(let i=1;i<a.length;i++){const r=a[i];let v=r[iD],n=+r[iT];if(v instanceof Date)v=v.getTime()/864e5+25569;else if(typeof v=='string')v=Date.parse(v)/864e5+25569;
+  const s=Math.floor(v);if(!(s>0)||!(n>0))continue;
+  const d=dt(s),y=d.getUTCFullYear(),doy=s-Math.floor(j1(y))+1,w=Math.floor((doy+new Date(Date.UTC(y,0,1)).getUTCDay()-1)/7)+1;
+  const code=String(r[iC]??'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''),inf=DB[code],p=String(r[iP]??'').trim().toUpperCase(),lm=p.match(/^S3A(\d+)/);
+  let rs=inf?inf[1].charAt(0).toUpperCase()+inf[1].slice(1).toLowerCase():'';if(!RC[rs])rs='Unrecognised';
+  if(!inf){badN++;bad.set(code||'(blank)',1)}
+  const shf=String(r[iS]??'').trim();
+  out.push({s,y,m:d.getUTCMonth()+1,w,dw:d.getUTCDay(),dd:d.getUTCDate(),c:inf?inf[0]:'Unrecognised code',r:rs,l:PL[p]||(lm?'Line '+lm[1]:'Unknown'),p,sh:/^n/i.test(shf)?'Night':/^d/i.test(shf)?'Day':'Unspecified',n})}
+ if(!out.length)throw new Error('no valid rows found');
+ return {out,badN,bad}}
+/* ---------- UI ---------- */
+$('#tabs').innerHTML=Object.keys(TN).map(t=>`<button data-t="${t}">${TN[t]}</button>`).join('');
+$('#tabs').onclick=e=>{if(e.target.dataset.t&&R.length)setType(e.target.dataset.t)};
+$('#lg').innerHTML=RS.map(r=>`<span><i style="background:${RC[r]}"></i>${r}</span>`).join('')+'<span>Percentages = share of the selected period’s total downtime</span>';
+const CARDS=[['cause','Downtime by cause · % of period total',430,1],['unit','',320],['resp','Responsibility · % of period total',300],['line','Press line · % of period total',300],['cmp','',340],['rec','',300]];
+$('#grid').innerHTML=CARDS.map(([id,t,h,w])=>`<div class="card${w?' w':''}" id="c_${id}"><div class="ch"><h3 id="t_${id}">${t}</h3>${id=='cmp'?'<select id="dim"><option value="cause">By cause</option><option value="resp">By responsibility</option><option value="line">By press line</option><option value="shift">By shift</option></select>':''}<button class="btn dl" data-c="${id}">PNG</button></div><div class="cv" style="height:${h}px"><canvas id="${id}"></canvas></div></div>`).join('');
+$('#grid').onclick=e=>{const c=e.target.dataset.c;if(c&&CH[c]){const u=imgs([c])[c],a=document.createElement('a');a.href=u;a.download=`downtime_${c}_${PN[S.t]}_${kl(S.k,S.t).replace(/[^\w]+/g,'_')}.png`;a.click()}};
+$('#dim').onchange=()=>cmp();
+$('#per').onchange=e=>{S.k=+e.target.value;draw()};
+$('#pv').onclick=()=>step(-1);$('#nx').onclick=()=>step(1);
+function step(d){const i=K.indexOf(S.k)+d;if(i>=0&&i<K.length){S.k=K[i];$('#per').value=S.k;draw()}}
+function setType(t){S.t=t;K=[...new Set(R.map(r=>kf(r,t)))].sort((a,b)=>a-b);
+ $('#per').innerHTML=K.slice().reverse().map(k=>`<option value="${k}">${kl(k,t)}</option>`).join('');S.k=K[K.length-1];$('#per').value=S.k;
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));draw()}
+/* ---------- charts ---------- */
+Chart.register({id:'lbl',beforeDraw(c){if(light){const x=c.ctx;x.save();x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.restore()}},
+ afterDatasetsDraw(c,_,o){const f=o&&o.fn;if(!f)return;const x=c.ctx;x.save();x.font='11px system-ui,sans-serif';x.fillStyle=T().tx;
+  if(c.config.type=='doughnut'){x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';c.getDatasetMeta(0).data.forEach((a,i)=>{const s=f(i);if(s){const p=a.tooltipPosition();x.fillText(s,p.x,p.y)}})}
+  else if(o.stack){x.textAlign='center';x.textBaseline='bottom';c.getDatasetMeta(0).data.forEach((b,i)=>{const s=f(i);if(!s)return;let y=1e9;c.data.datasets.forEach((d,j)=>{if(d.data[i]>0)y=Math.min(y,c.getDatasetMeta(j).data[i].y)});if(y<1e9)x.fillText(s,b.x,y-3)})}
+  else{const hz=c.options.indexAxis=='y';x.textAlign=hz?'left':'center';x.textBaseline=hz?'middle':'bottom';
+   c.data.datasets.forEach((d,j)=>c.getDatasetMeta(j).data.forEach((b,i)=>{const s=f(i,j);if(s)x.fillText(s,hz?b.x+4:b.x,hz?b.y:b.y-3)}))}
+  x.restore()}});
+const ax=(e={})=>({ticks:{color:()=>T().tx},grid:{color:()=>T().gr},...e}),tl=s=>({display:true,text:s,color:()=>T().tx});
+function mk(id,type,data,o={}){CH[id]&&CH[id].destroy();CH[id]=new Chart($('#'+id),{type,data,options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},...o,plugins:{legend:{display:false},...(o.plugins||{})}}})}
+function imgs(ids){light=true;ids.forEach(i=>CH[i]&&CH[i].update('none'));const o={};ids.forEach(i=>{if(CH[i])o[i]=CH[i].toBase64Image('image/png',1)});light=false;ids.forEach(i=>CH[i]&&CH[i].update('none'));return o}
+function draw(){
+ const cur=R.filter(r=>kf(r,S.t)==S.k),i=K.indexOf(S.k),pk=i>0?K[i-1]:null,prv=pk==null?[]:R.filter(r=>kf(r,S.t)==pk),tot=sum(cur),ptot=sum(prv);
+ D={cur,prv,pk,tot,ptot};const cm=srt(grp(cur,r=>r.c)),rm=srt(grp(cur,r=>r.r)),lm=srt(grp(cur,r=>r.l)),rsp={};cur.forEach(r=>rsp[r.c]=r.r);
+ const dl=pk==null?'—':(tot>=ptot?'+':'−')+hf(Math.abs(tot-ptot));
+ $('#kpi').innerHTML=[['Total downtime',hf(tot),nf(tot)+' min · '+nf(cur.length)+' records'],['Change vs previous '+PN[S.t],dl,pk==null?'no earlier '+PN[S.t]+' in the data':kl(pk,S.t)+': '+hf(ptot)],
+  ['Top cause',cm[0]?pc(cm[0][1],tot):'—',cm[0]?sh(cm[0][0],48):''],['Largest press line',lm[0]?pc(lm[0][1],tot):'—',lm[0]?lm[0][0]+' · '+hf(lm[0][1]):'']].map(k=>`<div class="k"><span class="mut">${k[0]}</span><b>${k[1]}</b><span class="mut">${k[2]}</span></div>`).join('');
+ /* cause pareto */
+ let top=cm.slice(0,10);const oth=cm.slice(10).reduce((s,x)=>s+x[1],0);if(oth)top.push(['Others ('+(cm.length-10)+' causes)',oth]);
+ mk('cause','bar',{labels:top.map(x=>x[0]),datasets:[{data:top.map(x=>x[1]),backgroundColor:top.map(x=>RC[rsp[x[0]]]||'#8d99ae')}]},{indexAxis:'y',
+  scales:{x:ax({grace:'28%',title:tl('Minutes')}),y:ax({ticks:{color:()=>T().tx,callback(v){return sh(this.getLabelForValue(v),40)}}})},plugins:{lbl:{fn:j=>`${nf(top[j][1])} min · ${pc(top[j][1],tot)}`}}});
+ /* breakdown inside period */
+ let ul,uf,ut;
+ if(S.t=='day'){ut='Downtime by press line · % of period total';ul=[...new Set(cur.map(r=>r.l))].sort((a,b)=>a.localeCompare(b,0,{numeric:true}));uf=r=>r.l}
+ else if(S.t=='week'){ut='Downtime by day of week · % of period total';ul=DN;uf=r=>DN[r.dw]}
+ else if(S.t=='month'){ut='Downtime by day of month · % of period total';const dm=new Date(Date.UTC(Math.floor(S.k/100),S.k%100,0)).getUTCDate();ul=Array.from({length:dm},(_,x)=>String(x+1));uf=r=>String(r.dd)}
+ else{ut='Downtime by month · % of period total';ul=MN.map(m=>m.slice(0,3));uf=r=>MN[r.m-1].slice(0,3)}
+ $('#t_unit').textContent=ut;const um=grp(cur,uf),ds=RS.map(rs=>({label:rs,backgroundColor:RC[rs],data:ul.map(u=>cur.filter(r=>r.r==rs&&uf(r)==u).reduce((s,r)=>s+r.n,0))})).filter(d=>d.data.some(v=>v>0));
+ mk('unit','bar',{labels:ul,datasets:ds},{scales:{x:ax({stacked:true}),y:ax({stacked:true,grace:'12%',title:tl('Minutes')})},plugins:{legend:{display:true,labels:{color:()=>T().tx}},lbl:{stack:true,fn:j=>um.get(ul[j])?pc(um.get(ul[j]),tot):''}}});
+ /* responsibility */
+ mk('resp','doughnut',{labels:rm.map(x=>x[0]),datasets:[{data:rm.map(x=>x[1]),backgroundColor:rm.map(x=>RC[x[0]]),borderWidth:0}]},{plugins:{legend:{display:true,position:'right',labels:{color:()=>T().tx,generateLabels:c=>rm.map((x,j)=>({text:`${x[0]} · ${pc(x[1],tot)} (${hf(x[1])})`,fillStyle:RC[x[0]],strokeStyle:RC[x[0]],fontColor:T().tx,index:j}))},onClick:null},lbl:{fn:j=>rm[j][1]/tot>=.05?pc(rm[j][1],tot):''}}});
+ /* press line */
+ $('#c_line').style.display=S.t=='day'?'none':'';if(S.t=='day'){CH.line&&CH.line.destroy();delete CH.line}
+ else{const ls=lm.slice().sort((a,b)=>a[0].localeCompare(b[0],0,{numeric:true}));mk('line','bar',{labels:ls.map(x=>x[0]),datasets:[{data:ls.map(x=>x[1]),backgroundColor:'#4361ee'}]},{scales:{x:ax(),y:ax({grace:'14%',title:tl('Minutes')})},plugins:{lbl:{fn:j=>pc(ls[j][1],tot)}}})}
+ cmp();
+ /* recent periods */
+ const N={day:14,week:12,month:12,year:10}[S.t],ks=K.slice(Math.max(0,i-N+1),i+1),tm=grp(R.filter(r=>ks.includes(kf(r,S.t))),r=>kf(r,S.t)),sl=k=>S.t=='day'?fd(k,{day:'numeric',month:'short'}):S.t=='week'?'W'+k%100:S.t=='month'?MN[k%100-1].slice(0,3)+' '+String(Math.floor(k/100)).slice(2):String(k);
+ $('#t_rec').textContent=`Total downtime, last ${ks.length} ${PN[S.t]}${ks.length>1?'s':''} (hours)`;
+ mk('rec','bar',{labels:ks.map(sl),datasets:[{data:ks.map(k=>(tm.get(k)||0)/60),backgroundColor:ks.map(k=>k==S.k?'#4361ee':'#9aa5b1')}]},{scales:{x:ax(),y:ax({grace:'14%',title:tl('Hours')})},plugins:{lbl:{fn:j=>(tm.get(ks[j])/60).toFixed(1)+' h'}}});
+ table(cm)}
+function cmp(){const {cur,prv,pk,tot,ptot}=D,dim=$('#dim').value,f={cause:r=>r.c,resp:r=>r.r,line:r=>r.l,shift:r=>r.sh}[dim],A=grp(cur,f),B=grp(prv,f);
+ let L=[...new Set([...A.keys(),...B.keys()])].sort((a,b)=>(B.get(b)||0)+(A.get(b)||0)-(A.get(a)||0)-(B.get(a)||0)).slice(0,dim=='cause'?8:12);
+ $('#t_cmp').textContent=pk==null?'Comparison · no earlier '+PN[S.t]+' to compare with':`Comparison with previous ${PN[S.t]} · % of each period’s own total`;
+ const mk1=(lab,M,t,col)=>({label:lab,data:L.map(l=>t?(M.get(l)||0)/t*100:0),mins:L.map(l=>M.get(l)||0),backgroundColor:col}),dsx=[mk1(kl(S.k,S.t),A,tot,'#4361ee')];
+ if(pk!=null)dsx.push(mk1(kl(pk,S.t),B,ptot,'#f4a261'));
+ mk('cmp','bar',{labels:L,datasets:dsx},{indexAxis:'y',scales:{x:ax({grace:'25%',title:tl('% of period total downtime')}),y:ax({ticks:{color:()=>T().tx,callback(v){return sh(this.getLabelForValue(v),32)}}})},
+  plugins:{legend:{display:true,labels:{color:()=>T().tx}},lbl:{fn:(i,j)=>dsx[j].data[i]>0?dsx[j].data[i].toFixed(1)+'%':''},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.x.toFixed(1)}% (${nf(c.dataset.mins[c.dataIndex])} min)`}}}})}
+function table(cm){const {cur,prv,tot,ptot}=D,pm=grp(prv,r=>r.c),rsp={};cur.forEach(r=>rsp[r.c]=r.r);$('#tt').textContent='Cause breakdown · '+kl(S.k,S.t);
+ $('#tb').innerHTML='<thead><tr><th>Cause</th><th>Responsibility</th><th>Minutes</th><th>Hours</th><th>% of period total</th><th>Previous period (min)</th></tr></thead><tbody>'+
+ cm.map(x=>`<tr><td>${x[0]}</td><td>${rsp[x[0]]}</td><td>${nf(x[1])}</td><td>${(x[1]/60).toFixed(1)}</td><td>${pc(x[1],tot)}</td><td>${prv.length?nf(pm.get(x[0])||0):'—'}</td></tr>`).join('')+
+ `</tbody><tfoot><tr><td>Total</td><td></td><td>${nf(tot)}</td><td>${(tot/60).toFixed(1)}</td><td>${tot?'100.0%':'0.0%'}</td><td>${prv.length?nf(ptot):'—'}</td></tr></tfoot>`}
+/* ---------- downloads ---------- */
+const fname=ext=>`Downtime_${TN[S.t]}_${kl(S.k,S.t).replace(/[^\w]+/g,'_')}.${ext}`;
+$('#bx').onclick=()=>{const {cur,prv,pk,tot,ptot}=D,wb=XLSX.utils.book_new();
+ const add=(n,aoa,pcols=[])=>{const ws=XLSX.utils.aoa_to_sheet(aoa);pcols.forEach(c=>{for(let r=1;r<aoa.length;r++){const a=XLSX.utils.encode_cell({r,c});if(ws[a]&&typeof ws[a].v=='number')ws[a].z='0.0%'}});ws['!cols']=aoa[0].map((_,i)=>({wch:i?16:48}));XLSX.utils.book_append_sheet(wb,ws,n)};
+ const tb=(M,P)=>{const rows=srt(M).map(x=>[x[0],x[1],+(x[1]/60).toFixed(2),tot?x[1]/tot:0].concat(P?[P.get(x[0])||0]:[]));return [['Name','Minutes','Hours','% of period total'].concat(P?['Previous period (min)']:[]),...rows,['Total',tot,+(tot/60).toFixed(2),tot?1:0]]};
+ add('Summary',[['Item','Value'],['View',TN[S.t]],['Period',kl(S.k,S.t)],['Total downtime (min)',tot],['Total downtime (hours)',+(tot/60).toFixed(2)],['Records',cur.length],['Previous period',pk==null?'none':kl(pk,S.t)],['Previous total (min)',pk==null?'':ptot],['Change (hours)',pk==null?'':+((tot-ptot)/60).toFixed(2)]]);
+ add('By Cause',tb(grp(cur,r=>r.c),grp(prv,r=>r.c)),[3]);add('By Responsibility',tb(grp(cur,r=>r.r),grp(prv,r=>r.r)),[3]);
+ add('By Press Line',tb(grp(cur,r=>r.l),grp(prv,r=>r.l)),[3]);add('By Shift',tb(grp(cur,r=>r.sh),grp(prv,r=>r.sh)),[3]);
+ add('Detail',[['Date','Press','Line','Cause','Responsibility','Shift','Minutes'],...cur.map(r=>[fd(r.s,{day:'2-digit',month:'short',year:'numeric'}),r.p,r.l,r.c,r.r,r.sh,r.n])]);
+ XLSX.writeFile(wb,fname('xlsx'))};
+$('#bp').onclick=()=>{const {cur,prv,pk,tot,ptot}=D,{jsPDF}=window.jspdf,d=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'}),ids=['cause','unit','resp','line','cmp','rec'].filter(i=>CH[i]),im=imgs(ids);
+ d.setFontSize(16);d.text('Press Downtime Report – '+TN[S.t],14,14);d.setFontSize(10);d.text(kl(S.k,S.t),14,20);
+ d.text(`Total downtime: ${hf(tot)} (${nf(tot)} min) · Records: ${nf(cur.length)}`+(pk==null?'':` · Previous ${PN[S.t]}: ${hf(ptot)}`),14,26);
+ d.setFontSize(8);d.text('All percentages are the share of the selected period’s total downtime.',14,31);
+ let col=0,y=35,rh=0;ids.forEach(id=>{const c=CH[id],w=133,h=Math.min(w*c.height/c.width,88);if(col==0&&y+h>200){d.addPage();y=14}
+  d.addImage(im[id],'PNG',14+col*141,y,w,h);rh=Math.max(rh,h);col++;if(col==2){col=0;y+=rh+4;rh=0}});
+ d.addPage();const pm=grp(prv,r=>r.c);
+ d.autoTable({startY:14,head:[['Cause','Responsibility','Minutes','Hours','% of period total','Previous period (min)']],body:srt(grp(cur,r=>r.c)).map(x=>[x[0],cur.find(r=>r.c==x[0]).r,nf(x[1]),(x[1]/60).toFixed(1),pc(x[1],tot),prv.length?nf(pm.get(x[0])||0):'—']),
+  foot:[['Total','',nf(tot),(tot/60).toFixed(1),'100.0%',prv.length?nf(ptot):'—']],styles:{fontSize:8},columnStyles:{2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}}});
+ d.save(fname('pdf'))};
+
+/* ---------- history: downtime by cause and by press over time ---------- */
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const H={by:'cause',t:'week',from:null,to:null,touched:false,resp:'all',line:'all',q:'',u:'min',sel:null,mode:'dash'};
+const pn=p=>String(p||'').replace(/^S3A/i,''),isoD=s=>dt(s).toISOString().slice(0,10);
+const hkey=r=>H.by==='cause'?r.c:pn(r.p);
+const hl=(k,t)=>t==='day'?fd(k,{day:'numeric',month:'short'}):t==='week'?'W'+(k%100)+' · '+String(Math.floor(k/100)).slice(2):t==='month'?MN[k%100-1].slice(0,3)+' '+String(Math.floor(k/100)).slice(2):String(k);
+const hv=m=>H.u==='h'?(m/60).toFixed(1):nf(m),HPAL=['#4361ee','#e76f51','#2a9d8f','#e9c46a','#9b5de5','#f15bb5','#00b4d8','#8ac926'];
+function hRange(){if(!R.length)return;const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s));
+ if(!H.touched||H.from==null||H.from<mn||H.to>mx||H.from>H.to){H.from=mn;H.to=mx;H.touched=false}}
+const hRows=()=>R.filter(r=>r.s>=H.from&&r.s<=H.to&&(H.resp==='all'||r.r===H.resp)&&(H.line==='all'||r.l===H.line));
+function hData(){
+ const all=hRows(),q=H.q.trim().toLowerCase(),rows=q?all.filter(r=>(r.c+' '+pn(r.p)).toLowerCase().includes(q)):all;
+ const periods=[...new Set(R.filter(r=>r.s>=H.from&&r.s<=H.to).map(r=>kf(r,H.t)))].sort((a,b)=>a-b),by=new Map();
+ rows.forEach(r=>{const k=hkey(r);let o=by.get(k);if(!o){o={k,tot:0,n:0,per:new Map(),resp:r.r};by.set(k,o)}o.tot+=r.n;o.n++;const pk=kf(r,H.t);o.per.set(pk,(o.per.get(pk)||0)+r.n)});
+ return{rows,periods,items:[...by.values()].sort((a,b)=>b.tot-a.tot)};
+}
+function hRender(){
+ const el=$('#hist');if(!R.length){el.innerHTML='';return}hRange();
+ const {rows,periods,items}=hData(),dates=[...new Set(R.map(r=>r.s))].sort((a,b)=>a-b),lines=[...new Set(R.map(r=>r.l))].sort((a,b)=>a.localeCompare(b,0,{numeric:true}));
+ if(!items.find(o=>o.k===H.sel))H.sel=items[0]?items[0].k:null;
+ const total=rows.reduce((s,r)=>s+r.n,0),ptot=new Map();rows.forEach(r=>{const k=kf(r,H.t);ptot.set(k,(ptot.get(k)||0)+r.n)});
+ const worst=[...ptot].sort((a,b)=>b[1]-a[1])[0],gmax=Math.max(1,...items.flatMap(o=>[...o.per.values()]));
+ const opt=(v,t,sel)=>`<option value="${v}"${sel?' selected':''}>${t}</option>`;
+ let h=`<div class="bar"><div class="tabs" id="h_by"><button data-by="cause" class="${H.by==='cause'?'on':''}">Cause wise</button><button data-by="press" class="${H.by==='press'?'on':''}">Press wise</button></div>
+<select id="h_t">${Object.keys(TN).map(t=>opt(t,TN[t],H.t===t)).join('')}</select><select id="h_u">${opt('min','Minutes',H.u==='min')}${opt('h','Hours',H.u==='h')}</select>
+<label class="mut">From <select id="h_f">${dates.map(d=>opt(d,isoD(d),d===H.from)).join('')}</select></label><label class="mut">To <select id="h_to">${dates.map(d=>opt(d,isoD(d),d===H.to)).join('')}</select></label>
+<select id="h_resp">${opt('all','All responsibilities',H.resp==='all')}${RS.map(r=>opt(r,r,H.resp===r)).join('')}</select><select id="h_line">${opt('all','All press lines',H.line==='all')}${lines.map(l=>opt(l,l,H.line===l)).join('')}</select>
+<input class="hq" id="h_q" placeholder="Search cause or press" value="${esc(H.q)}"><button class="btn" id="h_x">Download history (Excel)</button></div>`;
+ h+=`<div class="kpis"><div class="k"><span class="mut">Total downtime in range</span><b>${hf(total)}</b><span class="mut">${nf(total)} min · ${nf(rows.length)} records</span></div><div class="k"><span class="mut">${H.by==='cause'?'Causes':'Presses'} with downtime</span><b>${items.length}</b><span class="mut">${isoD(H.from)} to ${isoD(H.to)}</span></div><div class="k"><span class="mut">Worst ${PN[H.t]}</span><b>${worst?hf(worst[1]):'—'}</b><span class="mut">${worst?kl(worst[0],H.t):''}</span></div><div class="k"><span class="mut">Average per ${PN[H.t]}</span><b>${periods.length?hf(total/periods.length):'—'}</b><span class="mut">${periods.length} ${PN[H.t]}${periods.length===1?'':'s'}</span></div></div>`;
+ if(!items.length)return el.innerHTML=h+'<div class="empty">No downtime matches these filters.</div>';
+ h+=`<div class="card"><h3>Top ${Math.min(8,items.length)} ${H.by==='cause'?'causes':'presses'} over time (${H.u==='h'?'hours':'minutes'})</h3><div class="cv" style="height:320px;margin-top:8px"><canvas id="h_stack"></canvas></div></div>
+<div class="hx"><table><thead><tr><th>${H.by==='cause'?'Cause':'Press'}</th>${periods.map(k=>`<th title="${esc(kl(k,H.t))}">${hl(k,H.t)}</th>`).join('')}<th>Total</th><th>% of all</th><th>Records</th></tr></thead><tbody>`+
+  items.map(o=>`<tr data-k="${esc(o.k)}" class="${o.k===H.sel?'sel':''}"><td><b>${esc(o.k)}</b>${H.by==='cause'?` <span class="mut" style="color:${RC[o.resp]||'#8d99ae'}">● ${o.resp}</span>`:''}</td>${periods.map(k=>{const v=o.per.get(k)||0;return `<td style="${v?`background:rgba(231,111,81,${(.1+.6*v/gmax).toFixed(2)})`:'color:var(--mut)'}">${v?hv(v):'·'}</td>`}).join('')}<td><b>${hv(o.tot)}</b></td><td>${pc(o.tot,total)}</td><td>${o.n}</td></tr>`).join('')+
+  `</tbody><tfoot><tr><td>Total</td>${periods.map(k=>`<td>${hv(ptot.get(k)||0)}</td>`).join('')}<td>${hv(total)}</td><td>100%</td><td>${rows.length}</td></tr></tfoot></table></div>`;
+ const s=items.find(o=>o.k===H.sel);
+ if(s){const evs=rows.filter(r=>hkey(r)===s.k).sort((a,b)=>b.s-a.s||(b.sh<a.sh?-1:1)),other=new Map();
+  evs.forEach(r=>{const k=H.by==='cause'?pn(r.p):r.c;let o=other.get(k);if(!o){o={k,n:0,m:0,resp:r.r,line:r.l};other.set(k,o)}o.m+=r.n;o.n++});
+  const od=[...other.values()].sort((a,b)=>b.m-a.m),avg=s.tot/Math.max(1,periods.length);
+  h+=`<div class="hdet"><div class="card"><h3>History of ${esc(s.k)}</h3><div class="hk"><div><span class="mut">Total</span><b>${hf(s.tot)}</b></div><div><span class="mut">Records</span><b>${s.n}</b></div><div><span class="mut">Average per ${PN[H.t]}</span><b>${hf(avg)}</b></div><div><span class="mut">Share of all</span><b>${pc(s.tot,total)}</b></div></div><div class="cv" style="height:280px"><canvas id="h_det"></canvas></div></div>
+<div class="card"><h3>${H.by==='cause'?'Which presses had it':'Which causes stopped it'}</h3><div class="tw" style="margin-top:6px;max-height:330px;overflow:auto"><table><thead><tr><th>${H.by==='cause'?'Press':'Cause'}</th><th>${H.by==='cause'?'Line':'Responsibility'}</th><th>Minutes</th><th>% of ${esc(s.k)}</th><th>Records</th></tr></thead><tbody>${od.map(o=>`<tr><td>${esc(o.k)}</td><td style="text-align:right">${H.by==='cause'?esc(o.line):esc(o.resp)}</td><td>${nf(o.m)}</td><td>${pc(o.m,s.tot)}</td><td>${o.n}</td></tr>`).join('')}</tbody></table></div></div></div>
+<div class="card tw"><h3>Records of ${esc(s.k)}${evs.length>150?' — latest 150 of '+evs.length:''}</h3><table><thead><tr><th>Date</th><th>Shift</th><th>Press</th><th>Cause</th><th>Responsibility</th><th>Minutes</th></tr></thead><tbody>${evs.slice(0,150).map(r=>`<tr><td>${fd(r.s,{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</td><td style="text-align:right">${r.sh}</td><td style="text-align:right">${pn(r.p)}</td><td style="text-align:right">${esc(r.c)}</td><td style="text-align:right">${r.r}</td><td>${nf(r.n)}</td></tr>`).join('')}</tbody></table></div>`}
+ el.innerHTML=h;
+ const top=items.slice(0,8),rest=items.slice(8),U=H.u==='h'?1/60:1;
+ const ds=top.map((o,i)=>({label:sh(o.k,40),backgroundColor:HPAL[i],data:periods.map(k=>+((o.per.get(k)||0)*U).toFixed(1))}));
+ if(rest.length)ds.push({label:'Others ('+rest.length+')',backgroundColor:'#9aa5b1',data:periods.map(k=>+(rest.reduce((a,o)=>a+(o.per.get(k)||0),0)*U).toFixed(1))});
+ mk('h_stack','bar',{labels:periods.map(k=>hl(k,H.t)),datasets:ds},{scales:{x:ax({stacked:true}),y:ax({stacked:true,title:tl(H.u==='h'?'Hours':'Minutes')})},plugins:{legend:{display:true,position:'bottom',labels:{color:()=>T().tx}}}});
+ if(s)mk('h_det','bar',{labels:periods.map(k=>hl(k,H.t)),datasets:[{type:'bar',label:s.k,backgroundColor:'#e76f51',data:periods.map(k=>+((s.per.get(k)||0)*U).toFixed(1))},{type:'line',label:'Average',borderColor:'#4361ee',borderDash:[6,4],pointRadius:0,data:periods.map(()=>+(s.tot/Math.max(1,periods.length)*U).toFixed(1))}]},{scales:{x:ax(),y:ax({title:tl(H.u==='h'?'Hours':'Minutes')})},plugins:{legend:{display:true,position:'bottom',labels:{color:()=>T().tx}}}});
+}
+function hRefresh(){if(H.mode==='hist')hRender()}
+function hExcel(){
+ const {rows,periods,items}=hData(),M=items.map(o=>{const r={[H.by==='cause'?'Cause':'Press']:o.k};if(H.by==='cause')r['Responsibility']=o.resp;periods.forEach(k=>r[kl(k,H.t)]=o.per.get(k)||0);r['Total (min)']=o.tot;r['Records']=o.n;return r});
+ const E=rows.slice().sort((a,b)=>a.s-b.s).map(r=>({Date:isoD(r.s),Shift:r.sh,Press:pn(r.p),Line:r.l,Cause:r.c,Responsibility:r.r,Minutes:r.n,Tablet:r.tab||''}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(M),(H.by==='cause'?'By cause':'By press')+' ('+TN[H.t]+')');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(E),'Records');
+ XLSX.writeFile(wb,'Downtime_history_'+H.by+'_wise_'+isoD(H.from)+'_to_'+isoD(H.to)+'.xlsx');
+}
+$('#modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;H.mode=m;document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('#dash').hidden=m!=='dash';$('#hist').hidden=m!=='hist';if(m==='hist')hRender();else if(R.length)draw()};
+$('#hist').addEventListener('click',e=>{
+ const b=e.target.closest('#h_by button');if(b){H.by=b.dataset.by;H.sel=null;hRender();return}
+ if(e.target.closest('#h_x')){hExcel();return}
+ const tr=e.target.closest('.hx tbody tr');if(tr){H.sel=tr.dataset.k;hRender();document.getElementById('h_det')&&document.getElementById('h_det').scrollIntoView({block:'nearest'})}});
+$('#hist').addEventListener('change',e=>{const i=e.target.id;
+ if(i==='h_t')H.t=e.target.value;else if(i==='h_u')H.u=e.target.value;else if(i==='h_resp')H.resp=e.target.value;else if(i==='h_line')H.line=e.target.value;
+ else if(i==='h_f'){H.touched=true;H.from=+e.target.value;if(H.to<H.from)H.to=H.from}else if(i==='h_to'){H.touched=true;H.to=+e.target.value;if(H.from>H.to)H.from=H.to}else return;hRender()});
+$('#hist').addEventListener('input',e=>{if(e.target.id!=='h_q')return;H.q=e.target.value;const p=e.target.selectionStart;hRender();const n=$('#h_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}});
+$('#clr').addEventListener('click',()=>{H.from=H.to=null;H.touched=false;H.sel=null;$('#hist').innerHTML=''});
+
+try{parent.postMessage({type:'fitl-dash-ready'},'*')}catch(_){}
+</script></body></html>

@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Training App — Ferentino Industrial Tyres</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --ink:#1f2a33;
+    --paper:#f7f5f0;
+    --panel:#ffffff;
+    --line:#d8d2c4;
+    --amber:#c8601f;
+    --amber-deep:#9c4614;
+    --steel:#3c5a68;
+    --steel-pale:#e7eef0;
+    --ok:#3f7a4e;
+    --warn:#b8862b;
+    --brand-red:#e31e2b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Arial, "Iskoola Pota", "Sinhala Sangam MN", "Noto Sans Sinhala", sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:24px;
+  }
+  .wrap{max-width:1150px;margin:0 auto;}
+
+  /* ---- app masthead ---- */
+  .masthead{
+    border:2px solid var(--ink); background:var(--panel);
+    display:flex; align-items:center; gap:18px; padding:14px 20px;
+  }
+  .masthead img{height:40px; width:auto;}
+  .masthead .divider{width:1px; align-self:stretch; background:var(--line);}
+  .masthead .app-title{font-size:19px; font-weight:800; letter-spacing:.3px; color:var(--ink);}
+  .masthead .app-sub{font-size:12px; color:#666; margin-top:2px;}
+
+  /* ---- mini controlled-document header (per section, mirrored in PDFs) ---- */
+  .doc-mini{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px;
+    background:var(--steel); color:#fff; padding:9px 16px; border-radius:6px 6px 0 0;
+    font-size:11.5px; margin-top:20px;
+  }
+  .doc-mini .doc-title{font-weight:800; font-size:13.5px; letter-spacing:.2px; margin-right:auto;}
+  .doc-mini .doc-meta{opacity:.92;}
+  .doc-mini .doc-meta b{font-weight:700;}
+
+  /* ---- tabs ---- */
+  .tabbar{display:flex; gap:8px; margin:18px 0 0;}
+  .tabbar button{
+    flex:1; border:2px solid var(--ink); background:var(--panel); color:var(--ink);
+    padding:12px 14px; font-weight:800; font-size:14px; cursor:pointer; border-radius:6px 6px 0 0;
+    letter-spacing:.3px;
+  }
+  .tabbar button.active{background:var(--ink); color:var(--paper);}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+
+  .subtabbar{display:flex; gap:8px; margin:0 0 0; flex-wrap:wrap;}
+  .subtabbar button{
+    border:1px solid var(--line); background:var(--panel); color:var(--steel);
+    padding:9px 14px; font-weight:700; font-size:12.5px; cursor:pointer; border-radius:16px;
+  }
+  .subtabbar button.active{background:var(--steel); color:#fff; border-color:var(--steel);}
+  .subpanel{display:none;}
+  .subpanel.active{display:block;}
+
+  /* ---- top controls ---- */
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; margin:16px 0; }
+  .lang-toggle{ display:flex; border:2px solid var(--ink); border-radius:4px; overflow:hidden; }
+  .lang-toggle button{ border:none; background:var(--panel); color:var(--ink); padding:9px 18px; font-weight:700; cursor:pointer; font-size:14px; }
+  .lang-toggle button.active{background:var(--ink); color:var(--paper);}
+  .dept-select{ flex:1; min-width:220px; border:2px solid var(--ink); border-radius:4px; padding:9px 12px; font-size:14px; font-weight:600; background:var(--panel); color:var(--ink); }
+
+  /* ---- employee info ---- */
+  .info-panel{ background:var(--panel); border:1px solid var(--line); margin-top:0; padding:16px 18px; }
+  .info-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px 20px; }
+  .field label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--steel); font-weight:700; margin-bottom:4px; }
+  .field input, .field select, .field textarea{ width:100%; border:none; border-bottom:2px solid var(--line); padding:6px 2px; font-size:14px; background:transparent; color:var(--ink); font-family:inherit; }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-bottom-color:var(--amber);}
+
+  /* ---- sections ---- */
+  .section{ margin-top:22px; background:var(--panel); border:1px solid var(--line); }
+  .section-head{ display:flex; align-items:baseline; gap:10px; background:var(--steel); color:#fff; padding:10px 16px; }
+  .section-head .tag{ font-weight:800; font-size:15px; border:2px solid #fff; padding:1px 8px; border-radius:3px; }
+  .section-head h2{margin:0; font-size:15px; font-weight:700; letter-spacing:.3px;}
+  .section-sub{padding:10px 16px 0; font-size:12.5px; color:#555;}
+  .scale-key{ display:flex; flex-wrap:wrap; gap:10px; padding:8px 16px 12px; font-size:11.5px; color:var(--steel); }
+  .scale-key span{background:var(--steel-pale); padding:2px 8px; border-radius:10px;}
+
+  table.rate{width:100%; border-collapse:collapse;}
+  table.rate th, table.rate td{ border-top:1px solid var(--line); padding:8px 10px; font-size:13.5px; }
+  table.rate thead th{ font-size:11px; text-transform:uppercase; color:var(--steel); text-align:center; border-top:none; }
+  table.rate thead th:first-child{text-align:left;}
+  table.rate td:first-child{width:52%;}
+  table.rate td.opt{text-align:center; width:9.6%;}
+  table.rate tbody tr:nth-child(even){background:#fbfaf7;}
+  table.rate input[type=radio]{width:17px; height:17px; accent-color:var(--amber);}
+  .subgroup-title{ padding:10px 16px 0; font-weight:700; font-size:13px; color:var(--amber-deep); }
+
+  /* ---- supervisor block ---- */
+
+
+  /* ---- footer actions ---- */
+  .actions{ margin:26px 0 40px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap; }
+  .actions button{ border:2px solid var(--ink); background:var(--amber); color:#fff; font-weight:700; padding:11px 22px; border-radius:4px; cursor:pointer; font-size:14px; }
+  .actions button.secondary{background:var(--panel); color:var(--ink);}
+  .actions button.ghost{background:transparent; color:var(--steel); border-color:var(--line);}
+
+  .empty-msg{padding:16px; font-size:13px; color:#888; font-style:italic;}
+
+  .banner{ margin-top:14px; padding:12px 16px; border-radius:6px; font-size:13.5px; font-weight:600; display:none; }
+  .banner.show{display:block;}
+  .banner.ok{background:#e9f4ec; color:var(--ok); border:1px solid var(--ok);}
+  .banner.err{background:#fbeaea; color:#a33; border:1px solid #a33;}
+
+  /* ---- dashboard ---- */
+  .dash-toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0;}
+  .backup-bar{padding-bottom:14px; border-bottom:1px solid var(--line); margin-top:16px;}
+  .storage-notice{margin-top:14px; padding:10px 14px; border-radius:6px; font-size:12.5px; line-height:1.5;}
+  .storage-notice.cloud{background:#e9f4ec; color:var(--ok); border:1px solid var(--ok);}
+  .storage-notice.local{background:#fff6e6; color:var(--warn); border:1px solid var(--warn);}
+  .year-field{display:flex; align-items:center; gap:8px; border:2px solid var(--ink); border-radius:4px; padding:6px 12px; background:var(--panel);}
+  .year-field label{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--steel); font-weight:700;}
+  .year-field input{width:70px; border:none; font-size:14px; font-weight:700; color:var(--ink);}
+  .year-field input:focus{outline:none;}
+  .btn{border:2px solid var(--ink); padding:9px 16px; border-radius:4px; font-weight:700; cursor:pointer; background:var(--panel); font-size:13px;}
+  .btn.primary{background:var(--amber); color:#fff; border-color:var(--amber-deep);}
+  .btn.danger{background:transparent; color:#a33; border:1px solid #e3b3b3;}
+  .stat-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0;}
+  .stat-card{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px 16px;}
+  .stat-card .n{font-size:24px; font-weight:800; color:var(--steel);}
+  .stat-card .l{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#888; font-weight:700;}
+  .dash-section{margin-top:10px; border:1px solid var(--line); border-top:none;}
+  .dash-body{padding:16px;}
+  .dash-body p.hint{margin:0 0 12px; font-size:12.5px; color:#777;}
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); background:var(--panel);}
+  table.dash{width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px;}
+  table.dash th, table.dash td{border:1px solid var(--line); padding:7px 9px; text-align:center;}
+  table.dash th{background:var(--steel); color:#fff; font-weight:700; font-size:11px; text-transform:uppercase;}
+  table.dash td.name-col{text-align:left; font-weight:600; white-space:nowrap;}
+  table.dash tbody tr:nth-child(even){background:#fbfaf7;}
+  table.dash td.score-hi{background:#fbeaea; color:#a33; font-weight:700;}
+  table.dash td.score-mid{background:#fff6e6; color:var(--warn); font-weight:700;}
+  table.dash td.na{color:#ccc;}
+  table.dash td.flags{text-align:left; font-size:12px; line-height:1.5;}
+  .dept-group-title{ background:var(--ink); color:#fff; padding:8px 12px; font-weight:700; font-size:12.5px; margin-top:18px; border-radius:4px 4px 0 0; }
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:#666; margin:8px 0 0;}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .swatch{width:11px; height:11px; border-radius:2px; display:inline-block;}
+
+  /* ---- annual plan editor ---- */
+  table.plan{width:100%; border-collapse:collapse; font-size:11.5px; min-width:1100px;}
+  table.plan th, table.plan td{border:1px solid var(--line); padding:5px 6px;}
+  table.plan th{background:var(--steel); color:#fff; font-size:9.5px; text-transform:uppercase;}
+  table.plan td input[type=text], table.plan td textarea, table.plan td select{
+    width:100%; border:1px solid var(--line); border-radius:3px; padding:4px 5px; font-size:11.5px; font-family:inherit;
+  }
+  table.plan td.month{text-align:center; width:30px; padding:2px;}
+  table.plan td.month input{width:15px;height:15px;}
+  table.plan td.rowdel{text-align:center; width:28px;}
+  table.plan td.rowdel button{border:none;background:none;color:#a33;font-size:16px;cursor:pointer;}
+
+  /* ---- training record (photo log) ---- */
+  .tr-form{background:var(--panel); border:1px solid var(--line); padding:16px; margin-top:10px;}
+  .tr-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px 20px;}
+  .tr-grid .full{grid-column:1/-1;}
+  .photo-input-row{border:2px dashed var(--line); border-radius:6px; padding:16px; text-align:center; margin-top:10px;}
+  .photo-preview-strip{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .photo-preview-strip img{width:80px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--line);}
+  .tr-entry{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:14px;}
+  .tr-entry-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;}
+  .tr-entry-head h4{margin:0; font-size:14.5px;}
+  .tr-entry-meta{font-size:12px; color:#666; margin-top:3px;}
+  .tr-photos{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .tr-photos img{width:110px; height:110px; object-fit:cover; border-radius:6px; border:1px solid var(--line); cursor:pointer;}
+  .lightbox{display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:999; align-items:center; justify-content:center; padding:30px;}
+  .lightbox.show{display:flex;}
+  .lightbox img{max-width:100%; max-height:100%; border-radius:6px;}
+  .lightbox .close{position:absolute; top:20px; right:26px; color:#fff; font-size:30px; cursor:pointer; background:none; border:none;}
+
+  /* ---- print ---- */
+  @media print{
+    body{background:#fff; padding:0;}
+    .controls, .actions, .no-print, .tabbar, .subtabbar{display:none !important;}
+    .section, .info-panel{ border:1px solid #999; box-shadow:none; break-inside:avoid; }
+    .section-head, .masthead{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    table.rate input[type=radio]{accent-color:#000;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <img src="data:image/jpeg;base64,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" alt="Ferentino logo">
+    <div class="divider"></div>
+    <div>
+      <div class="app-title" id="t-app-title">Training App</div>
+      <div class="app-sub">Ferentino Industrial Tyres (Pvt) Ltd · Sri Lanka — Quality Management System</div>
+    </div>
+  </div>
+
+  <div class="tabbar no-print">
+    <button id="tab-btn-survey" class="active" onclick="switchTab('survey')">📝 Employee Survey</button>
+    <button id="tab-btn-dash" onclick="switchTab('dash')">📊 HR Dashboard</button>
+  </div>
+
+  <!-- ======================= SURVEY TAB (QMS/HR/01) ======================= -->
+  <div id="tab-survey" class="tabpanel active">
+
+    <div class="doc-mini">
+      <span class="doc-title" id="t-title">Training Needs Assessment Questionnaire</span>
+      <span class="doc-meta">Doc No: <b>QMS/HR/01</b></span>
+      <span class="doc-meta">Issue No: <b>02</b></span>
+      <span class="doc-meta">Revision No: <b>00</b></span>
+      <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
+    </div>
+
+    <div class="controls no-print">
+      <div class="lang-toggle">
+        <button id="btn-en" class="active" onclick="setLang('en')">English</button>
+        <button id="btn-si" onclick="setLang('si')">සිංහල</button>
+      </div>
+      <select id="dept-select" class="dept-select" onchange="renderSections()"></select>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-grid" id="info-grid"></div>
+    </div>
+
+    <div id="sections-container"></div>
+
+    <div id="survey-banner" class="banner no-print"></div>
+
+    <div class="actions no-print">
+      <button class="ghost" onclick="clearForm()" id="t-clear">Clear Form</button>
+      <button class="secondary" onclick="window.print()" id="t-print">Print / Save as PDF</button>
+      <button onclick="submitSurvey()" id="t-submit">Submit Survey</button>
+    </div>
+
+  </div>
+
+  <!-- ======================= DASHBOARD TAB ======================= -->
+  <div id="tab-dash" class="tabpanel">
+
+    <div id="dash-content">
+
+      <div id="storage-mode-banner" class="storage-notice"></div>
+
+      <div class="dash-toolbar no-print backup-bar">
+        <button class="btn" onclick="downloadBackup()">⬇ Download Backup (All Data)</button>
+        <button class="btn" onclick="document.getElementById('restore-file-input').click()">⬆ Reload from Backup</button>
+        <input type="file" id="restore-file-input" accept="application/json" style="display:none;" onchange="restoreBackup(this)">
+        <span id="backup-status" style="font-size:12px;color:#777;"></span>
+      </div>
+
+      <div class="subtabbar no-print" style="margin-top:14px;">
+        <button id="sub-btn-r2" class="active" onclick="switchSub('r2')">Training Need Assessment Record · QMS/HR/02</button>
+        <button id="sub-btn-plan" onclick="switchSub('plan')">Annual Training Plan · QMS/HR/03</button>
+        <button id="sub-btn-r4" onclick="switchSub('r4')">Need Identification · QMS/HR/04</button>
+        <button id="sub-btn-tr" onclick="switchSub('tr')">Training Record · QMS/HR/05</button>
+      </div>
+
+      <!-- ---- QMS/HR/02 ---- -->
+      <div id="sub-r2" class="subpanel active">
+        <div class="doc-mini">
+          <span class="doc-title">Training Needs Assessment Record</span>
+          <span class="doc-meta">Doc No: <b>QMS/HR/02</b></span>
+          <span class="doc-meta">Issue No: <b>02</b></span>
+          <span class="doc-meta">Revision No: <b>00</b></span>
+          <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
+        </div>
+        <div class="dash-section">
+          <div class="dash-body">
+            <p class="hint">One row per employee — average need/competency score (1–5) per training category, calculated live from every submitted survey. Higher = more urgent.</p>
+            <div class="dash-toolbar no-print">
+              <button class="btn" onclick="loadAll()">🔄 Refresh</button>
+              <button class="btn" onclick="exportCsv('record2')">⬇ CSV</button>
+              <button class="btn primary" onclick="downloadRecord2Pdf()">⬇ Download PDF (QMS/HR/02)</button>
+            </div>
+            <div class="stat-cards" id="stat-cards"></div>
+            <div class="table-scroll"><table class="dash" id="record2-table"></table></div>
+            <div class="legend">
+              <span><span class="swatch" style="background:#fbeaea;"></span> 4.0–5.0 (High / Urgent need)</span>
+              <span><span class="swatch" style="background:#fff6e6;"></span> 3.0–3.9 (Moderate need)</span>
+              <span><span class="swatch" style="background:#eee;"></span> N/A — not applicable to this employee's department</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- QMS/HR/03 ---- -->
+      <div id="sub-plan" class="subpanel">
+        <div class="doc-mini">
+          <span class="doc-title" id="plan-doc-title">Annual Training Plan</span>
+          <span class="doc-meta">Doc No: <b>QMS/HR/03</b></span>
+          <span class="doc-meta">Issue No: <b>02</b></span>
+          <span class="doc-meta">Revision No: <b>00</b></span>
+          <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
+        </div>
+        <div class="dash-section">
+          <div class="dash-body">
+            <p class="hint">Editable master plan. Training Need rows can be auto-filled from the submitted surveys (high/urgent-rated items, score ≥ 4) — tick the month(s) each item is scheduled and fill in the completion date once run.</p>
+            <div class="dash-toolbar no-print">
+              <div class="year-field"><label for="plan-year">Plan Year</label><input type="number" id="plan-year" min="2020" max="2100" step="1" onchange="planYearChange(this)"></div>
+              <button class="btn primary" onclick="newAnnualPlan()">🆕 New Annual Plan (from Surveys)</button>
+              <button class="btn" onclick="addPlanRow()">+ Add Row</button>
+              <button class="btn" onclick="savePlan()">💾 Save Changes</button>
+              <button class="btn" onclick="exportCsv('plan')">⬇ CSV</button>
+              <button class="btn primary" onclick="downloadPlanPdf()">⬇ Download PDF (QMS/HR/03)</button>
+            </div>
+            <div class="table-scroll"><table class="plan" id="plan-table"></table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- QMS/HR/04 ---- -->
+      <div id="sub-r4" class="subpanel">
+        <div class="doc-mini">
+          <span class="doc-title">Record for Training Need Identification</span>
+          <span class="doc-meta">Doc No: <b>QMS/HR/04</b></span>
+          <span class="doc-meta">Issue No: <b>02</b></span>
+          <span class="doc-meta">Revision No: <b>00</b></span>
+          <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
+        </div>
+        <div class="dash-section">
+          <div class="dash-body">
+            <p class="hint">Employees grouped by department with specific high-need topics (rated 4–5) auto-suggested from the survey. Review before formally scheduling into the Annual Training Plan.</p>
+            <div class="dash-toolbar no-print">
+              <button class="btn" onclick="loadAll()">🔄 Refresh</button>
+              <button class="btn" onclick="exportCsv('record4')">⬇ CSV</button>
+              <button class="btn primary" onclick="downloadRecord4Pdf()">⬇ Download PDF (QMS/HR/04)</button>
+            </div>
+            <div id="record4-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- QMS/HR/05 ---- -->
+      <div id="sub-tr" class="subpanel">
+        <div class="doc-mini">
+          <span class="doc-title">Training Record</span>
+          <span class="doc-meta">Doc No: <b>QMS/HR/05</b></span>
+          <span class="doc-meta">Issue No: <b>01</b></span>
+          <span class="doc-meta">Revision No: <b>00</b></span>
+          <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
+        </div>
+        <div class="dash-section">
+          <div class="dash-body">
+            <p class="hint">No fixed template was supplied for this one, so it's a straightforward session log: record each completed training with attendee details and attach photo evidence (sign-in sheets, session photos, certificates). Photos are resized in the browser before saving.</p>
+
+            <div class="tr-form">
+              <div class="tr-grid">
+                <div class="field"><label>Training Topic</label><input type="text" id="tr-topic"></div>
+                <div class="field"><label>Date Conducted</label><input type="date" id="tr-date"></div>
+                <div class="field"><label>Department / Section</label>
+                  <select id="tr-dept"><option value="">-- Select --</option></select>
+                </div>
+                <div class="field"><label>Trainer / Resource Person</label><input type="text" id="tr-trainer"></div>
+                <div class="field"><label>Type</label>
+                  <select id="tr-type"><option>Internal</option><option>External</option></select>
+                </div>
+                <div class="field"><label>No. of Attendees</label><input type="number" id="tr-count" min="0"></div>
+                <div class="field full"><label>Attendees (names / EPF numbers)</label><textarea id="tr-attendees" rows="2"></textarea></div>
+                <div class="field full"><label>Notes</label><textarea id="tr-notes" rows="2"></textarea></div>
+              </div>
+              <div class="photo-input-row">
+                <input type="file" id="tr-photos" accept="image/*" multiple capture="environment">
+                <div style="font-size:12px;color:#888;margin-top:6px;">Attach photos as evidence (sign-in sheet, session photos, certificates)</div>
+                <div class="photo-preview-strip" id="tr-photo-preview"></div>
+              </div>
+              <div id="tr-banner" class="banner"></div>
+              <div class="actions no-print">
+                <button onclick="saveTrainingRecord()">Save Training Record</button>
+              </div>
+            </div>
+
+            <div class="dash-toolbar no-print" style="margin-top:20px;">
+              <button class="btn" onclick="loadTrainingRecords()">🔄 Refresh Log</button>
+            </div>
+            <div id="tr-log"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-toolbar no-print" style="margin-top:26px; border-top:1px solid var(--line); padding-top:14px;">
+        <button class="btn danger" onclick="resetAllData()">🗑 Clear All Survey + Plan + Log Data</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="lightbox no-print" id="lightbox" onclick="closeLightbox()">
+  <button class="close" onclick="closeLightbox(event)">&times;</button>
+  <img id="lightbox-img" src="">
+</div>
+
+<script>
+/* =========================================================================
+   SHARED DATA MODEL
+   ========================================================================= */
+let lang = 'en';
+const SUBMISSIONS_KEY = 'submissions';
+const PLAN_KEY = 'annual-plan';
+const PLAN_YEAR_KEY = 'annual-plan-year';
+const TR_INDEX_KEY = 'training-record-index';
+
+/* ---------------------------------------------------------------------
+   STORAGE LAYER — window.storage only exists when this file is rendered
+   inside claude.ai's own artifact viewer. Opened normally (double-click,
+   a shared drive, an intranet URL, etc.) that API is undefined, so every
+   save would silently fail. These wrappers fall back to the browser's
+   own localStorage in that case so the app always works; the trade-off
+   is that local-storage mode keeps data on that one device/browser only
+   — use Download Backup / Reload from Backup to move data between
+   computers (e.g. from each employee's PC to HR's).
+   --------------------------------------------------------------------- */
+const HAS_CLOUD_STORAGE = (typeof window.storage !== 'undefined' && window.storage !== null);
+const LS_PREFIX = 'training_app__';
+
+async function storageGet(key, shared){
+  if(HAS_CLOUD_STORAGE) return window.storage.get(key, shared);
+  const raw = localStorage.getItem(LS_PREFIX+key);
+  return raw !== null ? {key, value: raw, shared} : null;
+}
+async function storageSet(key, value, shared){
+  if(HAS_CLOUD_STORAGE) return window.storage.set(key, value, shared);
+  localStorage.setItem(LS_PREFIX+key, value);
+  return {key, value, shared};
+}
+async function storageDelete(key, shared){
+  if(HAS_CLOUD_STORAGE) return window.storage.delete(key, shared);
+  localStorage.removeItem(LS_PREFIX+key);
+  return {key, deleted:true, shared};
+}
+
+const LOGO_DATA_URI = "data:image/jpeg;base64,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";
+
+const UI = {
+  title:{en:"Training Needs Assessment Questionnaire", si:"පුහුණු අවශ්‍යතා තක්සේරු ප්‍රශ්නාවලිය"},
+  deptPlaceholder:{en:"-- Select Department --", si:"-- අංශය තෝරන්න --"},
+  printBtn:{en:"Print / Save as PDF", si:"මුද්‍රණය කරන්න / PDF ලෙස සුරකින්න"},
+  clearBtn:{en:"Clear Form", si:"ෆෝරමය හිස් කරන්න"},
+  submitBtn:{en:"Submit Survey", si:"ප්‍රශ්නාවලිය ඉදිරිපත් කරන්න"},
+  fields:{
+    epf:{en:"EPF No", si:"සේවක අංකය (EPF)"},
+    dept:{en:"Department", si:"අංශය"},
+    designation:{en:"Designation", si:"තනතුර"},
+    years:{en:"Years of Experience", si:"සේවා පළපුරුද්ද (වසර)"},
+    qualification:{en:"Highest Qualification", si:"උසස්ම සුදුසුකම"},
+    supervisor:{en:"Supervisor", si:"අධීක්ෂක"},
+    date:{en:"Date", si:"දිනය"},
+    year:{en:"Assessment Year", si:"තක්සේරු වර්ෂය"},
+    name:{en:"Employee Name", si:"සේවක නම"}
+  },
+  scaleCompetency:[
+    {en:"1 = Not Competent", si:"1 = දක්ෂතාවක් නැත"},
+    {en:"2 = Needs Improvement", si:"2 = දියුණුවක් අවශ්‍යයි"},
+    {en:"3 = Average", si:"3 = සාමාන්‍ය"},
+    {en:"4 = Competent", si:"4 = දක්ෂයි"},
+    {en:"5 = Highly Competent", si:"5 = ඉතා දක්ෂයි"}
+  ],
+  scaleNeed:[
+    {en:"1 = No Training Needed", si:"1 = පුහුණුවක් අවශ්‍ය නැත"},
+    {en:"2 = Low Need", si:"2 = අඩු අවශ්‍යතාවයක්"},
+    {en:"3 = Moderate Need", si:"3 = මධ්‍යම අවශ්‍යතාවයක්"},
+    {en:"4 = High Need", si:"4 = ඉහළ අවශ්‍යතාවයක්"},
+    {en:"5 = Urgent Need", si:"5 = හදිසි අවශ්‍යතාවයක්"}
+  ],
+};
+
+const DEPARTMENTS = [
+  {en:"Stores", si:"ගබඩා", sections:["A","C","D","E","G","H"]},
+  {en:"HR & Admin", si:"මානව සම්පත් හා පරිපාලන", sections:["A","C","D","E","G","H"]},
+  {en:"Finance", si:"මූල්‍ය", sections:["A","C","D","E","G","H"]},
+  {en:"Exports", si:"අපනයන", sections:["A","C","D","E","G","H"]},
+  {en:"Planning", si:"සැලසුම්කරණය", sections:["A","B_both","C","D","E","G","H"]},
+  {en:"R&D", si:"පර්යේෂණ හා සංවර්ධන", sections:["A","B_both","C","D","E","G","H"]},
+  {en:"Quality", si:"ගුණාත්මකභාවය", sections:["A","B_both","C","D","E","G","H"]},
+  {en:"Mixing", si:"මිශ්‍ර කිරීම", sections:["A","B_mixing","C","D","G","H"]},
+  {en:"Extruding", si:"එක්ස්ට්‍රූඩින්", sections:["A","B_tyre","C","D","G","H"]},
+  {en:"Tyre Building", si:"ටයර් තැනීම", sections:["A","B_tyre","C","D","G","H"]},
+  {en:"Curing", si:"කියුරින්", sections:["A","B_tyre","C","D","G","H"]},
+  {en:"Finishing", si:"නිමාව", sections:["A","B_tyre","C","D","G","H"]},
+  {en:"Maintenance", si:"නඩත්තු", sections:["A","C","D","F","G","H"]}
+];
+
+const SECTIONS = {
+  A:{ tag:"A", title:{en:"Current Job Competency", si:"වත්මන් රැකියා දක්ෂතාව"},
+    sub:{en:"Rate your confidence in performing the following tasks.", si:"පහත කාර්යයන් සිදු කිරීමේදී ඔබේ විශ්වාසය ශ්‍රේණිගත කරන්න."},
+    scale:"competency",
+    items:[
+      {en:"Operating machinery safely", si:"යන්ත්‍ර ආරක්ෂිතව ක්‍රියාත්මක කිරීම"},
+      {en:"Following Standard Operating Procedures (SOPs)", si:"සම්මත ක්‍රියාපටිපාටි (SOP) අනුගමනය කිරීම"},
+      {en:"Reading work instructions", si:"කාර්ය උපදෙස් කියවීම"},
+      {en:"Meeting daily production targets", si:"දෛනික නිෂ්පාදන ඉලක්ක සපුරාලීම"},
+      {en:"Maintaining product quality", si:"නිෂ්පාදන ගුණාත්මකභාවය පවත්වා ගැනීම"},
+      {en:"Identifying defects", si:"දෝෂ හඳුනා ගැනීම"},
+      {en:"Troubleshooting machine problems", si:"යන්ත්‍ර ගැටලු නිරාකරණය කිරීම"},
+      {en:"Maintaining workplace cleanliness (5S)", si:"කාර්යස්ථානයේ පිරිසිදුකම පවත්වා ගැනීම (5S)"},
+      {en:"Following safety procedures", si:"ආරක්ෂක ක්‍රියාපටිපාටි අනුගමනය කිරීම"},
+      {en:"Using measuring instruments correctly", si:"මිනුම් උපකරණ නිවැරදිව භාවිතා කිරීම"}
+    ]
+  },
+  B_mixing:{ tag:"B", title:{en:"Technical Skills — Mixing Department", si:"තාක්ෂණික කුසලතා — මිශ්‍ර කිරීමේ අංශය"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"Chemical weighing process", si:"රසායනික බර කිරීමේ ක්‍රියාවලිය"},
+      {en:"Chemical Handling Process", si:"රසායනික හැසිරවීමේ ක්‍රියාවලිය"},
+      {en:"Raw material identification", si:"අමුද්‍රව්‍ය හඳුනා ගැනීම"},
+      {en:"Compound preparation", si:"සංයෝග සකස් කිරීම"},
+      {en:"Machine operation", si:"යන්ත්‍ර ක්‍රියාත්මක කිරීම"},
+      {en:"Machine setup", si:"යන්ත්‍ර සැකසීම"},
+      {en:"Preventive maintenance", si:"වැළැක්වීමේ නඩත්තුව"},
+      {en:"Basic electrical knowledge", si:"මූලික විදුලි දැනුම"},
+      {en:"Hydraulic systems", si:"හයිඩ්‍රොලික් පද්ධති"},
+      {en:"Pneumatic systems", si:"නියුමැටික් පද්ධති"}
+    ]
+  },
+  B_tyre:{ tag:"B", title:{en:"Technical Skills — Tyre Building / Extruding / Curing", si:"තාක්ෂණික කුසලතා — ටයර් තැනීම / එක්ස්ට්‍රූඩින් / කියුරින්"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"Tyre manufacturing process", si:"ටයර් නිෂ්පාදන ක්‍රියාවලිය"},
+      {en:"Tyre building process", si:"ටයර් තැනීමේ ක්‍රියාවලිය"},
+      {en:"Raw material identification", si:"අමුද්‍රව්‍ය හඳුනා ගැනීම"},
+      {en:"Compound preparation", si:"සංයෝග සකස් කිරීම"},
+      {en:"Machine operation", si:"යන්ත්‍ර ක්‍රියාත්මක කිරීම"},
+      {en:"Machine setup", si:"යන්ත්‍ර සැකසීම"},
+      {en:"Preventive maintenance", si:"වැළැක්වීමේ නඩත්තුව"},
+      {en:"Basic electrical knowledge", si:"මූලික විදුලි දැනුම"},
+      {en:"Hydraulic systems", si:"හයිඩ්‍රොලික් පද්ධති"},
+      {en:"Pneumatic systems", si:"නියුමැටික් පද්ධති"}
+    ]
+  },
+  C:{ tag:"C", title:{en:"Quality Management", si:"ගුණාත්මක කළමනාකරණය"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"ISO 9001 requirements", si:"ISO 9001 අවශ්‍යතා"},
+      {en:"Quality inspection", si:"ගුණාත්මක පරීක්ෂාව"},
+      {en:"Defect identification", si:"දෝෂ හඳුනා ගැනීම"},
+      {en:"Statistical Process Control (SPC)", si:"සංඛ්‍යානමය ක්‍රියාවලි පාලනය (SPC)"},
+      {en:"Root Cause Analysis", si:"මූලික හේතු විශ්ලේෂණය"},
+      {en:"7 QC Tools", si:"QC මෙවලම් 7"},
+      {en:"Corrective and Preventive Action (CAPA)", si:"නිවැරදි කිරීමේ හා වැළැක්වීමේ ක්‍රියාමාර්ග (CAPA)"},
+      {en:"Internal Quality Audits", si:"අභ්‍යන්තර ගුණාත්මක විගණන"},
+      {en:"Calibration of measuring equipment", si:"මිනුම් උපකරණ කැලිබ්‍රේෂන් කිරීම"}
+    ]
+  },
+  D:{ tag:"D", title:{en:"Safety", si:"ආරක්ෂාව"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"Occupational Safety", si:"රැකියා ආරක්ෂාව"},
+      {en:"Fire Safety", si:"ගිනි ආරක්ෂාව"},
+      {en:"Emergency Response", si:"හදිසි අවස්ථා ප්‍රතිචාරය"},
+      {en:"Chemical Handling", si:"රසායනික හැසිරවීම"},
+      {en:"Personal Protective Equipment", si:"පුද්ගලික ආරක්ෂිත උපකරණ"},
+      {en:"First Aid", si:"ප්‍රථමාධාර"},
+      {en:"Hazard Identification", si:"අන්තරාය හඳුනා ගැනීම"},
+      {en:"Risk Assessment", si:"අවදානම් තක්සේරුව"},
+      {en:"Lock Out Tag Out (LOTO)", si:"Lock Out Tag Out (LOTO)"},
+      {en:"Machine Safety", si:"යන්ත්‍ර ආරක්ෂාව"}
+    ]
+  },
+  E:{ tag:"E", title:{en:"Lean Manufacturing", si:"Lean නිෂ්පාදනය"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"5S", si:"5S"},
+      {en:"Kaizen", si:"කයිසෙන් (Kaizen)"},
+      {en:"Lean Manufacturing", si:"Lean නිෂ්පාදනය"},
+      {en:"Waste Reduction", si:"අපද්‍රව්‍ය අඩු කිරීම"},
+      {en:"Visual Management", si:"දෘශ්‍ය කළමනාකරණය"},
+      {en:"Six Sigma Basics", si:"Six Sigma මූලික කරුණු"},
+      {en:"OEE Improvement", si:"OEE දියුණු කිරීම"}
+    ]
+  },
+  F:{ tag:"F", title:{en:"Maintenance Skills", si:"නඩත්තු කුසලතා"},
+    sub:{en:"Applicable for maintenance personnel.", si:"නඩත්තු කාර්ය මණ්ඩලය සඳහා අදාළ වේ."},
+    scale:"need",
+    items:[
+      {en:"Preventive Maintenance", si:"වැළැක්වීමේ නඩත්තුව"},
+      {en:"Predictive Maintenance", si:"පුරෝකථන නඩත්තුව"},
+      {en:"Machine Troubleshooting", si:"යන්ත්‍ර ගැටලු නිරාකරණය"},
+      {en:"Bearing Replacement", si:"බෙයරින් ප්‍රතිස්ථාපනය"},
+      {en:"Lubrication Systems", si:"ලිහිසි පද්ධති"},
+      {en:"Electrical Troubleshooting", si:"විදුලි ගැටලු නිරාකරණය"},
+      {en:"Mechanical Maintenance", si:"යාන්ත්‍රික නඩත්තුව"}
+    ]
+  },
+  G:{ tag:"G", title:{en:"Soft Skills", si:"මෘදු කුසලතා"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"Communication Skills", si:"සන්නිවේදන කුසලතා"},
+      {en:"Teamwork", si:"කණ්ඩායම් වැඩ"},
+      {en:"Leadership", si:"නායකත්වය"},
+      {en:"Problem Solving", si:"ගැටලු විසඳීම"},
+      {en:"Decision Making", si:"තීරණ ගැනීම"},
+      {en:"Conflict Management", si:"ගැටුම් කළමනාකරණය"},
+      {en:"Time Management", si:"කාල කළමනාකරණය"},
+      {en:"Stress Management", si:"ආතති කළමනාකරණය"},
+      {en:"Report Writing", si:"වාර්තා ලිවීම"},
+      {en:"Presentation Skills", si:"ඉදිරිපත් කිරීමේ කුසලතා"}
+    ]
+  },
+  H:{ tag:"H", title:{en:"Computer Skills", si:"පරිගණක කුසලතා"},
+    sub:{en:"Rate your need for additional training.", si:"අමතර පුහුණුව සඳහා ඔබේ අවශ්‍යතාවය ශ්‍රේණිගත කරන්න."},
+    scale:"need",
+    items:[
+      {en:"Microsoft Excel", si:"Microsoft Excel"},
+      {en:"Microsoft Word", si:"Microsoft Word"},
+      {en:"PowerPoint", si:"PowerPoint"},
+      {en:"Microsoft Access", si:"Microsoft Access"},
+      {en:"SAP", si:"SAP"},
+      {en:"Data Entry", si:"දත්ත ඇතුළත් කිරීම"},
+      {en:"Email Communication", si:"විද්‍යුත් තැපැල් සන්නිවේදනය"},
+      {en:"Use of AI", si:"AI භාවිතය"}
+    ]
+  }
+};
+
+const CATEGORY_MAP = [
+  {key:'technical', label:{en:'Technical Skills', si:'තාක්ෂණික කුසලතා'}, kind:'section-avg', sections:['B_mixing','B_tyre']},
+  {key:'quality', label:{en:'Quality Management', si:'ගුණාත්මක කළමනාකරණය'}, kind:'section-avg', sections:['C']},
+  {key:'safety', label:{en:'Safety', si:'ආරක්ෂාව'}, kind:'section-avg', sections:['D']},
+  {key:'leadership', label:{en:'Leadership', si:'නායකත්වය'}, kind:'item', section:'G', itemText:'Leadership'},
+  {key:'maintenance', label:{en:'Maintenance', si:'නඩත්තුව'}, kind:'section-avg', sections:['F']},
+  {key:'lean', label:{en:'Lean Manufacturing', si:'Lean නිෂ්පාදනය'}, kind:'section-avg', sections:['E']},
+  {key:'computer', label:{en:'Computer Skills', si:'පරිගණක කුසලතා'}, kind:'section-avg', sections:['H']},
+  {key:'communication', label:{en:'Communication Skills', si:'සන්නිවේදන කුසලතා'}, kind:'item', section:'G', itemText:'Communication Skills'}
+];
+
+/* Default Annual Training Plan rows, seeded from the uploaded 2026 plan */
+const DEFAULT_PLAN_ROWS = [
+  {section:'Production Department', need:'Selection of compound / Compound milling / G.tyre building / Selection of green tyres', type:'Internal', resource:'Shift Executive / Mr Rajitha', months:[], date:'', description:''},
+  {section:'Production Department', need:'Training of tyre building, curing, repair mould & loading', type:'Internal', resource:'Shift Executive / Mr Rajitha', months:['MAR'], date:'2026.03.13', description:''},
+  {section:'Production Department', need:'Training of General Safety', type:'Internal', resource:'Shift Executive / Mr Rajitha / Mr Sankanath', months:['APR'], date:'2026.04.19', description:''},
+  {section:'Mixing Department', need:'Identification raw material Rubber mixing and badge process', type:'Internal', resource:'Shift Executive / Mr Rajitha / Mr Sankanath', months:[], date:'', description:''},
+  {section:'Mixing Department', need:'Type of Compound / Understanding Quality parameters', type:'Internal', resource:'Shift Executive / Mr Rajitha / Mr Sankanath', months:[], date:'', description:''},
+  {section:'Mixing Department', need:'Chemical Weighing', type:'Internal', resource:'Shift Executive / Mr Rajitha / Mr Sankanath', months:[], date:'', description:''},
+  {section:'Lab', need:'Awareness for compound mixing process', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''},
+  {section:'Lab', need:'Awareness for compound test methods and rubber related technology', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''},
+  {section:'Engineering', need:'Safety training & awareness (LOTO, Machine safety, Hot work, Height work)', type:'Internal', resource:'Mr. Prabath', months:[], date:'', description:''},
+  {section:'Engineering', need:'PLC program & troubleshoot for electricians', type:'Internal', resource:'Mr. Prabath', months:[], date:'', description:''},
+  {section:'Engineering', need:'Hydraulic & pneumatic basic training / Boiler Pressure training / Workplace safety & hazard identification', type:'Internal', resource:'Mr. Prabath', months:[], date:'', description:''},
+  {section:'Quality', need:'QMS & EMS training for newcomers / Training to minimize waste', type:'Internal', resource:'Mr Dammika / Mr Rajitha', months:['MAY'], date:'2026.05.06 / 2026.05.12', description:''},
+  {section:'Quality', need:'Improve communication skills / Quality inspection process training', type:'Internal', resource:'Mr Dammika / Mr Rajitha', months:[], date:'', description:''},
+  {section:'Stores', need:'Maintain a strong inventory management system (general stores)', type:'Internal', resource:'Mr Amal', months:[], date:'', description:''},
+  {section:'Stores', need:'Stock handling procedures — best practices', type:'Internal', resource:'Mr Amal', months:[], date:'', description:''},
+  {section:'Staff — HR Department', need:'Fire, Health and Safety', type:'Internal', resource:'Mr. Malith', months:['FEB'], date:'2026.02.18', description:''},
+  {section:'Staff — HR Department', need:'BOI guidelines follow-up', type:'External', resource:'BOI — IR Division', months:[], date:'', description:''},
+  {section:'Commercial', need:'Import and export guidance and negotiation skills', type:'Internal', resource:'Mr. Eranda', months:[], date:'', description:''},
+  {section:'Management System', need:'Knowledge refresh training for ISO 14001 / QMS 9001', type:'Internal', resource:'Mr. Dinesh', months:['JAN'], date:'2026.01.30', description:''},
+  {section:'Management System', need:'Process and risk management training', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''},
+  {section:'Management System', need:'Awareness training on internal audits (ISO 14001 EMS)', type:'External', resource:'SGS', months:['JUN'], date:'2026.06.02 / 2026.06.03', description:''},
+  {section:'Management System', need:'QMS awareness training for leaders / supervisors', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''},
+  {section:'Management System', need:'Awareness for chemical handling and MSDS', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''},
+  {section:'Management System', need:'Identification of aspect / impact process training', type:'Internal', resource:'Mr. Dinesh', months:[], date:'', description:''}
+];
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+function t(obj){ return obj[lang]; }
+
+/* =========================================================================
+   SURVEY RENDERING
+   ========================================================================= */
+function buildDeptOptions(){
+  const sel = document.getElementById('dept-select');
+  sel.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value=''; ph.textContent = t(UI.deptPlaceholder);
+  sel.appendChild(ph);
+  DEPARTMENTS.forEach((d,i)=>{
+    const o = document.createElement('option');
+    o.value = i; o.textContent = t(d);
+    sel.appendChild(o);
+  });
+}
+
+function buildInfoGrid(){
+  const grid = document.getElementById('info-grid');
+  const keys = ['epf','name','dept','designation','years','qualification','supervisor','date','year'];
+  const prevVals = {};
+  keys.forEach(k=>{ const el = document.getElementById(k==='dept' ? 'dept-mirror' : 'field-'+k); if(el) prevVals[k]=el.value; });
+  grid.innerHTML = '';
+  keys.forEach(k=>{
+    const div = document.createElement('div');
+    div.className='field';
+    const label = document.createElement('label');
+    label.textContent = t(UI.fields[k]);
+    const input = document.createElement('input');
+    if(k==='date') input.type='date';
+    if(k==='years') input.type='number';
+    if(k==='year'){ input.type='number'; input.min='2020'; input.max='2100'; input.step='1'; }
+    if(k==='dept'){ input.disabled = true; input.id = 'dept-mirror'; }
+    else { input.id = 'field-'+k; }
+    if(prevVals[k]!==undefined && prevVals[k]!==''){ input.value = prevVals[k]; }
+    else if(k==='year'){ input.value = String(new Date().getFullYear()); }
+    div.appendChild(label); div.appendChild(input);
+    grid.appendChild(div);
+  });
+}
+
+function scaleKeyHtml(scaleType){
+  const arr = scaleType==='competency' ? UI.scaleCompetency : UI.scaleNeed;
+  return '<div class="scale-key">'+arr.map(s=>'<span>'+t(s)+'</span>').join('')+'</div>';
+}
+
+function ratingTable(sectionKey, section, savedAnswers){
+  let rows = section.items.map((item,i)=>{
+    const name = sectionKey+'_'+i;
+    const savedVal = savedAnswers ? savedAnswers[name] : null;
+    let cells = [1,2,3,4,5].map(v=>
+      '<td class="opt"><input type="radio" name="'+name+'" value="'+v+'"'+(String(savedVal)===String(v)?' checked':'')+'></td>'
+    ).join('');
+    return '<tr><td>'+(i+1)+'. '+t(item)+'</td>'+cells+'</tr>';
+  }).join('');
+  return '<table class="rate"><thead><tr><th>'+ (lang==='en'?'Statement / Training Area':'ප්‍රකාශය / පුහුණු ක්ෂේත්‍රය') +
+    '</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function sectionBlockHtml(sectionKey, section, savedAnswers){
+  return '<div class="section">'+
+    '<div class="section-head"><span class="tag">'+section.tag+'</span><h2>'+t(section.title)+'</h2></div>'+
+    '<div class="section-sub">'+t(section.sub)+'</div>'+
+    scaleKeyHtml(section.scale)+
+    ratingTable(sectionKey, section, savedAnswers)+
+    '</div>';
+}
+
+function resolveSectionKeys(codes){
+  const set = [];
+  const has = c => codes.includes(c);
+  if(has('A')) set.push('A');
+  if(has('B_mixing')) set.push('B_mixing');
+  else if(has('B_tyre')) set.push('B_tyre');
+  else if(has('B_both')){ set.push('B_mixing'); set.push('B_tyre'); }
+  if(has('C')) set.push('C');
+  if(has('D')) set.push('D');
+  if(has('E')) set.push('E');
+  if(has('F')) set.push('F');
+  if(has('G')) set.push('G');
+  if(has('H')) set.push('H');
+  return set;
+}
+
+function collectCurrentAnswers(){
+  const answers = {};
+  document.querySelectorAll('#sections-container input[type=radio]:checked').forEach(inp=>{
+    answers[inp.name] = inp.value;
+  });
+  return answers;
+}
+
+function renderSections(savedAnswers){
+  const sel = document.getElementById('dept-select');
+  const container = document.getElementById('sections-container');
+  const mirror = document.getElementById('dept-mirror');
+  const carried = savedAnswers || collectCurrentAnswers();
+  container.innerHTML = '';
+
+  if(sel.value===''){
+    if(mirror) mirror.value='';
+    container.innerHTML = '<div class="empty-msg">'+
+      (lang==='en' ? 'Please select a department above to load the applicable sections.' :
+        'අදාළ කොටස් පූරණය කිරීමට කරුණාකර ඉහත අංශය තෝරන්න.') +
+      '</div>';
+    return;
+  }
+  const dept = DEPARTMENTS[sel.value];
+  if(mirror) mirror.value = t(dept);
+  const keys = resolveSectionKeys(dept.sections);
+  keys.forEach(k=>{
+    container.innerHTML += sectionBlockHtml(k, SECTIONS[k], carried);
+  });
+}
+
+function refreshStaticText(){
+  document.getElementById('t-title').textContent = t(UI.title);
+  document.getElementById('t-print').textContent = t(UI.printBtn);
+  document.getElementById('t-clear').textContent = t(UI.clearBtn);
+  document.getElementById('t-submit').textContent = t(UI.submitBtn);
+  buildDeptOptions();
+  buildInfoGrid();
+}
+
+function setLang(l){
+  lang = l;
+  document.getElementById('btn-en').classList.toggle('active', l==='en');
+  document.getElementById('btn-si').classList.toggle('active', l==='si');
+  document.documentElement.lang = l;
+  const prevDept = document.getElementById('dept-select') ? document.getElementById('dept-select').value : '';
+  const carried = collectCurrentAnswers();
+  refreshStaticText();
+  document.getElementById('dept-select').value = prevDept;
+  renderSections(carried);
+}
+
+function switchTab(which){
+  document.getElementById('tab-survey').classList.toggle('active', which==='survey');
+  document.getElementById('tab-dash').classList.toggle('active', which==='dash');
+  document.getElementById('tab-btn-survey').classList.toggle('active', which==='survey');
+  document.getElementById('tab-btn-dash').classList.toggle('active', which==='dash');
+  if(which==='dash'){
+    initDashboard();
+  }
+}
+
+function switchSub(which){
+  ['r2','plan','r4','tr'].forEach(k=>{
+    document.getElementById('sub-'+k).classList.toggle('active', k===which);
+    document.getElementById('sub-btn-'+k).classList.toggle('active', k===which);
+  });
+}
+
+function clearForm(){
+  document.querySelectorAll('#info-grid input').forEach(i=>{ if(!i.disabled) i.value=''; });
+  document.getElementById('dept-select').value='';
+  renderSections({});
+  showBanner('survey-banner', lang==='en' ? 'Form cleared.' : 'ෆෝරමය හිස් කරන ලදී.', true);
+}
+
+function showBanner(id, msg, ok){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'banner show ' + (ok ? 'ok' : 'err');
+}
+
+/* =========================================================================
+   PERSISTENCE — survey submission
+   ========================================================================= */
+async function submitSurvey(){
+  const epf = (document.getElementById('field-epf')||{}).value?.trim();
+  const name = (document.getElementById('field-name')||{}).value?.trim();
+  const deptSel = document.getElementById('dept-select');
+  if(!epf || !name || deptSel.value===''){
+    showBanner('survey-banner', lang==='en' ?
+      'Please fill in EPF No, Employee Name and Department before submitting.' :
+      'ඉදිරිපත් කිරීමට පෙර EPF අංකය, සේවක නම සහ අංශය පුරවන්න.', false);
+    return;
+  }
+  const answers = collectCurrentAnswers();
+  const dept = DEPARTMENTS[deptSel.value];
+  const keys = resolveSectionKeys(dept.sections);
+  const totalItems = keys.reduce((n,k)=>n+SECTIONS[k].items.length,0);
+  const answeredCount = Object.keys(answers).length;
+  if(answeredCount < totalItems){
+    const proceed = confirm((lang==='en' ?
+      `You've answered ${answeredCount} of ${totalItems} questions. Submit anyway?` :
+      `ඔබ ප්‍රශ්න ${totalItems} න් ${answeredCount} ට පිළිතුරු දී ඇත. තවමත් ඉදිරිපත් කරන්නද?`));
+    if(!proceed) return;
+  }
+
+  const submission = {
+    epf, name,
+    deptIndex: Number(deptSel.value),
+    deptName: dept.en,
+    designation: (document.getElementById('field-designation')||{}).value||'',
+    years: (document.getElementById('field-years')||{}).value||'',
+    qualification: (document.getElementById('field-qualification')||{}).value||'',
+    supervisor: (document.getElementById('field-supervisor')||{}).value||'',
+    date: (document.getElementById('field-date')||{}).value||'',
+    year: (document.getElementById('field-year')||{}).value||'',
+    answers,
+    submittedAt: new Date().toISOString()
+  };
+
+  try{
+    let list = [];
+    try{
+      const existing = await storageGet(SUBMISSIONS_KEY, true);
+      if(existing && existing.value) list = JSON.parse(existing.value);
+    }catch(e){ list = []; }
+    const idx = list.findIndex(s => s.epf === epf);
+    if(idx >= 0) list[idx] = submission; else list.push(submission);
+    const result = await storageSet(SUBMISSIONS_KEY, JSON.stringify(list), true);
+    if(!result) throw new Error('save failed');
+    if(HAS_CLOUD_STORAGE){
+      showBanner('survey-banner', lang==='en' ?
+        'Survey submitted. HR summary and department records have been updated automatically.' :
+        'ප්‍රශ්නාවලිය ඉදිරිපත් කරන ලදී. HR සාරාංශය ස්වයංක්‍රීයව යාවත්කාලීන කරන ලදී.', true);
+    }else{
+      showBanner('survey-banner', lang==='en' ?
+        'Survey saved on this device. This copy of the app is running in local storage mode — ask HR how submissions from this computer should reach them (e.g. via the Download Backup file, or a shared/hosted copy of this app).' :
+        'ප්‍රශ්නාවලිය මෙම උපකරණයේ සුරැකින ලදී. මෙම යෙදුම දේශීය ගබඩා ප්‍රකාරයේ ක්‍රියාත්මක වේ — මෙම පරිගණකයෙන් ලැබෙන ප්‍රතිචාර HR වෙත ලබා දෙන ආකාරය පිළිබඳව විමසන්න.', true);
+    }
+  }catch(err){
+    console.error(err);
+    showBanner('survey-banner', lang==='en' ?
+      'Something went wrong saving your survey. Please try again.' :
+      'ඔබේ ප්‍රශ්නාවලිය සුරැකීමේදී දෝෂයක් ඇතිවිය. නැවත උත්සාහ කරන්න.', false);
+  }
+}
+
+/* =========================================================================
+   DASHBOARD INIT (no access code — open to anyone who opens this tab)
+   ========================================================================= */
+let DASH_INITIALIZED = false;
+function initDashboard(){
+  if(DASH_INITIALIZED) return;
+  DASH_INITIALIZED = true;
+  renderStorageModeBanner();
+  buildTrDeptOptions();
+  loadAll();
+  loadTrainingRecords();
+}
+
+function renderStorageModeBanner(){
+  const el = document.getElementById('storage-mode-banner');
+  if(!el) return;
+  if(HAS_CLOUD_STORAGE){
+    el.className = 'storage-notice cloud';
+    el.textContent = 'Connected to shared cloud storage — every submission from every device is visible here automatically.';
+  }else{
+    el.className = 'storage-notice local';
+    el.textContent = 'Local browser storage mode: this file was opened outside claude.ai, so data is only saved on this device/browser and does not sync automatically with other computers. Use "Download Backup" here and "Reload from Backup" on another device to move data between them (e.g. from an employee\'s PC to HR\'s).';
+  }
+}
+
+let ALL_SUBMISSIONS = [];
+let PLAN_ROWS = [];
+
+async function loadAll(){
+  await loadSubmissions();
+  await loadPlan();
+}
+
+async function loadSubmissions(){
+  try{
+    const existing = await storageGet(SUBMISSIONS_KEY, true);
+    ALL_SUBMISSIONS = (existing && existing.value) ? JSON.parse(existing.value) : [];
+  }catch(e){ ALL_SUBMISSIONS = []; }
+  renderStats();
+  renderRecord2();
+  renderRecord4();
+}
+
+function renderStats(){
+  const cards = document.getElementById('stat-cards');
+  const depts = new Set(ALL_SUBMISSIONS.map(s=>s.deptIndex));
+  cards.innerHTML = `
+    <div class="stat-card"><div class="n">${ALL_SUBMISSIONS.length}</div><div class="l">Surveys Submitted</div></div>
+    <div class="stat-card"><div class="n">${depts.size}</div><div class="l">Departments Represented</div></div>
+    <div class="stat-card"><div class="n">${DEPARTMENTS.length}</div><div class="l">Total Departments</div></div>
+  `;
+}
+
+function sectionAverage(submission, sectionKeys){
+  let sum=0, n=0;
+  sectionKeys.forEach(sk=>{
+    const sec = SECTIONS[sk];
+    if(!sec) return;
+    sec.items.forEach((item,i)=>{
+      const v = submission.answers[sk+'_'+i];
+      if(v!==undefined){ sum += Number(v); n++; }
+    });
+  });
+  return n>0 ? sum/n : null;
+}
+
+function itemScore(submission, sectionKey, itemText){
+  const sec = SECTIONS[sectionKey];
+  if(!sec) return null;
+  const idx = sec.items.findIndex(it=>it.en===itemText);
+  if(idx<0) return null;
+  const v = submission.answers[sectionKey+'_'+idx];
+  return v!==undefined ? Number(v) : null;
+}
+
+function categoryScoresFor(submission){
+  const dept = DEPARTMENTS[submission.deptIndex];
+  const applicable = resolveSectionKeys(dept.sections);
+  const out = {};
+  CATEGORY_MAP.forEach(cat=>{
+    if(cat.kind==='section-avg'){
+      const secKeys = cat.sections.filter(sk=>applicable.includes(sk));
+      if(secKeys.length===0){ out[cat.key]=null; return; }
+      out[cat.key] = sectionAverage(submission, secKeys);
+    } else if(cat.kind==='item'){
+      if(!applicable.includes(cat.section)){ out[cat.key]=null; return; }
+      out[cat.key] = itemScore(submission, cat.section, cat.itemText);
+    }
+  });
+  return out;
+}
+
+function scoreCellClass(v){
+  if(v===null || v===undefined) return 'na';
+  if(v>=4) return 'score-hi';
+  if(v>=3) return 'score-mid';
+  return '';
+}
+function fmt(v){ return (v===null||v===undefined) ? 'N/A' : v.toFixed(1); }
+
+function renderRecord2(){
+  const table = document.getElementById('record2-table');
+  let head = '<thead><tr><th>Year</th><th>EPF No</th><th>Employee Name</th><th>Department</th>' +
+    CATEGORY_MAP.map(c=>'<th>'+c.label.en+'</th>').join('') + '</tr></thead>';
+  let rows = ALL_SUBMISSIONS.slice().sort((a,b)=>a.deptIndex-b.deptIndex || a.name.localeCompare(b.name)).map(s=>{
+    const scores = categoryScoresFor(s);
+    const cells = CATEGORY_MAP.map(c=>{
+      const v = scores[c.key];
+      return '<td class="'+scoreCellClass(v)+'">'+fmt(v)+'</td>';
+    }).join('');
+    return '<tr><td>'+(s.year||'')+'</td><td>'+s.epf+'</td><td class="name-col">'+s.name+'</td><td>'+s.deptName+'</td>'+cells+'</tr>';
+  }).join('');
+  if(!rows) rows = '<tr><td colspan="'+(4+CATEGORY_MAP.length)+'" style="padding:20px;color:#999;">No survey submissions yet.</td></tr>';
+  table.innerHTML = head + '<tbody>'+rows+'</tbody>';
+}
+
+function topNeedsFor(submission, limit){
+  const dept = DEPARTMENTS[submission.deptIndex];
+  const applicable = resolveSectionKeys(dept.sections);
+  const flagged = [];
+  applicable.forEach(sk=>{
+    const sec = SECTIONS[sk];
+    sec.items.forEach((item,i)=>{
+      const v = submission.answers[sk+'_'+i];
+      if(v!==undefined && Number(v)>=4){ flagged.push({text:item.en, score:Number(v)}); }
+    });
+  });
+  flagged.sort((a,b)=>b.score-a.score);
+  return flagged.slice(0, limit||6);
+}
+
+function renderRecord4(){
+  const container = document.getElementById('record4-container');
+  container.innerHTML = '';
+  DEPARTMENTS.forEach((dept,di)=>{
+    const subs = ALL_SUBMISSIONS.filter(s=>s.deptIndex===di).sort((a,b)=>a.name.localeCompare(b.name));
+    if(subs.length===0) return;
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'dept-group-title';
+    titleDiv.textContent = dept.en + ' Department — ' + subs.length + ' employee(s)';
+    container.appendChild(titleDiv);
+    const wrap = document.createElement('div');
+    wrap.className = 'table-scroll';
+    const tbl = document.createElement('table');
+    tbl.className = 'dash';
+    let rows = subs.map(s=>{
+      const needs = topNeedsFor(s, 6);
+      const flagsHtml = needs.length ? needs.map(n=>n.text+' <b>('+n.score+')</b>').join('<br>') :
+        '<span style="color:#999;">No items rated 4–5</span>';
+      return '<tr><td>'+s.epf+'</td><td class="name-col">'+s.name+'</td><td class="flags">'+flagsHtml+'</td></tr>';
+    }).join('');
+    tbl.innerHTML = '<thead><tr><th style="width:80px;">EPF No</th><th style="width:160px;">Employee Name</th><th>Suggested High-Priority Training (auto-flagged, rating ≥ 4 — review before finalizing)</th></tr></thead><tbody>'+rows+'</tbody>';
+    wrap.appendChild(tbl);
+    container.appendChild(wrap);
+  });
+  if(ALL_SUBMISSIONS.length===0){
+    container.innerHTML = '<div class="empty-msg">No survey submissions yet.</div>';
+  }
+}
+
+/* =========================================================================
+   AUTO-FILL ANNUAL PLAN "TRAINING NEED" FROM SUBMITTED SURVEYS
+   Aggregates every employee's high/urgent-rated (≥4) survey items per
+   department into one plan row per distinct need, so HR starts a new
+   plan with Section + Training Need already populated and just adds
+   Type / Resource Person / schedule / description.
+   ========================================================================= */
+function generatePlanRowsFromSurveys(){
+  const agg = {};
+  ALL_SUBMISSIONS.forEach(s=>{
+    const dept = DEPARTMENTS[s.deptIndex];
+    if(!dept) return;
+    const needs = topNeedsFor(s, 50);
+    needs.forEach(n=>{
+      const key = dept.en + '||' + n.text;
+      if(!agg[key]) agg[key] = {section: dept.en, need: n.text, count:0, maxScore:0};
+      agg[key].count++;
+      agg[key].maxScore = Math.max(agg[key].maxScore, n.score);
+    });
+  });
+  return Object.values(agg)
+    .sort((a,b)=> (DEPARTMENTS.findIndex(d=>d.en===a.section) - DEPARTMENTS.findIndex(d=>d.en===b.section)) || (b.count-a.count))
+    .map(e=>({
+      section: e.section,
+      need: e.need,
+      description: e.count + ' employee(s) rated this a high/urgent training need (score ' + e.maxScore + '/5) in the Training Needs Assessment survey.',
+      type: 'Internal',
+      resource: '',
+      months: [],
+      date: ''
+    }));
+}
+
+async function newAnnualPlan(){
+  const defaultYear = String(Number(PLAN_YEAR||new Date().getFullYear())+1);
+  const yearInput = prompt('Enter the year for the new Annual Training Plan:', defaultYear);
+  if(yearInput===null) return;
+  const year = yearInput.trim();
+  if(!year) return;
+
+  const autoRows = generatePlanRowsFromSurveys();
+  const msg = autoRows.length
+    ? 'This will replace the current Annual Training Plan with a new '+year+' plan. '+autoRows.length+' training need(s) will be auto-filled from the '+ALL_SUBMISSIONS.length+' submitted survey(s) — review and add Type / Resource Person / schedule / description for each. Continue?'
+    : 'No survey submissions with high/urgent-rated needs were found yet, so the new '+year+' plan will start empty. Continue?';
+  if(!confirm(msg)) return;
+
+  PLAN_ROWS = autoRows;
+  PLAN_YEAR = year;
+  const yearField = document.getElementById('plan-year');
+  if(yearField) yearField.value = year;
+  updatePlanDocTitle();
+  renderPlanTable();
+
+  try{
+    await storageSet(PLAN_KEY, JSON.stringify(PLAN_ROWS), true);
+    await storageSet(PLAN_YEAR_KEY, PLAN_YEAR, true);
+  }catch(e){
+    alert('The new plan was created but could not be saved: ' + e.message);
+  }
+}
+
+/* =========================================================================
+   ANNUAL TRAINING PLAN (QMS/HR/03) — editable
+   ========================================================================= */
+let PLAN_YEAR = String(new Date().getFullYear());
+
+async function loadPlan(){
+  try{
+    const existing = await storageGet(PLAN_KEY, true);
+    PLAN_ROWS = (existing && existing.value) ? JSON.parse(existing.value) : JSON.parse(JSON.stringify(DEFAULT_PLAN_ROWS));
+  }catch(e){
+    PLAN_ROWS = JSON.parse(JSON.stringify(DEFAULT_PLAN_ROWS));
+  }
+  try{
+    const existingYear = await storageGet(PLAN_YEAR_KEY, true);
+    PLAN_YEAR = (existingYear && existingYear.value) ? existingYear.value : '2026';
+  }catch(e){
+    PLAN_YEAR = '2026';
+  }
+  const yearInput = document.getElementById('plan-year');
+  if(yearInput) yearInput.value = PLAN_YEAR;
+  updatePlanDocTitle();
+  renderPlanTable();
+}
+
+function updatePlanDocTitle(){
+  const el = document.getElementById('plan-doc-title');
+  if(el) el.textContent = 'Annual Training Plan' + (PLAN_YEAR ? ' — ' + PLAN_YEAR : '');
+}
+
+async function planYearChange(el){
+  PLAN_YEAR = el.value;
+  updatePlanDocTitle();
+  try{
+    await storageSet(PLAN_YEAR_KEY, PLAN_YEAR, true);
+  }catch(e){
+    console.error('Could not save plan year', e);
+  }
+}
+
+function renderPlanTable(){
+  const table = document.getElementById('plan-table');
+  let head = '<thead><tr><th style="min-width:130px;">Section</th><th style="min-width:200px;">Training Need</th><th style="min-width:220px;">Training Description</th><th style="min-width:90px;">Type</th><th style="min-width:140px;">Resource Person</th>' +
+    MONTHS.map(m=>'<th>'+m+'</th>').join('') + '<th style="min-width:110px;">Date</th><th></th></tr></thead>';
+  let rows = PLAN_ROWS.map((r,ri)=>{
+    const monthCells = MONTHS.map(m=>
+      '<td class="month"><input type="checkbox" data-ri="'+ri+'" data-m="'+m+'" '+(r.months.includes(m)?'checked':'')+' onchange="planFieldChange(this)"></td>'
+    ).join('');
+    return '<tr>'+
+      '<td><input type="text" value="'+escapeAttr(r.section)+'" data-ri="'+ri+'" data-f="section" onchange="planFieldChange(this)"></td>'+
+      '<td><textarea rows="1" data-ri="'+ri+'" data-f="need" onchange="planFieldChange(this)">'+escapeHtml(r.need)+'</textarea></td>'+
+      '<td><textarea rows="1" placeholder="Describe what this training covers…" data-ri="'+ri+'" data-f="description" onchange="planFieldChange(this)">'+escapeHtml(r.description||'')+'</textarea></td>'+
+      '<td><select data-ri="'+ri+'" data-f="type" onchange="planFieldChange(this)"><option '+(r.type==='Internal'?'selected':'')+'>Internal</option><option '+(r.type==='External'?'selected':'')+'>External</option></select></td>'+
+      '<td><input type="text" value="'+escapeAttr(r.resource)+'" data-ri="'+ri+'" data-f="resource" onchange="planFieldChange(this)"></td>'+
+      monthCells+
+      '<td><input type="text" value="'+escapeAttr(r.date)+'" data-ri="'+ri+'" data-f="date" onchange="planFieldChange(this)"></td>'+
+      '<td class="rowdel"><button onclick="deletePlanRow('+ri+')" title="Delete row">&times;</button></td>'+
+      '</tr>';
+  }).join('');
+  table.innerHTML = head + '<tbody>'+rows+'</tbody>';
+}
+
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+function planFieldChange(el){
+  const ri = Number(el.dataset.ri);
+  if(el.dataset.m){
+    const m = el.dataset.m;
+    const set = new Set(PLAN_ROWS[ri].months);
+    if(el.checked) set.add(m); else set.delete(m);
+    PLAN_ROWS[ri].months = Array.from(set);
+  }else{
+    PLAN_ROWS[ri][el.dataset.f] = el.value;
+  }
+}
+
+function addPlanRow(){
+  PLAN_ROWS.push({section:'', need:'', type:'Internal', resource:'', months:[], date:'', description:''});
+  renderPlanTable();
+}
+function deletePlanRow(ri){
+  PLAN_ROWS.splice(ri,1);
+  renderPlanTable();
+}
+
+async function savePlan(){
+  try{
+    const result = await storageSet(PLAN_KEY, JSON.stringify(PLAN_ROWS), true);
+    if(!result) throw new Error('save failed');
+    alert('Annual Training Plan saved.');
+  }catch(e){
+    alert('Could not save: '+e.message);
+  }
+}
+
+/* =========================================================================
+   TRAINING RECORD (QMS/HR/05) — log with photo upload
+   ========================================================================= */
+function buildTrDeptOptions(){
+  const sel = document.getElementById('tr-dept');
+  DEPARTMENTS.forEach(d=>{
+    const o = document.createElement('option');
+    o.value = d.en; o.textContent = d.en;
+    sel.appendChild(o);
+  });
+}
+
+let PENDING_PHOTOS = [];
+
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id==='tr-photos'){
+    handlePhotoSelection(e.target.files);
+  }
+});
+
+function fileToCompressedDataUrl(file, maxDim, quality){
+  maxDim = maxDim || 900; quality = quality || 0.72;
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w=img.width, h=img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>=h){ h=Math.round(h*maxDim/w); w=maxDim; }
+          else{ w=Math.round(w*maxDim/h); h=maxDim; }
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoSelection(fileList){
+  const preview = document.getElementById('tr-photo-preview');
+  for(const file of fileList){
+    try{
+      const dataUrl = await fileToCompressedDataUrl(file);
+      PENDING_PHOTOS.push(dataUrl);
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      preview.appendChild(img);
+    }catch(e){ console.error('photo processing failed', e); }
+  }
+}
+
+async function saveTrainingRecord(){
+  const topic = document.getElementById('tr-topic').value.trim();
+  const date = document.getElementById('tr-date').value;
+  const dept = document.getElementById('tr-dept').value;
+  const trainer = document.getElementById('tr-trainer').value.trim();
+  const type = document.getElementById('tr-type').value;
+  const count = document.getElementById('tr-count').value;
+  const attendees = document.getElementById('tr-attendees').value.trim();
+  const notes = document.getElementById('tr-notes').value.trim();
+
+  if(!topic || !date || !dept){
+    showBanner('tr-banner', 'Please fill in at least Training Topic, Date and Department.', false);
+    return;
+  }
+
+  const entry = { id: 'tr_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    topic, date, dept, trainer, type, count, attendees, notes, photos: PENDING_PHOTOS.slice(),
+    savedAt: new Date().toISOString() };
+
+  try{
+    const result = await storageSet('training-record:'+entry.id, JSON.stringify(entry), true);
+    if(!result) throw new Error('save failed');
+
+    let index = [];
+    try{
+      const idxRes = await storageGet(TR_INDEX_KEY, true);
+      if(idxRes && idxRes.value) index = JSON.parse(idxRes.value);
+    }catch(e){ index = []; }
+    index.push(entry.id);
+    await storageSet(TR_INDEX_KEY, JSON.stringify(index), true);
+
+    showBanner('tr-banner', 'Training record saved with '+entry.photos.length+' photo(s).', true);
+    document.getElementById('tr-topic').value='';
+    document.getElementById('tr-date').value='';
+    document.getElementById('tr-dept').value='';
+    document.getElementById('tr-trainer').value='';
+    document.getElementById('tr-count').value='';
+    document.getElementById('tr-attendees').value='';
+    document.getElementById('tr-notes').value='';
+    document.getElementById('tr-photos').value='';
+    document.getElementById('tr-photo-preview').innerHTML='';
+    PENDING_PHOTOS = [];
+    loadTrainingRecords();
+  }catch(err){
+    console.error(err);
+    showBanner('tr-banner', 'Could not save training record (it may be too large — try fewer photos). '+err.message, false);
+  }
+}
+
+async function loadTrainingRecords(){
+  const logEl = document.getElementById('tr-log');
+  if(!logEl) return;
+  let index = [];
+  try{
+    const idxRes = await storageGet(TR_INDEX_KEY, true);
+    if(idxRes && idxRes.value) index = JSON.parse(idxRes.value);
+  }catch(e){ index = []; }
+
+  if(index.length===0){
+    logEl.innerHTML = '<div class="empty-msg">No training records logged yet.</div>';
+    return;
+  }
+  logEl.innerHTML = '<div class="empty-msg">Loading…</div>';
+  const entries = [];
+  for(const id of index){
+    try{
+      const r = await storageGet('training-record:'+id, true);
+      if(r && r.value) entries.push(JSON.parse(r.value));
+    }catch(e){ /* entry may have been deleted */ }
+  }
+  entries.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  TR_ENTRIES = entries;
+  logEl.innerHTML = entries.map(en=>`
+    <div class="tr-entry">
+      <div class="tr-entry-head">
+        <div>
+          <h4>${escapeHtml(en.topic)}</h4>
+          <div class="tr-entry-meta">${escapeHtml(en.dept)} · ${escapeHtml(en.type)} · Trainer: ${escapeHtml(en.trainer||'—')} · ${escapeHtml(en.date)}${en.count?' · '+escapeHtml(en.count)+' attendees':''}</div>
+        </div>
+        <button class="btn danger" style="padding:5px 10px;font-size:11px;" onclick="deleteTrainingRecord('${en.id}')">Delete</button>
+      </div>
+      ${en.attendees ? '<div style="font-size:12.5px;margin-top:8px;"><b>Attendees:</b> '+escapeHtml(en.attendees)+'</div>' : ''}
+      ${en.notes ? '<div style="font-size:12.5px;margin-top:4px;"><b>Notes:</b> '+escapeHtml(en.notes)+'</div>' : ''}
+      ${en.photos && en.photos.length ? '<div class="tr-photos">'+en.photos.map((p,pi)=>'<img src="'+p+'" onclick="openLightboxFor(&quot;'+en.id+'&quot;,'+pi+')">').join('')+'</div>' : ''}
+    </div>
+  `).join('');
+}
+
+async function deleteTrainingRecord(id){
+  if(!confirm('Delete this training record and its photos?')) return;
+  try{
+    let index = [];
+    const idxRes = await storageGet(TR_INDEX_KEY, true);
+    if(idxRes && idxRes.value) index = JSON.parse(idxRes.value);
+    index = index.filter(x=>x!==id);
+    await storageSet(TR_INDEX_KEY, JSON.stringify(index), true);
+    await storageDelete('training-record:'+id, true);
+    loadTrainingRecords();
+  }catch(e){ alert('Could not delete: '+e.message); }
+}
+
+let TR_ENTRIES = [];
+function openLightboxFor(entryId, photoIndex){
+  const en = TR_ENTRIES.find(e=>e.id===entryId);
+  if(!en || !en.photos || !en.photos[photoIndex]) return;
+  openLightbox(en.photos[photoIndex]);
+}
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox(e){
+  if(e) e.stopPropagation();
+  document.getElementById('lightbox').classList.remove('show');
+}
+
+/* =========================================================================
+   CSV EXPORT
+   ========================================================================= */
+function csvEscape(s){
+  s = String(s===null||s===undefined?'':s);
+  if(/[",\n]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function downloadCsv(filename, rows){
+  const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCsv(which){
+  if(which==='record2'){
+    const header = ['Year','EPF No','Employee Name','Department', ...CATEGORY_MAP.map(c=>c.label.en)];
+    const rows = [header];
+    ALL_SUBMISSIONS.slice().sort((a,b)=>a.deptIndex-b.deptIndex).forEach(s=>{
+      const scores = categoryScoresFor(s);
+      rows.push([s.year||'', s.epf, s.name, s.deptName, ...CATEGORY_MAP.map(c=>fmt(scores[c.key]))]);
+    });
+    downloadCsv('QMS_HR_02_training_need_assessment_record.csv', rows);
+  }else if(which==='record4'){
+    const rows = [['Department','EPF No','Employee Name','Suggested Training Need','Rating']];
+    DEPARTMENTS.forEach((dept,di)=>{
+      ALL_SUBMISSIONS.filter(s=>s.deptIndex===di).forEach(s=>{
+        const needs = topNeedsFor(s, 10);
+        if(needs.length===0){ rows.push([dept.en, s.epf, s.name, '', '']); }
+        else{ needs.forEach(n=> rows.push([dept.en, s.epf, s.name, n.text, n.score])); }
+      });
+    });
+    downloadCsv('QMS_HR_04_record_for_training_need_identification.csv', rows);
+  }else if(which==='plan'){
+    const rows = [['Section','Training Need','Training Description','Type','Resource Person', ...MONTHS, 'Date']];
+    PLAN_ROWS.forEach(r=>{
+      rows.push([r.section, r.need, r.description||'', r.type, r.resource, ...MONTHS.map(m=>r.months.includes(m)?'X':''), r.date]);
+    });
+    downloadCsv('QMS_HR_03_annual_training_plan_'+(PLAN_YEAR||'')+'.csv', rows);
+  }
+}
+
+/* =========================================================================
+   PDF EXPORT (jsPDF + autotable) for QMS/HR/02, 03, 04
+   ========================================================================= */
+function pdfHeader(doc, docNo, issueNo, docTitle){
+  try{ doc.addImage(LOGO_DATA_URI, 'JPEG', 40, 25, 95, 32); }catch(e){}
+  doc.setFontSize(8.5);
+  doc.setFont(undefined,'bold');
+  doc.text('FERENTINO INDUSTRIAL TYRES (PVT) LTD', 145, 34);
+  doc.setFont(undefined,'normal');
+  doc.text('SRI LANKA — Quality Management System', 145, 44);
+
+  doc.setFontSize(13);
+  doc.setFont(undefined,'bold');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.text(docTitle, pageWidth/2, 40, {align:'center'});
+
+  doc.setFontSize(8);
+  doc.setFont(undefined,'normal');
+  const rx = pageWidth - 170;
+  doc.text('Doc No: '+docNo, rx, 30);
+  doc.text('Issue No: '+issueNo+'   Rev No: 00', rx, 42);
+  doc.text('Issue Date: 2026.04.20', rx, 54);
+
+  doc.setLineWidth(1);
+  doc.line(30, 65, pageWidth-30, 65);
+  return 78;
+}
+
+function downloadRecord2Pdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const startY = pdfHeader(doc, 'QMS/HR/02', '02', 'Training Needs Assessment Record');
+  const head = [['Year','EPF No','Employee Name','Department', ...CATEGORY_MAP.map(c=>c.label.en)]];
+  const body = ALL_SUBMISSIONS.slice().sort((a,b)=>a.deptIndex-b.deptIndex).map(s=>{
+    const scores = categoryScoresFor(s);
+    return [s.year||'', s.epf, s.name, s.deptName, ...CATEGORY_MAP.map(c=>fmt(scores[c.key]))];
+  });
+  doc.autoTable({ head, body, startY, styles:{fontSize:7.5, cellPadding:3}, headStyles:{fillColor:[60,90,104]}, theme:'grid' });
+  doc.save('QMS_HR_02_Training_Need_Assessment_Record.pdf');
+}
+
+function downloadRecord4Pdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const startY = pdfHeader(doc, 'QMS/HR/04', '02', 'Record for Training Need Identification');
+  const head = [['Department','EPF No','Employee Name','Suggested Training Need','Rating']];
+  const body = [];
+  DEPARTMENTS.forEach((dept,di)=>{
+    ALL_SUBMISSIONS.filter(s=>s.deptIndex===di).forEach(s=>{
+      const needs = topNeedsFor(s, 10);
+      if(needs.length===0){ body.push([dept.en, s.epf, s.name, '—', '—']); }
+      else{ needs.forEach(n=> body.push([dept.en, s.epf, s.name, n.text, String(n.score)])); }
+    });
+  });
+  doc.autoTable({ head, body, startY, styles:{fontSize:8, cellPadding:3}, headStyles:{fillColor:[60,90,104]}, theme:'grid' });
+  doc.save('QMS_HR_04_Record_for_Training_Need_Identification.pdf');
+}
+
+function downloadPlanPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const startY = pdfHeader(doc, 'QMS/HR/03', '02', 'Annual Training Plan' + (PLAN_YEAR ? ' — '+PLAN_YEAR : ''));
+  const head = [['Section','Training Need','Training Description','Type','Resource Person','Scheduled Month(s)','Date']];
+  const body = PLAN_ROWS.map(r=>[r.section, r.need, r.description||'', r.type, r.resource, r.months.join(', '), r.date]);
+  doc.autoTable({ head, body, startY, styles:{fontSize:7.5, cellPadding:3}, headStyles:{fillColor:[60,90,104]},
+    columnStyles:{1:{cellWidth:150}, 2:{cellWidth:150}}, theme:'grid' });
+  doc.save('QMS_HR_03_Annual_Training_Plan_'+(PLAN_YEAR||'')+'.pdf');
+}
+
+async function resetAllData(){
+  if(!confirm('This will permanently delete all submitted surveys, the annual plan, and every training record photo log for everyone. Continue?')) return;
+  try{
+    await storageSet(SUBMISSIONS_KEY, JSON.stringify([]), true);
+    await storageSet(PLAN_KEY, JSON.stringify(DEFAULT_PLAN_ROWS), true);
+    let index = [];
+    try{
+      const idxRes = await storageGet(TR_INDEX_KEY, true);
+      if(idxRes && idxRes.value) index = JSON.parse(idxRes.value);
+    }catch(e){ index = []; }
+    for(const id of index){
+      try{ await storageDelete('training-record:'+id, true); }catch(e){}
+    }
+    await storageSet(TR_INDEX_KEY, JSON.stringify([]), true);
+    await loadAll();
+    await loadTrainingRecords();
+  }catch(e){
+    alert('Could not clear data: ' + e.message);
+  }
+}
+
+/* =========================================================================
+   FULL DATA BACKUP / RESTORE (JSON) — covers survey submissions, the
+   annual plan + its year, and every training record (incl. photos)
+   ========================================================================= */
+async function downloadBackup(){
+  const statusEl = document.getElementById('backup-status');
+  if(statusEl) statusEl.textContent = 'Preparing backup…';
+  try{
+    const submissionsRes = await storageGet(SUBMISSIONS_KEY, true);
+    const submissions = (submissionsRes && submissionsRes.value) ? JSON.parse(submissionsRes.value) : [];
+
+    const planRes = await storageGet(PLAN_KEY, true);
+    const plan = (planRes && planRes.value) ? JSON.parse(planRes.value) : DEFAULT_PLAN_ROWS;
+
+    const planYearRes = await storageGet(PLAN_YEAR_KEY, true);
+    const planYear = (planYearRes && planYearRes.value) ? planYearRes.value : '';
+
+    let trIndex = [];
+    try{
+      const idxRes = await storageGet(TR_INDEX_KEY, true);
+      if(idxRes && idxRes.value) trIndex = JSON.parse(idxRes.value);
+    }catch(e){ trIndex = []; }
+
+    const trainingRecords = [];
+    for(const id of trIndex){
+      try{
+        const r = await storageGet('training-record:'+id, true);
+        if(r && r.value) trainingRecords.push(JSON.parse(r.value));
+      }catch(e){ /* skip missing entry */ }
+    }
+
+    const backup = {
+      app: 'Training App — Ferentino Industrial Tyres',
+      backupVersion: 1,
+      exportedAt: new Date().toISOString(),
+      submissions,
+      plan,
+      planYear,
+      trainingRecords
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = 'training_app_backup_'+dateStamp+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if(statusEl) statusEl.textContent = 'Backup downloaded.';
+  }catch(e){
+    console.error(e);
+    if(statusEl) statusEl.textContent = 'Backup failed: ' + e.message;
+  }
+}
+
+function restoreBackup(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('backup-status');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let backup;
+    try{
+      backup = JSON.parse(reader.result);
+    }catch(e){
+      alert('That file is not valid backup JSON.');
+      inputEl.value = '';
+      return;
+    }
+    if(!backup || !Array.isArray(backup.submissions) || !Array.isArray(backup.plan)){
+      alert('This file does not look like a Training App backup.');
+      inputEl.value = '';
+      return;
+    }
+    const summary = `This backup contains:\n`+
+      `• ${backup.submissions.length} survey submission(s)\n`+
+      `• ${backup.plan.length} annual plan row(s)`+ (backup.planYear ? ' (year '+backup.planYear+')' : '') + `\n`+
+      `• ${(backup.trainingRecords||[]).length} training record(s)\n\n`+
+      `Restoring will REPLACE all current data for everyone. Continue?`;
+    if(!confirm(summary)){ inputEl.value=''; return; }
+
+    if(statusEl) statusEl.textContent = 'Restoring…';
+    try{
+      await storageSet(SUBMISSIONS_KEY, JSON.stringify(backup.submissions), true);
+      await storageSet(PLAN_KEY, JSON.stringify(backup.plan), true);
+      if(backup.planYear) await storageSet(PLAN_YEAR_KEY, backup.planYear, true);
+
+      // clear existing training records, then write the restored set
+      let oldIndex = [];
+      try{
+        const idxRes = await storageGet(TR_INDEX_KEY, true);
+        if(idxRes && idxRes.value) oldIndex = JSON.parse(idxRes.value);
+      }catch(e){ oldIndex = []; }
+      for(const id of oldIndex){
+        try{ await storageDelete('training-record:'+id, true); }catch(e){}
+      }
+      const newIndex = [];
+      for(const entry of (backup.trainingRecords||[])){
+        if(!entry.id) continue;
+        await storageSet('training-record:'+entry.id, JSON.stringify(entry), true);
+        newIndex.push(entry.id);
+      }
+      await storageSet(TR_INDEX_KEY, JSON.stringify(newIndex), true);
+
+      await loadAll();
+      await loadTrainingRecords();
+      if(statusEl) statusEl.textContent = 'Backup restored successfully.';
+    }catch(e){
+      console.error(e);
+      if(statusEl) statusEl.textContent = 'Restore failed: ' + e.message;
+      alert('Restore failed: ' + e.message);
+    }
+    inputEl.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* init */
+refreshStaticText();
+renderSections({});
+</script>
+</body>
+</html>

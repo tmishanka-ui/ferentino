@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance KPI — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--navy:#1F3A5F;--green:#2C7A4B;--green-bg:#E1F0E7;--amber:#B97708;--amber-bg:#FBF0D8;--head:'Barlow Condensed','Arial Narrow',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select{font:inherit;color:inherit}h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500;white-space:nowrap}.btn:hover{border-color:#B9B2A6}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn.sm{padding:3px 10px;font-size:12.5px}.btn:disabled{opacity:.45;cursor:default}
+  select,input[type=number]{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 10px}
+  .yr{display:flex;align-items:center;gap:8px;background:#FBFAF7;border:1px solid var(--line);border-radius:9px;padding:6px 10px}.yr label{font-size:12px;font-weight:600;color:var(--soft)}.yr select{font-weight:700;font-size:15px}
+  main{padding:16px 22px 60px;max-width:1550px;margin:0 auto}
+  .status{font-size:12.5px;color:var(--soft);margin:0 0 12px}.status b{color:var(--ink)}.warn{color:#8A5A00;background:#FFF3D6;padding:1px 8px;border-radius:9px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}.pn{padding:14px 16px;margin-bottom:14px}.pn h2{font-size:20px;text-transform:uppercase;margin-bottom:8px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px}.t{padding:12px 14px;border-left:6px solid var(--line)}.t small{display:block;color:var(--soft);font-size:12px}.t b{font:600 32px/1.1 var(--head)}.t .n{font-size:12px;color:var(--soft)}.t.good{border-left-color:var(--green)}.t.bad{border-left-color:var(--red)}.t.mid{border-left-color:var(--amber)}.t.good b{color:var(--green)}.t.bad b{color:var(--red-d)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}.cb{padding:10px 12px;height:330px;position:relative}.full{grid-column:1/-1}.tall{height:430px}
+  .tw{overflow:auto;border-radius:8px}table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}th{background:#F7F4EE;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0;z-index:1}
+  td:first-child,th:first-child{text-align:left;white-space:normal;min-width:230px}td.l,th.l{text-align:left}td.c,th.c{text-align:center}
+  td.ok{background:#DDEFE4}td.no{background:#F6D2D4}td.nd{color:#B5B0A6}td.ytd{font-weight:700;border-left:2px solid var(--line)}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap;background:#ECE9E3;color:var(--soft)}.chip.ok{background:var(--green-bg);color:var(--green)}.chip.no{background:var(--red-bg);color:var(--red-d)}
+  .empty{padding:48px 20px;text-align:center;color:var(--soft);line-height:1.8}
+  .veil{position:fixed;inset:0;background:rgba(29,33,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:50;overflow:auto}.modal{background:#fff;border-radius:12px;width:min(760px,100%);padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto}.modal h2{font-size:24px;text-transform:uppercase;margin-bottom:6px}.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:440px}#toast.show{opacity:1}
+  .note{color:var(--soft);font-size:12.5px}details{margin-top:8px}summary{cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Maintenance KPI</h1><div class="sub">Maintenance Department — monthly KPI figures from the KPI workbook, against their targets</div></div>
+<div class="yr"><label for="yr">Year of the data</label><select id="yr"></select></div>
+<label class="btn red" id="uplab" style="margin:0">Upload Excel<input id="f" type="file" accept=".xlsx,.xlsm,.xls" hidden></label><button class="btn" id="xl" disabled>Download Excel</button></header>
+<main id="main"></main>
+<div id="host"></div><div id="toast"></div>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KEY='fitl_mkpi_v1',MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],MN=['january','february','march','april','may','june','july','august','september','october','november','december'];
+const NOW=new Date().getFullYear();
+let D;try{D=JSON.parse(localStorage.getItem(KEY)||'null')}catch(_){}if(!D||!D.years)D={years:{},ov:{}};D.ov=D.ov||{};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(_){toast('Could not save — the browser storage is full.')}};
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3200)}
+const dv=(a,b,m)=>a==null||b==null||!(b>0)?null:a/b*(m||1);
+
+/* ---------- the 15 KPIs of the workbook's Graphs sheet ---------- */
+const KP=[
+ {id:'se',t:'MITL Specific Energy',u:'MWh/Ton',dir:'low',dec:3,n:r=>r.toe,d:r=>r.prod,hs:/^total specific energy/,f:'(electrical kWh + thermal kWh of the steam) ÷ tyre production kg'},
+ {id:'tbse',t:'Tyre Building Specific Energy',u:'MWh/Ton',dir:'low',dec:3,n:r=>r.tbe,d:r=>r.prod,hs:/^tyre building specific electrical energy/,f:'tyre building energy kWh ÷ tyre production kg'},
+ {id:'boil',t:'Boiler Efficiency',u:'steam kg / wood kg',dir:'high',dec:2,n:r=>r.steam,d:r=>r.wood,hs:/^boiler efficiency/,f:'steam kg ÷ wood kg (higher is better)'},
+ {id:'steam',t:'Specific Steam Consumption',u:'steam kg / tyre kg',dir:'low',dec:2,n:r=>r.steam,d:r=>r.prod,hs:/^steam usage for curing/,f:'steam kg ÷ tyre production kg'},
+ {id:'maint',t:'Maintenance Cost',u:'LKR / tyre kg',dir:'low',dec:2,n:r=>r.maint,d:r=>r.prod,hs:/^maintenance cost \(lkr\/kg\)/,f:'maintenance cost LKR ÷ tyre production kg'},
+ {id:'fcost',t:'Forklift Repair and Hire Cost',u:'LKR / tyre kg',dir:'low',dec:3,n:r=>r.fcost,d:r=>r.prod,hs:/^forklift cost/,f:'forklift repair + hire LKR ÷ tyre production kg'},
+ {id:'fdown',t:'Forklift Downtime',u:'%',dir:'low',pct:1,dec:1,avg:1,v:r=>dv(r.fdown,r.dfd||(r.dim||31)*120),dk:'dfd',hs:/^forklift downtime/,f:'forklift down time minutes ÷ the available minutes of that month (taken from the workbook’s own formula for the month; 120 minutes × days of the month when the formula is missing)'},
+ {id:'oil',t:'Oil Usage (HD68, engine, transmission, brake oil)',u:'ml / ton',dir:'low',dec:1,n:r=>r.oil,d:r=>r.prod,m:1000,hs:/^reduce hd68/,f:'oil used ÷ tyre production tons'},
+ {id:'water',t:'Boiler and Cooling Tower Water Usage',u:'litres / tyre kg',dir:'low',dec:3,n:r=>r.water,d:r=>r.prod,hs:/^boiler and cooling tower water usage/,f:'water litres ÷ tyre production kg'},
+ {id:'grease',t:'Grease Usage of Twin Mill and Banbury',u:'kg / ton',dir:'low',dec:3,n:r=>r.grease,d:r=>r.prod,m:1000,hs:/^grease usage/,f:'grease kg ÷ tyre production tons'},
+ {id:'hyd',t:'Hydraulic Oil Consumption',u:'litres / ton',dir:'low',dec:2,n:r=>r.hyd,d:r=>r.prod,m:1000,hs:/^hydraulic oil consumption/,f:'hydraulic oil litres ÷ tyre production tons'},
+ {id:'comp',t:'Compressor Specific Energy',u:'kWh / ton',dir:'low',dec:1,n:r=>r.comp,d:r=>r.prod,m:1000,hs:/^compressor specific energy/,f:'compressor kWh ÷ tyre production tons'},
+ {id:'maxd',t:'Maximum Demand',u:'kVA',dir:'low',dec:0,avg:1,v:r=>r.maxd,th:/^max demand target/,f:'maximum demand of the month (year figure = average of the months)'},
+ {id:'tbd',t:'Tyre Building Breakdown',u:'%',dir:'low',pct:1,dec:2,avg:1,v:r=>dv(r.tyrebd,r.dtb||3456000),dk:'dtb',hs:/^reduce tyre building department breakdown/,f:'tyre building breakdown minutes ÷ the available machine minutes of that month (taken from the workbook’s own formula; 3,456,000 when missing)'},
+ {id:'mixbd',t:'Mixing Breakdown',u:'%',dir:'low',pct:1,dec:2,avg:1,v:r=>dv(r.mixbd,r.dmx||72000),dk:'dmx',hs:/^reduce mixing department breakdown/,f:'mixing breakdown minutes ÷ the available machine minutes of that month (taken from the workbook’s own formula; 72,000 when missing)'}];
+const mval=(k,r)=>r?(k.avg?k.v(r):dv(k.n(r),k.d(r),k.m)):null;
+const fmt=(k,v)=>v==null?'–':k.pct?(v*100).toFixed(k.dec)+' %':v.toLocaleString(undefined,{minimumFractionDigits:k.dec,maximumFractionDigits:k.dec});
+const fmtT=(k,t)=>t==null?'not set':k.pct?+(t*100).toFixed(3)+' %':+t.toFixed(4);
+const met=(k,v,t)=>v==null||t==null?null:k.dir==='low'?v<=t:v>=t;
+
+/* ---------- reading the workbook ---------- */
+const numv=v=>{if(typeof v==='number'&&isFinite(v))return v;if(typeof v==='string'){const s=v.trim().replace(/,/g,'');if(/^-?\d+(\.\d+)?$/.test(s))return parseFloat(s)}return null};
+const RAW={prod:/^tyre production/,maxd:/^maximum demand/,elec:/^electrical unit/,tbe:/^tyre building energy usage/,wood:/^wood consumption/,steam:/^steam consumption/,therm:/^thermal energy/,maint:/^maintenace? cost \(lkr\)/,comp:/^compressor energy \(kwh\)/,fcost:/^forklift cost/,fdown:/^forklift downtime/,oil:/^hd68/,water:/^boiler and cooling tower water usage/,mixbd:/^mixing department breakdown/,grease:/^grease usage/,hyd:/^hydraulic oil consumption/,tyrebd:/^tyre department breakdown/};
+function parseWorkbook(wb){
+  const ws=wb.Sheets['Data']||wb.Sheets[wb.SheetNames[0]];if(!ws)throw new Error('no “Data” sheet');
+  const A=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),H=(A[0]||[]).map(h=>String(h==null?'':h).trim().toLowerCase().replace(/\s+/g,' '));
+  const cols={};Object.keys(RAW).forEach(k=>{cols[k]=H.findIndex(h=>RAW[k].test(h))});
+  const miss=Object.keys(cols).filter(k=>cols[k]<0&&['prod'].includes(k));if(miss.length)throw new Error('the “Tyre Production (kg)” column was not found — this does not look like the maintenance KPI workbook');
+  const yr=(/20\d\d/.exec(String(A[0]&&A[0][0]||''))||[null])[0];
+  const raw={};
+  for(let i=1;i<A.length;i++){const a=String(A[i][0]==null?'':A[i][0]).trim().toLowerCase();if(a==='ytd')break;const m=MN.indexOf(a);if(m<0)continue;
+    const r={};Object.keys(cols).forEach(k=>{if(cols[k]>=0){const v=numv(A[i][cols[k]]);if(v!=null)r[k]=v}});
+    if(r.elec!=null&&(r.therm!=null||r.steam!=null))r.toe=r.elec+(r.therm!=null?r.therm:r.steam*2769.1/3600);
+    if(Object.keys(r).length)raw[m+1]=r}
+  const tg={};KP.forEach(k=>{let j;if(k.th)j=H.findIndex(h=>k.th.test(h));else{const c=H.findIndex((h,i)=>i>=24&&k.hs.test(h));j=c<0?-1:H.findIndex((h,i)=>i>c&&/target/.test(h))}
+    if(j>=0)for(let i=1;i<=13&&i<A.length;i++){const v=numv(A[i][j]);if(v!=null){tg[k.id]=v;break}}});
+  // the workbook's own KPI figures, kept to check my arithmetic against theirs
+  const own={};KP.forEach(k=>{const c=k.th?H.findIndex(h=>RAW.maxd.test(h)):H.findIndex((h,i)=>i>=24&&k.hs.test(h));if(c>=0){own[k.id]={};for(let m=1;m<=12;m++){const row=A[m];if(row){const v=numv(row[c]);if(v!=null)own[k.id][m]=v}}}});
+  // the "available minutes" behind the three percentage KPIs differ month by month in the workbook: read them from its formulas
+  const rg=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  KP.filter(k=>k.dk).forEach(k=>{const c=H.findIndex((h,i)=>i>=24&&k.hs.test(h));if(c<0)return;
+    for(let i=1;i<A.length;i++){const a=String(A[i][0]==null?'':A[i][0]).trim().toLowerCase(),m=MN.indexOf(a);if(m<0||!raw[m+1])continue;
+      const cell=ws[XLSX.utils.encode_cell({r:rg.s.r+i,c:rg.s.c+c})],f=cell&&cell.f?String(cell.f):'',x=/\/\s*(\d+(?:\.\d+)?)\s*$/.exec(f);if(x)raw[m+1][k.dk]=parseFloat(x[1])}});
+  Object.keys(raw).forEach(m=>{raw[m].dim=new Date(yr?+yr:NOW,+m,0).getDate()});
+  if(!Object.keys(raw).length)throw new Error('no month rows with figures were found');
+  return{year:yr?+yr:null,raw,tg,own};
+}
+
+/* ---------- numbers ---------- */
+let YR=null,CMP='';
+const yrs=()=>Object.keys(D.years).map(Number).sort((a,b)=>b-a);
+const tgt=(y,id)=>{const o=(D.ov[y]||{})[id];return o!=null?o:(D.years[y]&&D.years[y].tg[id]!=null?D.years[y].tg[id]:null)};
+function series(y,k){const Y=D.years[y];return Array.from({length:12},(_,i)=>Y?mval(k,Y.raw[i+1]):null)}
+function ytd(y,k){const Y=D.years[y];if(!Y)return null;const rs=Object.values(Y.raw);
+  if(k.avg){const v=rs.map(r=>k.v(r)).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null}
+  let n=0,d=0,c=0;rs.forEach(r=>{const a=k.n(r),b=k.d(r);if(a!=null&&b!=null&&b>0){n+=a;d+=b;c++}});return c?n/d*(k.m||1):null}
+function destroy(){(destroy.c||[]).forEach(c=>c.destroy());destroy.c=[]}
+const mk=(id,cfg)=>{if(typeof Chart==='undefined'||!$(id))return;Chart.defaults.font.family="Inter,system-ui,sans-serif";destroy.c.push(new Chart($(id),cfg))};
+const G='#2E9E6B',R='#DA1B22',N='#1F3A5F';
+
+/* ---------- screen ---------- */
+function yearBox(){const s=new Set(yrs());for(let y=NOW-3;y<=NOW+1;y++)s.add(y);if(YR)s.add(YR);const list=[...s].sort((a,b)=>b-a);
+  $('yr').innerHTML=list.map(y=>'<option value="'+y+'"'+(y===YR?' selected':'')+'>'+y+(D.years[y]?' ✓':'')+'</option>').join('');$('uplab').firstChild.nodeValue='Upload Excel for '+YR+' ';$('xl').disabled=!D.years[YR]}
+function render(){
+  destroy();if(YR==null)YR=yrs()[0]||NOW;yearBox();const Y=D.years[YR];
+  if(!Y){$('main').innerHTML='<div class="card empty"><b>No Maintenance KPI data for '+YR+' yet.</b><br>Choose the year of the data above, then press <b>Upload Excel for '+YR+'</b> and pick the KPI workbook (the one with the “Data” sheet).'+(yrs().length?'<br><span class="note">Years already uploaded: '+yrs().join(', ')+'.</span>':'')+'</div>';return}
+  const months=Object.keys(Y.raw).map(Number).sort((a,b)=>a-b),last=months[months.length-1];
+  const S=KP.map(k=>({k,v:series(YR,k),t:tgt(YR,k.id)}));S.forEach(x=>{x.y=ytd(YR,x.k);x.ys=met(x.k,x.y,x.t);x.ms=x.v.map(v=>met(x.k,v,x.t));x.nOk=x.ms.filter(z=>z===true).length;x.nAll=x.ms.filter(z=>z!=null).length;x.ls=x.ms[last-1]});
+  const withY=S.filter(x=>x.ys!=null),okY=withY.filter(x=>x.ys).length,withL=S.filter(x=>x.ls!=null),okL=withL.filter(x=>x.ls).length;
+  const mpct=MONS.map((_,i)=>{const a=S.filter(x=>x.ms[i]!=null);return a.length?a.filter(x=>x.ms[i]).length/a.length*100:null});
+  let h='<p class="status"><b>'+YR+'</b> · file <b>'+esc(Y.file)+'</b> · uploaded '+esc(String(Y.at).slice(0,10))+' · figures for <b>'+months.map(m=>MONS[m-1]).join(', ')+'</b>'+(Y.diff&&Y.diff.length?' · <span class="warn" title="'+esc(Y.diff.join('; '))+'">'+Y.diff.length+' value(s) differ from the workbook’s own KPI columns</span>':' · <span class="chip ok">matches the workbook’s own KPI columns</span>')+'</p>';
+  h+='<div class="tiles"><div class="card t '+(withL.length?okL===withL.length?'good':okL>=withL.length/2?'mid':'bad':'')+'"><small>KPIs on target — '+MONS[last-1]+'</small><b>'+okL+' of '+withL.length+'</b><div class="n">latest month with figures</div></div>'+
+   '<div class="card t '+(withY.length?okY===withY.length?'good':okY>=withY.length/2?'mid':'bad':'')+'"><small>KPIs on target — year to date</small><b>'+okY+' of '+withY.length+'</b><div class="n">'+MONS[months[0]-1]+' to '+MONS[last-1]+' '+YR+'</div></div>'+
+   '<div class="card t bad"><small>Not on target, year to date</small><b>'+withY.filter(x=>!x.ys).length+'</b><div class="n">'+esc(withY.filter(x=>!x.ys).map(x=>x.k.t).slice(0,3).join(' · '))+(withY.filter(x=>!x.ys).length>3?' …':'')+'</div></div>'+
+   '<div class="card t"><small>Months with figures</small><b>'+months.length+'</b><div class="n">of 12</div></div></div>';
+  h+='<div class="card pn" style="padding:10px 14px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="note">Compare with the same KPIs of <select id="cmp"><option value="">— no comparison —</option>'+yrs().filter(y=>y!==YR).map(y=>'<option value="'+y+'"'+(String(y)===CMP?' selected':'')+'>'+y+'</option>').join('')+'</select></label><span style="flex:1"></span><button class="btn sm" data-act="targets">Edit targets</button><button class="btn sm" data-act="defs">KPI definitions</button></div></div>';
+  h+='<div class="grid2"><div class="card cb tall"><canvas id="c0"></canvas></div><div class="card cb tall"><canvas id="c00"></canvas></div></div>';
+  h+='<div class="card pn"><h2>Maintenance KPI scorecard — '+YR+'</h2><p class="note" style="margin:0 0 8px">Green: target met · red: target not met · grey: no figure yet. Lower is better, except Boiler Efficiency (higher is better). Year to date uses only the months that have both figures.</p><div class="tw"><table><thead><tr><th>KPI</th><th class="l">Target</th>'+MONS.map(m=>'<th>'+m+'</th>').join('')+'<th>Year to date</th><th class="c">Months on target</th></tr></thead><tbody>'+
+   S.map(x=>'<tr><td><b>'+esc(x.k.t)+'</b><div class="note">'+esc(x.k.u)+'</div></td><td class="l">'+(x.k.dir==='low'?'≤ ':'≥ ')+fmtT(x.k,x.t)+'</td>'+x.v.map((v,i)=>'<td class="'+(x.ms[i]==null?'nd':x.ms[i]?'ok':'no')+'">'+fmt(x.k,v)+'</td>').join('')+'<td class="ytd '+(x.ys==null?'nd':x.ys?'ok':'no')+'">'+fmt(x.k,x.y)+'</td><td class="c">'+(x.nAll?x.nOk+' of '+x.nAll:'–')+'</td></tr>').join('')+'</tbody></table></div></div>';
+  h+='<div class="grid2">'+KP.map((k,i)=>'<div class="card cb"><canvas id="k'+i+'"></canvas></div>').join('')+'</div>';
+  $('main').innerHTML=h;
+  /* ----- charts ----- */
+  const ws=S.filter(x=>x.y!=null&&x.t);
+  mk('c0',{type:'bar',data:{labels:ws.map(x=>x.k.t),datasets:[{label:'Year to date ÷ target (%)',data:ws.map(x=>Math.round(x.y/x.t*1000)/10),backgroundColor:ws.map(x=>x.ys?G:R)},{type:'line',label:'Target = 100 %',data:ws.map(()=>100),borderColor:'#1D2127',borderDash:[7,5],borderWidth:2,pointRadius:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Every KPI against its target, '+YR+' year to date (% of target)',font:{size:15}},subtitle:{display:true,text:'Left of the 100 % line is better for all KPIs except Boiler Efficiency, where right of it is better',font:{size:11}},legend:{position:'bottom'}},scales:{x:{beginAtZero:true,title:{display:true,text:'% of target'}},y:{ticks:{font:{size:10}}}}}});
+  mk('c00',{type:'bar',data:{labels:MONS,datasets:[{label:'KPIs on target (%)',data:mpct.map(v=>v==null?null:Math.round(v)),backgroundColor:mpct.map(v=>v==null?'#ccc':v>=100?G:v>=60?'#E0A526':R)},{type:'line',label:'Target = every KPI on target (100 %)',data:MONS.map(()=>100),borderColor:'#1D2127',borderDash:[7,5],borderWidth:2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Share of the KPIs that met their target, by month — '+YR,font:{size:15}},legend:{position:'bottom'}},scales:{y:{min:0,max:110,title:{display:true,text:'% of the KPIs with a figure'}}}}});
+  const cmpSer=CMP&&D.years[CMP]?KP.map(k=>series(+CMP,k).concat([ytd(+CMP,k)])):null;
+  S.forEach((x,i)=>{const k=x.k,sc=k.pct?100:1,lab=MONS.concat(['YTD']),vals=x.v.concat([x.y]).map(v=>v==null?null:v*sc),t=x.t==null?null:x.t*sc;
+    const ds=[{label:YR+' actual',data:vals,backgroundColor:vals.map((v,j)=>v==null?'#ccc':j===12?N:met(k,v/sc,x.t)===false?R:G),order:2},{type:'line',label:'Target '+(t==null?'(not set)':(k.dir==='low'?'≤ ':'≥ ')+(+t.toFixed(4))),data:lab.map(()=>t),borderColor:'#1D2127',borderDash:[7,5],borderWidth:2,pointRadius:0,order:1}];
+    if(cmpSer)ds.push({type:'line',label:CMP+' actual',data:cmpSer[i].map(v=>v==null?null:v*sc),borderColor:'#8A94A3',borderDash:[2,3],borderWidth:2,pointRadius:3,pointBackgroundColor:'#8A94A3',order:0,spanGaps:true});
+    mk('k'+i,{type:'bar',data:{labels:lab,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:k.t+' ('+k.u+') — YTD '+fmt(k,x.y)+(x.ys==null?'':x.ys?' ✓ on target':' ✗ off target'),font:{size:13}},legend:{position:'bottom',labels:{boxWidth:14,font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y==null?'–':(+c.parsed.y.toFixed(k.dec+1)).toLocaleString())}}},scales:{y:{beginAtZero:true,title:{display:true,text:k.u}}}}})});
+}
+
+/* ---------- actions ---------- */
+function openModal(h){$('host').innerHTML='<div class="veil"><div class="modal">'+h+'</div></div>'}
+const closeW=()=>{$('host').innerHTML=''};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act;
+  if(act==='close')closeW();
+  else if(act==='defs')openModal('<h2>KPI definitions</h2><p class="note" style="margin:0 0 8px">How each KPI is worked out from the monthly figures of the “Data” sheet (the same formulas as the workbook’s KPI columns).</p><div class="tw" style="max-height:60vh"><table><thead><tr><th>KPI</th><th class="l">Unit</th><th class="l">Formula</th><th class="l">Better when</th></tr></thead><tbody>'+KP.map(k=>'<tr><td><b>'+esc(k.t)+'</b></td><td class="l">'+esc(k.u)+'</td><td class="l" style="white-space:normal">'+esc(k.f)+'</td><td class="l">'+(k.dir==='low'?'lower':'higher')+'</td></tr>').join('')+'</tbody></table></div><div class="foot"><button class="btn red" data-act="close">Close</button></div>');
+  else if(act==='targets'){const Y=D.years[YR];openModal('<h2>Targets — '+YR+'</h2><p class="note" style="margin:0 0 8px">The targets come from the “Target” columns of the uploaded workbook. Type a different value to override one (leave it empty to use the workbook’s). Percent KPIs are typed as numbers, e.g. 5 for 5 %.</p><div class="tw" style="max-height:60vh"><table><thead><tr><th>KPI</th><th>Workbook target</th><th>Your target</th></tr></thead><tbody>'+KP.map(k=>{const o=(D.ov[YR]||{})[k.id],f=Y.tg[k.id],sc=k.pct?100:1;return'<tr><td><b>'+esc(k.t)+'</b><div class="note">'+(k.dir==='low'?'≤':'≥')+' · '+esc(k.u)+'</div></td><td>'+(f==null?'—':+(f*sc).toFixed(4)+(k.pct?' %':''))+'</td><td><input type="number" step="any" data-tg="'+k.id+'" style="width:110px" value="'+(o==null?'':+(o*sc).toFixed(4))+'"></td></tr>'}).join('')+'</tbody></table></div><div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn red" data-act="savetg">Save targets</button></div>')}
+  else if(act==='savetg'){const o={};document.querySelectorAll('[data-tg]').forEach(i=>{const k=KP.find(x=>x.id===i.dataset.tg),v=parseFloat(i.value);if(isFinite(v))o[k.id]=k.pct?v/100:v});D.ov[YR]=o;save();closeW();render();toast('Targets saved')}
+});
+document.addEventListener('change',e=>{if(e.target.id==='yr'){YR=+e.target.value;CMP='';render()}else if(e.target.id==='cmp'){CMP=e.target.value;render()}});
+$('f').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{if(typeof XLSX==='undefined')throw new Error('the Excel library did not load — check the internet connection');
+    const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array'}),p=parseWorkbook(wb);
+    if(p.year&&p.year!==YR&&!confirm('The “Data” sheet of this file says '+p.year+', but the year chosen above is '+YR+'.\n\nStore these figures as '+YR+'?\n\n(Cancel, then choose '+p.year+' in the year box if the file really is '+p.year+'.)'))return;
+    if(D.years[YR]&&!confirm('Replace the '+YR+' figures uploaded on '+String(D.years[YR].at).slice(0,10)+' ('+D.years[YR].file+')?'))return;
+    const diff=[];KP.forEach(k=>{const own=p.own[k.id]||{};Object.keys(own).forEach(m=>{const mine=mval(k,p.raw[m]);if(mine!=null&&Math.abs(mine-own[m])>Math.max(1e-9,Math.abs(own[m])*0.005))diff.push(k.t+' '+MONS[m-1]+': mine '+fmt(k,mine)+' vs sheet '+fmt(k,own[m]))})});
+    D.years[YR]={file:f.name,at:new Date().toISOString(),raw:p.raw,tg:p.tg,diff:diff.slice(0,20)};save();render();toast(YR+' figures loaded: '+Object.keys(p.raw).length+' months')}
+  catch(err){toast('That file could not be read: '+err.message)}};
+$('xl').onclick=()=>{const Y=D.years[YR];if(!Y)return;const S=KP.map(k=>({k,v:series(YR,k),t:tgt(YR,k.id),y:ytd(YR,k)}));
+  const a=[['KPI','Unit','Better when','Target'].concat(MONS).concat(['Year to date','Year to date vs target','Months on target'])].concat(S.map(x=>{const ms=x.v.map(v=>met(x.k,v,x.t)),sc=x.k.pct?100:1,r=v=>v==null?'':+(v*sc).toFixed(4);return[x.k.t,x.k.u,x.k.dir==='low'?'lower':'higher',x.t==null?'':+(x.t*sc).toFixed(4)].concat(x.v.map(r)).concat([r(x.y),x.t==null||x.y==null?'':(met(x.k,x.y,x.t)?'on target':'off target'),ms.filter(z=>z!=null).length?ms.filter(z=>z===true).length+' of '+ms.filter(z=>z!=null).length:''])}));
+  const w=XLSX.utils.aoa_to_sheet(a);w['!cols']=[{wch:44},{wch:20},{wch:12},{wch:10}].concat(Array(12).fill({wch:10})).concat([{wch:14},{wch:20},{wch:16}]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,w,'Maintenance KPI '+YR);XLSX.writeFile(wb,'Maintenance_KPI_'+YR+'.xlsx')};
+YR=yrs()[0]||NOW;render();
+})();
+</script>
+</body>
+</html>

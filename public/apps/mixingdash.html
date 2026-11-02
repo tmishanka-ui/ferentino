@@ -1,0 +1,962 @@
+<!doctype html><html lang="en" data-theme="light"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mixing Department</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working console. Import bar, settings (rework codes, attendance, yearly targets), then a tabbed view: Daily, Weekly, Monthly, Yearly KPIs and a compound-wise Production tab. */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --line: #d6dce2;
+  --fg: #16212b;
+  --muted: #5a6875;
+  --accent: #1d5f8a;
+  --accent-soft: #dcebf5;
+  --good: #1b7a46;
+  --good-soft: #dff1e6;
+  --bad: #b4442a;
+  --bad-soft: #f8e2db;
+  --bar: #8fb1c9;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171d; --surface: #1a232c; --surface-2: #222d38; --line: #323f4c;
+    --fg: #e8edf2; --muted: #9aa8b5; --accent: #6fb2dd; --accent-soft: #1f3a4f;
+    --good: #5fcf8f; --good-soft: #17382a; --bad: #f08a6c; --bad-soft: #43251d; --bar: #3f6d8c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #1a232c; --surface-2: #222d38; --line: #323f4c;
+  --fg: #e8edf2; --muted: #9aa8b5; --accent: #6fb2dd; --accent-soft: #1f3a4f;
+  --good: #5fcf8f; --good-soft: #17382a; --bad: #f08a6c; --bad-soft: #43251d; --bar: #3f6d8c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+h1 { font-family: var(--font-display); font-size: 28px; line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: .01em; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.sub { color: var(--muted); margin: 4px 0 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.top { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; }
+.import { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button, .btn, select, input[type=number] { font: inherit; color: inherit; }
+button.primary {
+  background: var(--accent); color: var(--surface); border: 1px solid var(--accent); border-radius: 4px;
+  padding: 8px 14px; cursor: pointer; font-weight: 600;
+}
+button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+button.small { padding: 5px 10px; font-size: 13px; }
+button:hover { filter: brightness(1.08); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#drop { border: 1.5px dashed var(--line); border-radius: 6px; padding: 10px 14px; color: var(--muted); background: var(--surface-2); }
+#drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+#status { margin: 0; color: var(--muted); font-size: 13px; }
+#status.err { color: var(--bad); font-weight: 500; }
+.settings { display: grid; gap: 16px; }
+.srow { display: flex; flex-wrap: wrap; gap: 10px 32px; align-items: center; }
+.settings legend { padding: 0; font-weight: 600; margin-right: 6px; }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; min-width: 0; }
+label.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.defatt { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; }
+input[type=number] { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px; text-align: right; font-family: var(--font-num); width: 84px; }
+select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; max-width: 100%; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 16px; width: 100%; }
+.tfield { display: grid; gap: 2px; }
+.tfield .l { font-size: 13px; font-weight: 600; }
+.tfield .u { font-size: 12px; color: var(--muted); }
+.tfield .row { display: flex; gap: 8px; align-items: center; }
+.tfield .dir { font-size: 12px; color: var(--muted); }
+.divider { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin: -4px 0 14px; }
+.tab {
+  background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+  font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+  padding: 8px 16px 7px; cursor: pointer; margin-bottom: -1px;
+}
+.tab:hover { color: var(--fg); filter: none; }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.controls .grp { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.range { color: var(--muted); font-size: 13px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { background: var(--surface-2); border: 0; border-right: 1px solid var(--line); padding: 6px 14px; cursor: pointer; font-weight: 500; color: var(--fg); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.tile { border: 1px solid var(--line); border-radius: 6px; padding: 14px; background: var(--surface-2); display: grid; gap: 6px; min-width: 0; align-content: start; }
+.tile .id { font-family: var(--font-num); font-size: 12px; color: var(--accent); font-weight: 500; }
+.tile .name { font-weight: 600; line-height: 1.3; }
+.tile .val { font-family: var(--font-num); font-size: 30px; font-weight: 500; line-height: 1.1; }
+.tile .unit { font-size: 12px; color: var(--muted); }
+.tile .tgt { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.pill { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.block-h { margin: 22px 0 12px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.chart { border: 1px solid var(--line); border-radius: 6px; padding: 12px 12px 6px; min-width: 0; }
+.chart h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--font-num); font-size: 9px; fill: var(--muted); }
+.chart .tl { fill: var(--accent); font-weight: 500; }
+.chart .bar { fill: var(--bar); cursor: pointer; }
+.chart .bar.sel { fill: var(--accent); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tgtline { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.chart.wide { max-width: 100%; }
+.chart .hb { fill: var(--accent); }
+.chart .hl { fill: var(--fg); font-size: 10px; }
+.chart .hv { fill: var(--muted); font-size: 10px; }
+.tablewrap { overflow-x: auto; max-height: 520px; overflow-y: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 900px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); vertical-align: bottom; white-space: normal; background: var(--surface); position: sticky; top: 0; z-index: 1; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr.sel { background: var(--accent-soft); }
+table.plain tbody tr { cursor: default; }
+td.k { font-family: var(--font-num); }
+td.k.good { color: var(--good); } td.k.bad { color: var(--bad); }
+td input { width: 60px; }
+td .avg { color: var(--muted); font-family: var(--font-num); }
+td.txt { text-align: left; color: var(--muted); }
+tfoot td { font-weight: 600; border-bottom: 0; }
+.share { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.share .bg { width: 70px; height: 8px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.share .fg { height: 100%; background: var(--accent); }
+.matrix { min-width: 0; }
+.matrix th, .matrix td { padding: 6px 8px; }
+.matrix td:first-child, .matrix th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.matrix td.z { color: var(--muted); }
+.notes { color: var(--muted); font-size: 13px; display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+.foot-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+@media (max-width: 520px) { h1 { font-size: 24px; } .tile .val { font-size: 26px; } .tab { padding: 8px 9px 7px; font-size: 15px; } }
+@media (prefers-reduced-motion: no-preference) { .tile, .chart .bar { transition: fill .15s ease; } }
+</style>
+<style id="fit-theme">
+/* Ferentino management system look: Inter + Barlow Condensed, brand red accent, warm paper background, white header with a red rule */
+:root{--bg:#F2F0EB;--surface:#FFFFFF;--surface-2:#F7F5F1;--line:#DDD8CF;--fg:#1D2127;--muted:#5E6772;
+ --accent:#DA1B22;--accent-soft:#FBE9EA;--good:#2C7A4B;--good-soft:#E1F0E7;--bad:#B3151B;--bad-soft:#FBE9EA;--bar:#9CB4D6;
+ --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--font-body:"Inter",system-ui,"Segoe UI",Arial,sans-serif;--font-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;color-scheme:light}
+body{font-size:14px}
+.panel{border-radius:10px}
+.top{background:#fff;border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:10px;padding:12px 18px;align-items:center}
+.top .brand{display:flex;align-items:center;gap:14px}
+.top .brand img{height:38px;width:auto;border-radius:4px;display:block;flex-shrink:0}
+h1{text-transform:uppercase;font-size:28px;font-weight:600}
+h2{font-weight:600}
+button.primary,button.ghost{border-radius:7px}
+button.primary:hover{filter:none;background:#B3151B;border-color:#B3151B}
+button.ghost:hover{background:var(--accent-soft);filter:none}
+select,input[type=number]{border-radius:6px}
+.tab{font-size:19px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><img src="data:image/jpeg;base64,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" alt="Ferentino"><div>
+      <h1>Mixing Department</h1>
+      <p class="sub">KPI 3.1 to 3.5 by day, week, month and year, plus compound-wise production, from the daily mixing and daily down time sheets.</p>
+    </div></div>
+    <div class="import">
+      <div id="drop">Drop Mixing Summery .xlsx here</div>
+      <input id="file" type="file" accept=".xlsx,.xlsm,.xls" hidden>
+      <button id="pick" type="button" class="primary">Import workbook</button>
+    </div>
+  </header>
+  <p id="status" role="status" class="panel">Showing the 2 Jan to 27 Oct 2026 snapshot from Mixing Summery 2026.xlsx. Import the workbook to refresh it. The file is read in your browser and is not uploaded.</p>
+
+  <section class="panel" aria-labelledby="set-h">
+    <div class="settings">
+      <div class="srow">
+        <fieldset>
+          <legend id="set-h">Rework time includes</legend>
+          <label class="chk"><input type="checkbox" class="code" value="2.04" checked> Extra time for Master (2.04)</label>
+          <label class="chk"><input type="checkbox" class="code" value="2.05" checked> Extra time for Final (2.05)</label>
+          <label class="chk"><input type="checkbox" class="code" value="3.52"> Extra time for 2nd stage (3.52)</label>
+          <label class="chk"><input type="checkbox" class="code" value="2.03"> Change over (2.03)</label>
+        </fieldset>
+        <label class="defatt" for="defatt">Default attendance <input id="defatt" type="number" min="1" step="0.5" value="8"></label>
+      </div>
+      <hr class="divider">
+      <div>
+        <div class="srow" style="margin-bottom:10px">
+          <strong id="tg-h">KPI targets for the year</strong>
+          <label for="tyear">Year <select id="tyear"></select></label>
+          <button type="button" class="ghost small" id="treset">Reset to QMS values</button>
+          <span class="range" id="tnote"></span>
+        </div>
+        <div class="tgrid" id="tgrid"></div>
+      </div>
+      <hr class="divider">
+      <div id="cdbox">
+        <div class="srow" style="margin-bottom:8px"><strong>KPI 3.5 · Compound delay of the presses</strong>
+          <label for="platt">Number of platterns <input id="platt" type="number" min="1" step="1" value="84"></label>
+          <span class="range" id="dlnote"></span></div>
+        <p class="sub" style="margin:0 0 8px">KPI 3.5 = press down time caused by compound delay ÷ (platterns × 24 × 60 × days in the period). The down time comes from the production down time report imported on the Press Downtime Dashboard tab.</p>
+        <details><summary id="cdsum">Down time causes counted as compound delay</summary><div id="causes" class="tgrid" style="margin-top:8px"></div></details>
+      </div>
+      <hr class="divider">
+      <div id="atbox">
+        <div class="srow" style="margin-bottom:8px"><strong>KPI 3.4 · Attendance from the HR attendance report</strong><span class="range" id="atnote"></span></div>
+        <p class="sub" style="margin:0 0 8px">Default attendance comes from the daily attendance report uploaded on the HR Department · Attendance tab. A figure typed into the table below replaces it for those days, and days with no report use the default attendance above. <b>Additional manpower</b> typed in the table is added on top, and the sum is what the KPIs use.</p>
+        <div class="srow" style="margin-bottom:8px"><label class="chk"><input type="radio" name="atmode" value="assigned" class="atm" checked> Employees assigned to the Mixing group (Shift Groups tab)</label><label class="chk"><input type="radio" name="atmode" value="locations" class="atm"> Everyone at the chosen locations</label></div>
+        <details><summary id="atsum">Locations and shift types counted</summary><div id="atlocs" class="tgrid" style="margin-top:8px"></div><div id="atcls" class="srow" style="margin-top:10px"></div></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Performance">
+    <div class="tabs" role="tablist" aria-label="Report">
+      <button class="tab" role="tab" id="tab-kpi" data-view="kpi" aria-selected="true" tabindex="0">KPI</button>
+      <button class="tab" role="tab" id="tab-production" data-view="production" aria-selected="false" tabindex="-1">Production</button>
+    </div>
+
+    <div id="view" role="tabpanel">
+      <div class="controls">
+        <div class="grp">
+          <div class="seg" id="kseg" role="group" aria-label="Basis">
+            <button type="button" data-kv="daily" aria-pressed="false">Daily</button>
+            <button type="button" data-kv="weekly" aria-pressed="false">Weekly</button>
+            <button type="button" data-kv="monthly" aria-pressed="true">Monthly</button>
+            <button type="button" data-kv="yearly" aria-pressed="false">Yearly</button>
+          </div>
+          <label id="monthfilter" hidden>Month <select id="mfilter"></select></label>
+          <label><span id="plabel">Period</span> <select id="period"></select></label>
+        </div>
+        <span class="range" id="range"></span>
+      </div>
+      <div class="tiles" id="tiles"></div>
+
+      <h2 class="block-h" id="trend-h">Trend</h2>
+      <div class="charts" id="charts"></div>
+
+      <h2 class="block-h" id="tbl-h">Table</h2>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th id="th-p">Period</th><th>Production days</th><th>Production (kg)</th><th>Production time (min)</th><th>Rework (kg)</th><th>Rework time (min)</th><th>Attendance (default)</th><th>Additional manpower</th><th>Manpower used</th>
+              <th>3.1 Rework time (%)</th><th>3.2 Output (kg/h)</th><th>3.3 Rework (% by kg)</th><th>3.4 Output per man hour (kg)</th><th>3.5 Compound delay (% of platterns time)</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+          <tfoot id="avg"></tfoot>
+        </table>
+      </div>
+      <div class="foot-actions">
+        <button class="ghost" id="copy" type="button">Copy table as CSV</button>
+        <span id="copymsg" class="sub" role="status"></span>
+      </div>
+    </div>
+
+    <div id="pview" role="tabpanel" aria-labelledby="tab-production" hidden>
+      <div class="controls">
+        <div class="grp">
+          <div class="seg" id="pseg" role="group" aria-label="Basis">
+            <button type="button" data-pv="daily" aria-pressed="false">Daily</button>
+            <button type="button" data-pv="weekly" aria-pressed="false">Weekly</button>
+            <button type="button" data-pv="monthly" aria-pressed="true">Monthly</button>
+          </div>
+          <label id="pmonthfilter" hidden>Month <select id="pmfilter"></select></label>
+          <label><span id="pplabel">Month</span> <select id="pperiod"></select></label>
+          <label>Group by <select id="pgroup"><option value="compound">Compound</option><option value="type">Compound type</option></select></label>
+        </div>
+        <span class="range" id="prange"></span>
+      </div>
+      <div class="tiles" id="ptiles"></div>
+
+      <h2 class="block-h" id="pchart-h">Top compounds</h2>
+      <div class="charts"><div class="chart" id="pchart"></div></div>
+
+      <h2 class="block-h" id="ptbl-h">Compounds</h2>
+      <div class="tablewrap">
+        <table class="plain">
+          <thead>
+            <tr><th id="pth-n">Compound</th><th>Type</th><th>Brand</th><th>Batches</th><th>Production (kg)</th><th>Mixing time (min)</th><th>Output (kg/h)</th><th>Share of kg</th></tr>
+          </thead>
+          <tbody id="prows"></tbody>
+          <tfoot id="pfoot"></tfoot>
+        </table>
+      </div>
+      <div class="foot-actions">
+        <button class="ghost" id="pcopy" type="button">Copy table as CSV</button>
+        <span id="pcopymsg" class="sub" role="status"></span>
+      </div>
+
+      <h2 class="block-h" id="pmx-h">Production by compound</h2>
+      <p class="sub" style="margin:-6px 0 10px" id="pmx-s"></p>
+      <div class="tablewrap">
+        <table class="plain matrix">
+          <thead id="mxh"></thead>
+          <tbody id="mxb"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <ul class="notes">
+      <li>3.1 = rework time / total production time x 100. Production time is the sum of Time /min in the daily mixing sheet.</li>
+      <li>3.2 = production kg / (production minutes / 60). 3.3 = kg of "Re work" batches / production kg x 100. 3.4 = 3.2 / attendance.</li>
+      <li>Weeks follow the Week column in the workbook. Days with no mixing rows are left out.</li>
+      <li>Targets start from the 2026 QMS KPI sheet (3.1 at most 2%, 3.2 at least 2000 kg/h, 3.3 at most 1%, 3.4 at least 250 kg per man hour). Changes are saved per year in this browser. Daily figures swing a lot, so read single days with that in mind.</li>
+      <li>Attendance is not in the workbook, so every day uses the default above (8). Typing a value in the Attendance column sets it for every day in that row. Clear the box to go back to the default.</li>
+      <li>The Production tab uses the description column of daily mixing as the compound, with its compound type and brand. Batches are the QTY column.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function () {
+  var MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var KPIS = [
+    { id: '3.1', name: 'Extra (NVA) time in compounding', unit: '% of production time', dir: 'low', dp: 2, def: 2 },
+    { id: '3.2', name: 'Output of mixer per hour', unit: 'kg per hour', dir: 'high', dp: 0, def: 2000 },
+    { id: '3.3', name: 'Re-work batches', unit: '% by kg', dir: 'low', dp: 2, def: 1 },
+    { id: '3.4', name: 'Output per man hour', unit: 'kg per man hour', dir: 'high', dp: 1, def: 250 },
+    { id: '3.5', name: 'Compound delay of the presses', unit: '% of platterns time', dir: 'low', dp: 2, def: null }
+  ];
+  var CODES = ['2.03', '2.04', '2.05', '3.52'];
+  /* Snapshot of the 2026 workbook, one row per production day:
+     [date, week, kg, minutes, rework kg, code 2.03, 2.04, 2.05, 3.52 minutes] */
+  var SNAP = [["2026-01-02",1,3370.5,165.0,0.0,20.0,2.5,85.0,0.0],["2026-01-03",1,1510.3,55.0,0.0,50.0,2.5,12.5,4.5],["2026-01-04",2,11961.82,470.0,0.0,35.0,57.5,81.0,22.0],["2026-01-05",2,12207.3,470.0,0.0,60.0,55.0,104.0,6.5],["2026-01-06",2,13761.46,390.0,510.0,70.0,10.0,27.0,18.0],["2026-01-07",2,9603.69,385.0,0.0,50.0,72.5,41.5,7.0],["2026-01-08",2,13805.06,458.0,0.0,32.0,60.0,38.5,11.0],["2026-01-09",2,3999.5,100.0,0.0,0.0,0.0,12.5,0.0],["2026-01-10",2,8832.32,305.0,0.0,120.0,32.5,28.5,13.5],["2026-01-11",3,12770.3,350.0,3060.0,50.0,17.5,37.0,2.0],["2026-01-12",3,14189.52,480.0,340.0,55.0,52.5,68.0,2.5],["2026-01-13",3,10037.52,310.0,0.0,40.0,20.0,57.5,0.0],["2026-01-14",3,15147.52,477.0,0.0,83.0,50.0,35.0,3.0],["2026-01-15",3,15030.9,430.0,0.0,50.0,5.0,37.0,41.0],["2026-01-16",3,10780.98,320.0,850.0,40.0,42.5,17.0,0.5],["2026-01-17",3,13813.02,460.0,1020.0,40.0,55.0,26.5,35.5],["2026-01-18",4,16845.78,540.0,0.0,40.0,30.0,68.0,5.5],["2026-01-19",4,15900.52,470.0,1020.0,70.0,25.0,18.5,6.5],["2026-01-20",4,11102.68,365.0,0.0,65.0,25.0,69.5,7.5],["2026-01-21",4,14046.9,425.0,0.0,55.0,37.5,47.5,5.5],["2026-01-22",4,14548.36,480.0,0.0,50.0,40.0,58.0,6.0],["2026-01-23",4,13782.36,475.0,0.0,35.0,52.5,32.0,4.5],["2026-01-24",4,13801.68,470.0,0.0,30.0,67.5,34.5,12.0],["2026-01-25",5,13591.6,345.0,0.0,50.0,10.0,12.5,2.0],["2026-01-26",5,8164.32,210.0,0.0,30.0,7.5,12.0,0.0],["2026-01-27",5,12890.7,365.0,0.0,25.0,10.0,49.5,0.5],["2026-01-28",5,15531.46,515.0,0.0,55.0,55.0,21.0,6.5],["2026-01-29",5,14382.14,490.0,340.0,55.0,62.5,41.5,16.0],["2026-01-30",5,17383.3,540.0,850.0,60.0,47.5,55.5,7.5],["2026-01-31",5,3999.5,100.0,0.0,0.0,0.0,12.5,0.0],["2026-02-01",6,12653.82,415.0,0.0,40.0,23.0,58.5,6.0],["2026-02-02",6,6611.82,360.0,0.0,20.0,25.0,97.5,0.0],["2026-02-03",6,12519.32,375.0,1530.0,40.0,37.5,4.5,25.5],["2026-02-05",6,14091.28,475.0,0.0,60.0,60.0,41.5,2.0],["2026-02-06",6,6590.22,230.0,0.0,25.0,20.0,49.0,0.5],["2026-02-07",6,12204.0,415.0,0.0,40.0,12.5,81.5,4.5],["2026-02-08",7,10950.94,365.0,0.0,30.0,45.0,27.0,4.0],["2026-02-09",7,15561.48,495.0,0.0,78.0,37.5,58.0,2.0],["2026-02-10",7,11966.08,435.0,0.0,35.0,52.5,64.5,0.0],["2026-02-12",7,11972.5,480.0,0.0,40.0,75.0,66.5,20.5],["2026-02-13",7,11173.84,405.0,0.0,45.0,42.5,40.0,22.5],["2026-02-14",7,7544.28,210.0,0.0,10.0,2.5,39.0,0.0],["2026-02-16",8,12087.38,450.0,0.0,50.0,77.5,56.5,3.0],["2026-02-17",8,12597.6,385.0,2040.0,30.0,2.5,74.0,18.0],["2026-02-18",8,10554.06,385.0,0.0,65.0,32.5,44.5,14.0],["2026-02-19",8,9272.0,290.0,0.0,20.0,25.0,32.5,0.0],["2026-02-20",8,5411.78,155.0,0.0,50.0,2.5,28.0,0.5],["2026-02-21",8,11346.88,390.0,0.0,30.0,37.5,68.0,2.5],["2026-02-23",9,10909.36,380.0,340.0,30.0,25.0,70.0,21.0],["2026-02-24",9,12918.48,500.0,0.0,50.0,92.5,56.5,8.0],["2026-02-25",9,5237.3,135.0,0.0,15.0,0.0,20.5,2.5],["2026-02-26",9,7287.7,295.0,0.0,30.0,22.5,68.5,0.0],["2026-02-27",9,11110.08,315.0,0.0,20.0,15.0,39.5,5.5],["2026-02-28",9,16973.0,521.0,0.0,35.0,37.5,66.5,2.0],["2026-03-01",10,2879.64,120.0,0.0,0.0,0.0,57.0,0.0],["2026-03-03",10,8191.4,290.0,0.0,21.0,50.0,9.5,26.0],["2026-03-04",10,12071.0,415.0,0.0,55.0,47.5,45.0,17.5],["2026-03-05",10,9342.28,450.0,0.0,70.0,100.0,76.5,0.0],["2026-03-06",10,3969.78,130.0,0.0,5.0,0.0,11.5,34.5],["2026-03-07",10,10895.98,467.0,0.0,53.0,62.5,111.5,0.0],["2026-03-08",11,9534.16,333.0,0.0,55.0,25.0,62.5,6.5],["2026-03-09",11,9834.4,265.0,0.0,70.0,5.0,16.0,25.0],["2026-03-10",11,12879.5,490.0,0.0,50.0,92.5,9.0,41.0],["2026-03-11",11,2629.78,100.0,0.0,25.0,0.0,44.0,0.0],["2026-03-12",11,3361.36,170.0,0.0,15.0,30.0,54.0,0.0],["2026-03-13",11,12837.48,480.0,2720.0,60.0,30.0,115.5,24.0],["2026-03-14",11,7126.8,260.0,0.0,55.0,25.0,24.5,19.0],["2026-03-15",12,8426.12,305.0,0.0,45.0,37.5,46.5,10.0],["2026-03-16",12,7298.22,192.0,0.0,70.0,2.5,34.0,1.0],["2026-03-17",12,9654.2,480.0,0.0,50.0,147.5,24.0,7.0],["2026-03-18",12,12349.2,440.0,340.0,50.0,30.0,77.5,46.5],["2026-03-19",12,4936.36,185.0,0.0,10.0,0.0,70.0,0.0],["2026-03-20",12,2141.6,90.0,0.0,10.0,22.5,5.5,0.0],["2026-03-21",12,6328.2,270.0,340.0,45.0,15.0,33.0,48.0],["2026-03-23",13,7789.01,355.0,0.0,45.0,75.0,63.5,12.5],["2026-03-25",13,13409.4,449.0,0.0,46.0,31.5,58.0,10.5],["2026-03-26",13,12451.0,390.0,0.0,25.0,25.0,36.5,25.0],["2026-03-28",13,12904.7,392.0,1870.0,73.0,20.0,75.5,3.0],["2026-03-29",14,10379.08,327.0,0.0,68.0,25.0,39.0,5.0],["2026-03-30",14,15576.8,475.0,1020.0,95.0,30.0,47.5,23.0],["2026-03-31",14,12589.12,385.0,0.0,75.0,40.0,30.0,0.5],["2026-04-02",14,16758.38,495.0,2890.0,45.0,40.0,62.0,18.0],["2026-04-03",14,10247.88,375.0,0.0,50.0,67.5,5.5,15.0],["2026-04-04",14,14527.54,475.0,850.0,25.0,5.0,121.0,36.5],["2026-04-07",15,10796.3,470.0,0.0,50.0,95.0,77.5,16.5],["2026-04-08",15,8562.28,385.0,0.0,55.0,92.5,44.0,0.0],["2026-04-17",16,2943.6,90.0,0.0,10.0,0.0,4.0,23.0],["2026-04-18",16,11658.8,280.0,2040.0,30.0,0.0,29.5,5.5],["2026-04-19",17,10442.1,350.0,2040.0,50.0,0.0,83.5,46.0],["2026-04-20",17,9163.81,340.0,680.0,80.0,40.0,58.0,13.0],["2026-04-21",17,7098.58,185.0,1020.0,30.0,5.0,12.5,4.5],["2026-04-22",17,8649.86,270.0,0.0,45.0,10.0,43.0,14.5],["2026-04-23",17,10267.44,390.0,0.0,40.0,42.5,83.5,2.0],["2026-04-24",17,12918.27,505.0,0.0,55.0,100.0,32.0,15.0],["2026-04-29",18,10438.27,270.0,0.0,40.0,12.5,17.0,0.0],["2026-04-30",18,10070.68,390.0,0.0,45.0,60.0,53.0,2.5],["2026-05-02",18,14281.62,507.0,0.0,43.0,45.0,61.0,38.5],["2026-05-03",19,15607.55,480.0,1870.0,40.0,35.0,34.5,31.5],["2026-05-04",19,16309.56,482.0,850.0,58.0,10.0,95.5,13.0],["2026-05-05",19,14369.18,444.0,1020.0,56.0,35.0,33.5,13.0],["2026-05-06",19,12284.0,435.0,0.0,75.0,52.5,57.0,19.0],["2026-05-07",19,12613.51,460.0,0.0,70.0,55.0,78.5,35.0],["2026-05-08",19,17094.9,565.0,2720.0,45.0,70.0,80.0,4.5],["2026-05-09",19,14056.77,375.0,1700.0,35.0,22.5,33.0,1.0],["2026-05-10",20,12228.88,295.0,0.0,50.0,0.0,17.5,18.5],["2026-05-11",20,12314.57,475.0,1700.0,55.0,117.5,33.0,0.0],["2026-05-12",20,5010.96,335.0,0.0,55.0,17.5,90.0,0.0],["2026-05-13",20,5301.94,160.0,0.0,30.0,5.0,10.0,0.0],["2026-05-14",20,4617.92,120.0,1020.0,15.0,0.0,18.0,4.0],["2026-05-15",20,8096.78,225.0,0.0,30.0,7.5,5.5,3.5],["2026-05-16",20,17692.32,520.0,0.0,50.0,42.5,35.5,5.5],["2026-05-17",21,20034.22,500.0,2380.0,60.0,12.5,35.0,3.5],["2026-05-18",21,14666.96,475.0,0.0,55.0,35.0,42.5,1.5],["2026-05-19",21,13050.16,460.0,0.0,50.0,65.0,33.5,2.5],["2026-05-20",21,15315.6,450.0,680.0,50.0,20.0,12.0,4.5],["2026-05-21",21,14146.78,455.0,510.0,50.0,30.0,34.0,14.5],["2026-05-22",21,10147.46,320.0,0.0,35.0,27.5,30.5,3.5],["2026-05-23",21,17981.0,485.0,3570.0,55.0,25.0,26.0,6.0],["2026-05-24",22,3929.7,95.0,0.0,5.0,0.0,16.0,0.0],["2026-05-25",22,16280.71,470.0,1190.0,60.0,20.0,22.5,0.5],["2026-05-26",22,16554.46,545.0,340.0,45.0,25.0,26.0,3.5],["2026-05-27",22,15117.56,450.0,0.0,70.0,30.0,15.0,4.5],["2026-05-28",22,14557.0,460.0,0.0,55.0,27.5,31.5,16.0],["2026-05-29",22,14277.48,425.0,340.0,55.0,20.0,35.0,3.0],["2026-06-01",23,6761.6,193.0,0.0,42.0,10.0,13.5,1.0],["2026-06-02",23,11345.71,380.0,0.0,50.0,52.5,24.0,0.0],["2026-06-03",23,9846.36,320.0,0.0,40.0,40.0,24.0,0.5],["2026-06-04",23,11131.98,355.0,1020.0,60.0,25.0,46.5,13.0],["2026-06-05",23,5784.8,135.0,0.0,5.0,0.0,11.5,4.5],["2026-06-06",23,12710.3,450.0,170.0,72.0,45.5,27.0,31.5],["2026-06-07",24,9939.28,325.0,0.0,35.0,22.5,14.0,5.0],["2026-06-08",24,20185.54,500.0,1700.0,70.0,10.0,21.0,20.5],["2026-06-09",24,15166.6,440.0,1360.0,60.0,17.5,42.0,4.0],["2026-06-10",24,14422.44,460.0,0.0,60.0,35.0,37.5,12.5],["2026-06-11",24,10602.72,390.0,0.0,60.0,50.0,57.0,0.0],["2026-06-12",24,15277.24,430.0,3060.0,65.0,30.0,21.0,7.0],["2026-06-13",24,16691.75,490.0,0.0,70.0,27.5,38.5,12.0],["2026-06-14",25,19726.3,475.0,6290.0,65.0,7.5,22.0,7.0],["2026-06-15",25,17923.13,463.0,2720.0,57.0,5.5,37.5,8.5],["2026-06-16",25,14541.98,475.0,1700.0,65.0,50.0,44.5,10.0],["2026-06-17",25,12382.16,395.0,1020.0,65.0,35.0,26.5,4.0],["2026-06-18",25,12642.62,380.0,0.0,60.0,22.5,17.0,17.0],["2026-06-19",25,4459.74,105.0,510.0,10.0,0.0,6.0,4.5],["2026-06-20",25,9756.24,350.0,0.0,30.0,35.0,45.5,0.0],["2026-06-21",26,6404.49,195.0,0.0,40.0,5.0,41.0,0.0],["2026-06-22",26,15086.19,425.0,1870.0,55.0,15.0,43.5,15.0],["2026-06-23",26,3784.32,135.0,0.0,35.0,15.0,8.0,19.0],["2026-06-24",26,15293.08,455.0,1700.0,60.0,17.5,25.5,22.5],["2026-06-25",26,11277.06,340.0,1020.0,45.0,10.0,41.5,9.5],["2026-06-26",26,11015.5,345.0,0.0,55.0,12.5,23.5,8.0],["2026-06-27",26,13165.5,360.0,2040.0,55.0,15.0,39.0,12.5],["2026-06-30",27,13651.7,416.0,0.0,367.5,15.0,21.0,0.5],["2026-07-01",27,7957.51,318.0,0.0,52.0,20.5,37.5,0.0],["2026-07-02",27,13346.98,440.0,0.0,50.0,12.5,58.5,16.0],["2026-07-03",27,10893.2,350.0,1530.0,65.0,40.0,4.5,8.5],["2026-07-04",27,12495.62,400.0,0.0,55.0,27.5,45.0,11.0],["2026-07-05",28,12790.18,360.0,1700.0,50.0,20.0,17.0,28.5],["2026-07-06",28,14218.04,445.0,0.0,45.0,37.5,33.5,2.0],["2026-07-07",28,7004.94,200.0,850.0,15.0,7.5,16.0,5.0],["2026-07-08",28,15660.44,490.0,510.0,55.0,32.5,25.0,6.5],["2026-07-09",28,14523.26,460.0,510.0,50.0,30.0,42.0,9.5],["2026-07-10",28,13892.92,360.0,2890.0,55.0,10.0,10.5,16.0],["2026-07-11",28,15106.36,415.0,2040.0,75.0,25.0,24.0,10.0],["2026-07-13",29,11820.4,415.0,0.0,75.0,52.5,37.0,15.0],["2026-07-14",29,12577.37,420.0,1360.0,65.0,30.0,41.0,25.0],["2026-07-15",29,14952.88,440.0,0.0,40.0,30.0,32.5,1.0],["2026-07-16",29,13854.79,425.0,0.0,45.0,32.5,17.5,14.5],["2026-07-17",29,4109.6,110.0,0.0,10.0,5.0,9.5,0.0],["2026-07-18",29,12209.78,415.0,340.0,45.0,27.5,22.5,15.5],["2026-07-19",30,11246.96,325.0,170.0,50.0,10.0,39.5,4.5],["2026-07-20",30,12289.54,410.0,0.0,60.0,47.5,23.5,12.5],["2026-07-21",30,13957.28,460.0,0.0,60.0,15.0,29.5,2.0],["2026-07-22",30,12544.14,420.0,0.0,50.0,35.0,37.0,16.0],["2026-07-23",30,13985.34,410.0,680.0,50.0,20.0,29.5,13.0],["2026-07-24",30,4898.67,145.0,0.0,15.0,5.0,27.0,0.0],["2026-07-25",30,12578.18,360.0,510.0,50.0,10.0,15.5,1.5],["2026-07-26",31,21146.79,565.0,3060.0,55.0,2.5,9.5,6.0],["2026-07-27",31,16507.0,515.0,0.0,45.0,30.0,22.5,3.5],["2026-07-28",31,14126.06,450.0,170.0,60.0,20.0,51.5,19.0],["2026-07-29",31,12349.22,375.0,340.0,50.0,20.0,26.0,7.5],["2026-07-30",31,17744.3,452.0,2210.0,53.0,2.0,4.5,0.5],["2026-07-31",31,13421.56,340.0,340.0,25.0,2.5,3.0,6.0],["2026-08-02",32,19418.74,505.0,4250.0,50.0,17.5,16.0,8.0],["2026-08-03",32,19554.48,510.0,4590.0,40.0,22.5,32.0,9.0],["2026-08-04",32,14851.19,424.0,680.0,46.0,19.5,26.0,5.5],["2026-08-05",32,13662.72,375.0,2380.0,55.0,10.0,38.5,3.0],["2026-08-06",32,15590.44,445.0,3570.0,70.0,17.5,30.0,14.5],["2026-08-07",32,14024.25,426.0,0.0,49.0,11.0,31.0,5.5],["2026-08-08",32,12589.84,365.0,0.0,40.0,7.5,22.5,11.5],["2026-08-09",33,11167.78,320.0,2550.0,55.0,2.5,41.0,17.5],["2026-08-10",33,14391.52,405.0,510.0,55.0,22.5,8.0,11.5],["2026-08-11",33,11144.99,390.0,0.0,50.0,35.0,58.5,1.5],["2026-08-12",33,14865.7,450.0,0.0,45.0,42.5,11.5,23.0],["2026-08-13",33,14779.97,455.0,1529.87,65.0,15.0,40.5,27.0],["2026-08-14",33,869.89,30.0,0.0,0.0,2.5,6.0,0.0],["2026-08-15",33,8828.46,315.0,1870.0,50.0,50.0,3.0,1.5],["2026-08-16",34,8952.88,260.0,0.0,60.0,5.0,30.0,3.0],["2026-08-17",34,11726.14,350.0,1190.0,45.0,20.0,24.0,4.0],["2026-08-18",34,15002.77,460.0,1360.0,60.0,30.0,22.5,14.0],["2026-08-19",34,14094.6,435.0,0.0,50.0,17.5,54.5,4.5],["2026-08-20",34,15647.39,420.0,3400.0,55.0,0.0,39.0,32.0],["2026-08-22",34,9452.4,425.0,1360.0,50.0,77.5,11.0,2.0],["2026-08-23",35,11061.18,345.0,0.0,50.0,32.5,1.5,10.0],["2026-08-24",35,15156.64,435.0,2890.0,75.0,12.5,38.0,16.5],["2026-08-25",35,12643.94,370.0,0.0,65.0,10.0,59.5,6.0],["2026-08-28",35,10337.72,380.0,1360.0,85.0,42.5,37.0,26.0],["2026-08-29",35,13443.0,415.0,510.0,85.0,27.5,20.5,17.0],["2026-08-30",36,8016.82,265.0,0.0,20.0,20.0,15.0,0.0],["2026-09-01",36,5991.16,240.0,2380.0,55.0,22.5,44.0,31.0],["2026-09-02",36,5841.94,225.0,0.0,15.0,25.0,48.5,0.0],["2026-09-03",36,11411.0,415.0,0.0,55.0,25.0,66.0,28.5],["2026-09-05",36,8460.4,310.0,0.0,55.0,22.5,15.5,15.0],["2026-09-06",37,10347.26,320.0,0.0,45.0,15.0,43.5,24.0],["2026-09-07",37,12598.43,415.0,1020.0,55.0,22.5,15.5,4.0],["2026-09-08",37,10107.7,365.0,0.0,65.0,20.0,38.5,6.5],["2026-09-09",37,9324.8,350.0,0.0,80.0,52.5,8.5,2.5],["2026-09-10",37,9756.96,345.0,0.0,45.0,45.0,52.5,0.0],["2026-09-12",37,12883.39,345.0,0.0,55.0,20.0,92.0,33.0],["2026-09-14",38,8012.18,335.0,170.0,55.0,65.0,31.0,1.5],["2026-09-15",38,9193.9,305.0,0.0,50.0,37.5,9.5,8.0],["2026-09-16",38,12171.72,385.0,0.0,60.0,17.5,36.0,34.5],["2026-09-17",38,7918.0,340.0,510.0,65.0,35.0,108.5,4.5],["2026-09-19",38,10630.42,455.0,0.0,45.0,67.5,69.5,0.0],["2026-09-20",39,9418.9,345.0,1700.0,50.0,22.5,55.0,8.0],["2026-09-21",39,12956.92,405.0,850.0,50.0,22.5,61.0,43.5],["2026-09-22",39,8738.8,240.0,2040.0,55.0,0.0,46.5,8.0],["2026-09-23",39,12547.52,500.0,0.0,70.0,77.5,63.0,3.0],["2026-09-25",39,7567.7,325.0,0.0,130.0,55.0,10.0,4.5],["2026-09-26",39,13747.26,385.0,0.0,65.0,37.5,20.5,19.0],["2026-09-27",40,15759.84,410.0,4080.0,30.0,10.0,22.0,16.0],["2026-09-28",40,9989.39,335.0,1190.0,45.0,42.5,20.0,0.5],["2026-09-29",40,8571.8,375.0,0.0,65.0,67.5,27.0,0.0],["2026-09-30",40,15860.33,475.0,0.0,45.0,22.5,71.0,4.5],["2026-10-01",40,7810.88,335.0,0.0,55.0,62.5,8.0,16.5],["2026-10-03",40,10549.6,455.0,0.0,45.0,100.0,1.5,38.5],["2026-10-04",41,10257.15,350.0,680.0,65.0,40.0,66.0,1.0],["2026-10-05",41,8710.55,315.0,1190.0,40.0,27.5,29.5,15.5],["2026-10-06",41,10851.5,425.0,0.0,55.0,32.5,61.5,20.0],["2026-10-07",41,11954.0,390.0,0.0,60.0,50.0,6.5,3.0],["2026-10-08",41,15884.54,460.0,4420.0,50.0,32.5,29.5,29.0],["2026-10-10",41,10834.2,350.0,0.0,50.0,30.0,7.0,19.5],["2026-10-11",42,10519.75,305.0,0.0,45.0,2.5,49.5,4.5],["2026-10-12",42,5551.8,285.0,0.0,55.0,75.0,4.5,0.0],["2026-10-13",42,1670.04,75.0,0.0,0.0,5.0,27.0,0.0],["2026-10-14",42,16374.84,485.0,1870.0,55.0,30.0,60.5,10.5],["2026-10-15",42,13494.17,405.0,0.0,65.0,17.5,75.5,4.0],["2026-10-17",42,6384.71,185.0,2380.0,35.0,0.0,20.0,32.0],["2026-10-18",43,11550.19,365.0,0.0,65.0,35.0,17.5,9.5],["2026-10-19",43,12524.26,360.0,1360.0,55.0,7.5,44.0,29.5],["2026-10-20",43,16685.19,495.0,1530.0,50.0,10.0,86.0,11.0],["2026-10-21",43,5628.43,190.0,850.0,25.0,32.5,12.0,7.5],["2026-10-22",43,14707.8,490.0,510.0,60.0,42.5,55.5,18.5],["2026-10-23",43,11584.77,420.0,0.0,60.0,60.0,41.5,3.0],["2026-10-24",43,12490.99,425.0,1360.0,60.0,42.5,49.5,21.0],["2026-10-25",44,7499.92,310.0,0.0,25.0,47.5,23.5,0.0],["2026-10-26",44,13479.9,400.0,0.0,80.0,20.0,66.5,7.5],["2026-10-27",44,9903.25,400.0,0.0,50.0,62.5,57.5,0.0]];
+  /* Compound table [description, type, brand] and production rows [date, compound index, batches, kg, minutes]. */
+  var DESCS = [["AS Bonding Master","Master","Black"],["AS Bonding final","Final","Black"],["AS final","Final","NM"],["AS master","Master","NM"],["BAP 2nd stage","2 nd stage","Black"],["BAP RW","Re work","Black"],["BAP final","Final","Black"],["BAP master","Master","Black"],["BCU 50 Final","Final","Black"],["BCU 50 Master","Master","Black"],["BEV 2nd stage","2 nd stage","Black"],["BEV RW","Re work","Black"],["BEV final","Final","Black"],["BEV master","Master","Black"],["BFP RW","Re work","Black"],["BFP final","Final","Black"],["BFP master","Master","Black"],["BLK TR Final","Final","Black"],["BLK TR Master","Master","Black"],["BLK TR Re work","Re work","Black"],["BTM final","Final","Black"],["Black colour M/B","Color M/B","Black"],["CSM final","Final","Black"],["CSM master","Master","Black"],["ECO 2nd stage","2 nd stage","NM"],["ECO final","Final","NM"],["ECO master","Master","NM"],["GPS 2nd stage","2 nd stage","Black"],["GPS RW","Re work","Black"],["GPS final","Final","Black"],["GPS master","Master","Black"],["GPT-3 final","Final","Black"],["GPT-3 master","Master","Black"],["GPT-M RW","Re work","Black"],["MBT RW","Re work","Black"],["MBT final","Final","Black"],["MBT master","Master","Black"],["MLRT RW","Re work","Black"],["MLRT final","Final","Black"],["MLRT master","Master","Black"],["NM HL Final","Final","Black"],["NM HL Master","Master","Black"],["NMG final","Final","NM"],["NMG master","Master","NM"],["RB Final","Final","Black"],["RB M1","Master","Black"],["RB M2","Master","Black"],["RGNM final","Final","NM"],["RGNM master","Master","NM"],["RH Final","Final","Black"],["RH Master","Master","Black"],["RNM 2nd stage","2 nd stage","NM"],["RNM final","Final","NM"],["RNM master","Master","NM"],["RS 2nd stage","2 nd stage","Black"],["RS Final","Final","Black"],["RS Master","Master","Black"],["RSS CL","Cleaning","Black"],["SP RW","Re work","Black"],["SP final","Final","Black"],["SVR 3L","Cleaning","Black"],["TEV Final","Final","Black"],["TEV Master","Master","Black"],["TEVRW","Re work","Black"],["TMT 2nd stage","2 nd stage","Black"],["TMT RW","Re work","Black"],["TMT final","Final","Black"],["TMT master","Master","Black"],["YELLOW M/B","Color M/B","NM"]];
+  var PROD = [["2026-01-02",22,1,170.9,10.0],["2026-01-02",31,20,3199.6,155.0],["2026-01-03",24,3,510.0,15.0],["2026-01-03",25,4,680.0,25.0],["2026-01-03",42,1,170.3,5.0],["2026-01-03",57,1,150.0,10.0],["2026-01-04",24,18,3060.0,85.0],["2026-01-04",25,15,2550.0,55.0],["2026-01-04",26,16,3121.6,175.0],["2026-01-04",31,19,3039.62,145.0],["2026-01-04",48,1,190.6,10.0],["2026-01-05",6,2,340.0,10.0],["2026-01-05",20,3,508.5,15.0],["2026-01-05",24,11,1870.0,45.0],["2026-01-05",25,16,2720.0,70.0],["2026-01-05",26,10,1951.0,120.0],["2026-01-05",31,20,3199.6,145.0],["2026-01-05",42,2,340.6,10.0],["2026-01-05",43,2,387.0,25.0],["2026-01-05",47,3,509.4,15.0],["2026-01-05",48,2,381.2,15.0],["2026-01-06",24,8,1360.0,30.0],["2026-01-06",25,8,1360.0,30.0],["2026-01-06",26,7,1365.7,55.0],["2026-01-06",31,37,5919.26,150.0],["2026-01-06",36,1,199.5,10.0],["2026-01-06",43,1,193.5,10.0],["2026-01-06",51,3,510.0,15.0],["2026-01-06",52,3,509.1,15.0],["2026-01-06",53,3,554.4,25.0],["2026-01-06",63,3,510.0,20.0],["2026-01-06",64,8,1280.0,30.0],["2026-01-07",26,13,2536.3,160.0],["2026-01-07",31,25,3999.5,125.0],["2026-01-07",35,1,173.09,5.0],["2026-01-07",42,1,170.3,5.0],["2026-01-07",43,1,193.5,15.0],["2026-01-07",47,4,679.2,15.0],["2026-01-07",48,3,571.8,25.0],["2026-01-07",64,8,1280.0,35.0],["2026-01-08",24,12,2040.0,53.0],["2026-01-08",25,23,3910.0,85.0],["2026-01-08",26,6,1170.6,50.0],["2026-01-08",31,17,2719.66,85.0],["2026-01-08",66,9,1526.4,40.0],["2026-01-08",67,8,1598.4,85.0],["2026-01-08",68,4,840.0,60.0],["2026-01-09",31,25,3999.5,100.0],["2026-01-10",24,9,1530.0,45.0],["2026-01-10",25,9,1530.0,35.0],["2026-01-10",26,8,1560.8,85.0],["2026-01-10",31,14,2239.72,70.0],["2026-01-10",47,6,1018.8,25.0],["2026-01-10",48,5,953.0,45.0],["2026-01-11",12,9,1530.0,55.0],["2026-01-11",14,18,3060.0,65.0],["2026-01-11",15,19,3233.8,80.0],["2026-01-11",26,7,1365.7,65.0],["2026-01-11",31,20,3199.6,70.0],["2026-01-11",48,2,381.2,15.0],["2026-01-12",24,10,1700.0,35.0],["2026-01-12",25,11,1870.0,50.0],["2026-01-12",26,2,390.2,20.0],["2026-01-12",31,14,2239.72,75.0],["2026-01-12",32,10,2102.0,95.0],["2026-01-12",42,1,170.3,5.0],["2026-01-12",47,3,509.4,10.0],["2026-01-12",51,3,510.0,10.0],["2026-01-12",52,3,509.1,15.0],["2026-01-12",53,3,554.4,25.0],["2026-01-12",63,2,340.0,10.0],["2026-01-12",66,10,1696.0,60.0],["2026-01-12",67,8,1598.4,70.0],["2026-01-13",15,8,1361.6,35.0],["2026-01-13",31,34,5439.32,160.0],["2026-01-13",32,8,1681.6,55.0],["2026-01-13",61,3,480.0,20.0],["2026-01-13",62,5,1075.0,40.0],["2026-01-14",4,5,800.0,20.0],["2026-01-14",6,5,850.0,20.0],["2026-01-14",22,2,341.8,12.0],["2026-01-14",24,7,1190.0,25.0],["2026-01-14",25,7,1190.0,25.0],["2026-01-14",26,6,1170.6,60.0],["2026-01-14",29,4,682.4,15.0],["2026-01-14",31,24,3839.52,105.0],["2026-01-14",35,9,1527.3,30.0],["2026-01-14",36,7,1396.5,55.0],["2026-01-14",42,2,340.6,10.0],["2026-01-14",43,2,387.0,20.0],["2026-01-14",48,3,571.8,35.0],["2026-01-14",62,4,860.0,45.0],["2026-01-15",4,6,960.0,25.0],["2026-01-15",6,6,1020.0,25.0],["2026-01-15",24,8,1360.0,30.0],["2026-01-15",25,8,1360.0,35.0],["2026-01-15",26,7,1365.7,55.0],["2026-01-15",31,30,4799.4,115.0],["2026-01-15",47,4,679.2,20.0],["2026-01-15",48,1,190.6,10.0],["2026-01-15",64,10,1600.0,70.0],["2026-01-15",66,10,1696.0,45.0],["2026-01-16",24,7,1190.0,25.0],["2026-01-16",25,8,1360.0,30.0],["2026-01-16",26,6,1170.6,75.0],["2026-01-16",31,31,4959.38,120.0],["2026-01-16",34,5,850.0,20.0],["2026-01-16",47,4,679.2,15.0],["2026-01-16",48,3,571.8,35.0],["2026-01-17",14,6,1020.0,30.0],["2026-01-17",15,6,1021.2,30.0],["2026-01-17",24,10,1700.0,65.0],["2026-01-17",25,11,1870.0,45.0],["2026-01-17",26,10,1951.0,120.0],["2026-01-17",31,29,4639.42,110.0],["2026-01-17",47,5,849.0,20.0],["2026-01-17",48,4,762.4,40.0],["2026-01-18",15,8,1361.6,40.0],["2026-01-18",16,7,1398.6,55.0],["2026-01-18",24,7,1190.0,30.0],["2026-01-18",25,7,1190.0,35.0],["2026-01-18",26,6,1170.6,55.0],["2026-01-18",29,15,2559.0,55.0],["2026-01-18",30,12,2642.4,105.0],["2026-01-18",31,26,4159.48,125.0],["2026-01-18",42,2,340.6,10.0],["2026-01-18",43,1,193.5,10.0],["2026-01-18",61,4,640.0,20.0],["2026-01-19",14,6,1020.0,25.0],["2026-01-19",15,17,2893.4,60.0],["2026-01-19",16,10,1998.0,80.0],["2026-01-19",29,13,2217.8,50.0],["2026-01-19",30,10,2202.0,85.0],["2026-01-19",31,14,2239.72,55.0],["2026-01-19",32,8,1681.6,70.0],["2026-01-19",64,5,800.0,20.0],["2026-01-19",66,5,848.0,25.0],["2026-01-20",4,10,1600.0,35.0],["2026-01-20",6,11,1870.0,55.0],["2026-01-20",15,7,1191.4,35.0],["2026-01-20",24,5,850.0,25.0],["2026-01-20",25,6,1020.0,30.0],["2026-01-20",26,4,780.4,45.0],["2026-01-20",31,16,2559.68,85.0],["2026-01-20",47,3,509.4,15.0],["2026-01-20",48,3,571.8,30.0],["2026-01-20",60,1,150.0,10.0],["2026-01-21",6,1,170.0,5.0],["2026-01-21",12,7,1190.0,25.0],["2026-01-21",24,9,1530.0,35.0],["2026-01-21",25,10,1700.0,50.0],["2026-01-21",26,8,1560.8,90.0],["2026-01-21",27,8,1280.0,30.0],["2026-01-21",29,9,1535.4,35.0],["2026-01-21",31,25,3999.5,115.0],["2026-01-21",47,3,509.4,10.0],["2026-01-21",48,3,571.8,30.0],["2026-01-22",2,4,240.0,10.0],["2026-01-22",24,11,1870.0,40.0],["2026-01-22",25,12,2040.0,55.0],["2026-01-22",26,10,1951.0,100.0],["2026-01-22",31,32,5119.36,150.0],["2026-01-22",43,1,193.5,10.0],["2026-01-22",47,4,679.2,15.0],["2026-01-22",48,3,571.8,30.0],["2026-01-22",51,3,510.0,15.0],["2026-01-22",52,3,509.1,15.0],["2026-01-22",53,3,554.4,25.0],["2026-01-22",60,1,150.0,10.0],["2026-01-22",61,1,160.0,5.0],["2026-01-23",24,13,2210.0,50.0],["2026-01-23",25,14,2380.0,65.0],["2026-01-23",26,12,2341.2,120.0],["2026-01-23",31,32,5119.36,155.0],["2026-01-23",48,3,571.8,25.0],["2026-01-23",61,2,320.0,10.0],["2026-01-23",68,4,840.0,50.0],["2026-01-24",24,18,3060.0,75.0],["2026-01-24",25,11,1870.0,45.0],["2026-01-24",26,16,3121.6,180.0],["2026-01-24",31,26,4159.48,115.0],["2026-01-24",47,6,1018.8,25.0],["2026-01-24",48,3,571.8,30.0],["2026-01-25",1,0,30.6,5.0],["2026-01-25",12,10,1700.0,35.0],["2026-01-25",24,8,1360.0,30.0],["2026-01-25",25,15,2550.0,55.0],["2026-01-25",26,6,1170.6,45.0],["2026-01-25",31,40,6399.2,150.0],["2026-01-25",48,2,381.2,25.0],["2026-01-26",24,6,1020.0,20.0],["2026-01-26",25,6,1020.0,20.0],["2026-01-26",26,5,975.5,45.0],["2026-01-26",31,29,4639.42,115.0],["2026-01-26",47,3,509.4,10.0],["2026-01-27",24,7,1190.0,25.0],["2026-01-27",25,7,1190.0,30.0],["2026-01-27",26,6,1170.6,50.0],["2026-01-27",31,55,8798.9,235.0],["2026-01-27",48,2,381.2,20.0],["2026-01-27",61,1,160.0,5.0],["2026-01-28",24,18,3060.0,65.0],["2026-01-28",25,17,2890.0,60.0],["2026-01-28",26,21,4097.1,200.0],["2026-01-28",31,7,1119.86,30.0],["2026-01-28",47,7,1188.6,35.0],["2026-01-28",48,4,762.4,35.0],["2026-01-28",51,3,510.0,15.0],["2026-01-28",52,3,509.1,15.0],["2026-01-28",53,3,554.4,25.0],["2026-01-28",68,4,840.0,35.0],["2026-01-29",24,12,2040.0,55.0],["2026-01-29",25,12,2040.0,45.0],["2026-01-29",26,16,3121.6,175.0],["2026-01-29",31,33,5279.34,140.0],["2026-01-29",47,3,509.4,15.0],["2026-01-29",48,3,571.8,30.0],["2026-01-29",58,2,340.0,10.0],["2026-01-29",61,3,480.0,20.0],["2026-01-30",7,1,185.0,10.0],["2026-01-30",24,20,3400.0,65.0],["2026-01-30",25,27,4590.0,100.0],["2026-01-30",26,12,2341.2,110.0],["2026-01-30",30,1,220.2,10.0],["2026-01-30",31,25,3999.5,130.0],["2026-01-30",38,1,170.6,5.0],["2026-01-30",39,1,185.2,10.0],["2026-01-30",47,4,679.2,20.0],["2026-01-30",48,4,762.4,50.0],["2026-01-30",58,5,850.0,30.0],["2026-01-31",31,25,3999.5,100.0],["2026-02-01",24,10,1700.0,35.0],["2026-02-01",25,11,1870.0,75.0],["2026-02-01",26,8,1560.8,65.0],["2026-02-01",31,19,3039.62,90.0],["2026-02-01",32,3,630.6,28.0],["2026-02-01",47,3,509.4,10.0],["2026-02-01",48,2,381.2,15.0],["2026-02-01",51,6,1020.0,27.0],["2026-02-01",52,6,1018.2,20.0],["2026-02-01",53,5,924.0,50.0],["2026-02-02",6,1,170.0,5.0],["2026-02-02",22,2,341.8,10.0],["2026-02-02",29,1,170.6,5.0],["2026-02-02",31,29,4639.42,270.0],["2026-02-02",62,6,1290.0,70.0],["2026-02-03",14,9,1530.0,55.0],["2026-02-03",15,9,1531.8,30.0],["2026-02-03",24,8,1360.0,30.0],["2026-02-03",25,8,1360.0,25.0],["2026-02-03",26,7,1365.7,85.0],["2026-02-03",31,19,3039.62,70.0],["2026-02-03",47,7,1188.6,30.0],["2026-02-03",48,6,1143.6,50.0],["2026-02-05",24,14,2380.0,50.0],["2026-02-05",25,15,2550.0,55.0],["2026-02-05",26,12,2341.2,125.0],["2026-02-05",31,16,2559.68,90.0],["2026-02-05",47,6,1018.8,25.0],["2026-02-05",48,6,1143.6,70.0],["2026-02-05",51,4,680.0,15.0],["2026-02-05",52,4,678.8,15.0],["2026-02-05",53,4,739.2,30.0],["2026-02-06",24,7,1190.0,25.0],["2026-02-06",25,7,1190.0,25.0],["2026-02-06",26,6,1170.6,65.0],["2026-02-06",31,19,3039.62,115.0],["2026-02-07",24,6,1020.0,25.0],["2026-02-07",25,7,1190.0,25.0],["2026-02-07",26,5,975.5,40.0],["2026-02-07",31,20,3199.6,150.0],["2026-02-07",47,7,1188.6,25.0],["2026-02-07",48,6,1143.6,50.0],["2026-02-07",51,7,1190.0,25.0],["2026-02-07",52,7,1187.9,25.0],["2026-02-07",53,6,1108.8,50.0],["2026-02-08",24,16,2720.0,60.0],["2026-02-08",25,15,2550.0,70.0],["2026-02-08",26,12,2341.2,110.0],["2026-02-08",31,13,2079.74,55.0],["2026-02-08",68,6,1260.0,70.0],["2026-02-09",3,1,230.0,10.0],["2026-02-09",15,7,1191.4,30.0],["2026-02-09",16,9,1798.2,60.0],["2026-02-09",24,17,2890.0,60.0],["2026-02-09",25,18,3060.0,70.0],["2026-02-09",26,15,2926.5,120.0],["2026-02-09",31,16,2559.68,100.0],["2026-02-09",48,2,381.2,25.0],["2026-02-09",51,1,170.0,5.0],["2026-02-09",52,1,169.7,5.0],["2026-02-09",53,1,184.8,10.0],["2026-02-10",2,2,139.8,20.0],["2026-02-10",6,1,170.0,5.0],["2026-02-10",7,2,370.0,10.0],["2026-02-10",15,14,2382.8,55.0],["2026-02-10",16,12,2397.6,135.0],["2026-02-10",29,1,170.6,5.0],["2026-02-10",30,1,220.2,10.0],["2026-02-10",31,36,5759.28,180.0],["2026-02-10",38,1,170.6,5.0],["2026-02-10",39,1,185.2,10.0],["2026-02-12",24,17,2890.0,80.0],["2026-02-12",25,17,2890.0,100.0],["2026-02-12",26,16,3121.6,185.0],["2026-02-12",31,5,799.9,35.0],["2026-02-12",47,7,1188.6,30.0],["2026-02-12",48,4,762.4,40.0],["2026-02-12",61,2,320.0,10.0],["2026-02-13",24,7,1190.0,40.0],["2026-02-13",25,7,1190.0,35.0],["2026-02-13",26,6,1170.6,55.0],["2026-02-13",31,8,1279.84,45.0],["2026-02-13",47,7,1188.6,35.0],["2026-02-13",48,6,1143.6,60.0],["2026-02-13",51,8,1360.0,35.0],["2026-02-13",52,8,1357.6,30.0],["2026-02-13",53,7,1293.6,70.0],["2026-02-14",31,46,7359.08,200.0],["2026-02-14",39,1,185.2,10.0],["2026-02-16",24,12,2040.0,45.0],["2026-02-16",25,12,2040.0,65.0],["2026-02-16",26,10,1951.0,100.0],["2026-02-16",31,21,3359.58,105.0],["2026-02-16",38,1,170.6,5.0],["2026-02-16",42,1,170.3,5.0],["2026-02-16",43,1,193.5,10.0],["2026-02-16",47,6,1018.8,20.0],["2026-02-16",48,6,1143.6,95.0],["2026-02-17",6,7,1190.0,40.0],["2026-02-17",14,12,2040.0,60.0],["2026-02-17",15,11,1872.2,55.0],["2026-02-17",31,30,4799.4,140.0],["2026-02-17",42,1,170.3,5.0],["2026-02-17",43,1,193.5,10.0],["2026-02-17",47,7,1188.6,30.0],["2026-02-17",48,6,1143.6,45.0],["2026-02-18",24,8,1360.0,30.0],["2026-02-18",25,1,170.0,5.0],["2026-02-18",26,8,1560.8,75.0],["2026-02-18",31,7,1119.86,60.0],["2026-02-18",47,7,1188.6,30.0],["2026-02-18",48,6,1143.6,55.0],["2026-02-18",51,8,1360.0,40.0],["2026-02-18",52,8,1357.6,30.0],["2026-02-18",53,7,1293.6,60.0],["2026-02-19",25,8,1360.0,35.0],["2026-02-19",26,4,780.4,30.0],["2026-02-19",31,30,4799.4,120.0],["2026-02-19",47,7,1188.6,35.0],["2026-02-19",48,6,1143.6,70.0],["2026-02-20",6,4,839.12,20.0],["2026-02-20",24,5,850.0,20.0],["2026-02-20",25,5,850.0,20.0],["2026-02-20",31,7,1119.86,45.0],["2026-02-20",42,2,340.6,10.0],["2026-02-20",43,1,193.5,10.0],["2026-02-20",51,2,340.0,5.0],["2026-02-20",52,3,509.1,10.0],["2026-02-20",53,2,369.6,15.0],["2026-02-21",24,5,850.0,20.0],["2026-02-21",25,5,850.0,20.0],["2026-02-21",26,4,780.4,35.0],["2026-02-21",31,46,7359.08,225.0],["2026-02-21",42,1,170.3,5.0],["2026-02-21",43,1,193.5,10.0],["2026-02-21",48,6,1143.6,75.0],["2026-02-23",14,2,340.0,10.0],["2026-02-23",24,12,2040.0,60.0],["2026-02-23",25,12,2040.0,45.0],["2026-02-23",26,10,1951.0,100.0],["2026-02-23",31,22,3519.56,140.0],["2026-02-23",47,6,1018.8,25.0],["2026-02-24",24,12,2040.0,50.0],["2026-02-24",25,11,1870.0,45.0],["2026-02-24",26,9,1755.9,105.0],["2026-02-24",31,21,3359.58,110.0],["2026-02-24",47,9,1528.2,45.0],["2026-02-24",48,8,1524.8,100.0],["2026-02-24",68,4,840.0,45.0],["2026-02-25",6,6,1020.0,25.0],["2026-02-25",31,15,2399.7,60.0],["2026-02-25",64,5,800.0,20.0],["2026-02-25",66,6,1017.6,30.0],["2026-02-26",26,9,1755.9,80.0],["2026-02-26",31,20,3199.6,120.0],["2026-02-26",47,7,1188.6,40.0],["2026-02-26",48,6,1143.6,55.0],["2026-02-27",24,17,2890.0,65.0],["2026-02-27",25,17,2890.0,70.0],["2026-02-27",26,6,1170.6,60.0],["2026-02-27",31,26,4159.48,120.0],["2026-02-28",24,18,3060.0,65.0],["2026-02-28",25,19,3230.0,85.0],["2026-02-28",26,15,2926.5,130.0],["2026-02-28",31,5,799.9,50.0],["2026-02-28",32,22,4624.4,86.0],["2026-02-28",47,7,1188.6,40.0],["2026-02-28",48,6,1143.6,65.0],["2026-03-01",31,18,2879.64,120.0],["2026-03-03",15,7,1191.4,25.0],["2026-03-03",24,9,1530.0,35.0],["2026-03-03",25,10,1700.0,40.0],["2026-03-03",26,8,1560.8,105.0],["2026-03-03",48,2,381.2,20.0],["2026-03-03",59,1,180.0,5.0],["2026-03-03",64,5,800.0,40.0],["2026-03-03",66,5,848.0,20.0],["2026-03-04",24,15,2550.0,70.0],["2026-03-04",25,17,2890.0,70.0],["2026-03-04",26,14,2731.4,150.0],["2026-03-04",31,20,3199.6,100.0],["2026-03-04",47,3,509.4,15.0],["2026-03-04",48,1,190.6,10.0],["2026-03-05",26,14,2731.4,160.0],["2026-03-05",31,26,4159.48,160.0],["2026-03-05",47,5,849.0,25.0],["2026-03-05",48,4,762.4,55.0],["2026-03-05",68,4,840.0,50.0],["2026-03-06",24,13,2210.0,80.0],["2026-03-06",31,11,1759.78,50.0],["2026-03-07",22,2,341.8,12.0],["2026-03-07",25,17,2890.0,80.0],["2026-03-07",26,10,1951.0,110.0],["2026-03-07",31,11,1759.78,90.0],["2026-03-07",47,10,1698.0,65.0],["2026-03-07",48,9,1715.4,95.0],["2026-03-07",59,3,540.0,15.0],["2026-03-08",12,13,2210.0,78.0],["2026-03-08",24,6,1020.0,25.0],["2026-03-08",26,2,390.2,15.0],["2026-03-08",31,17,2719.66,90.0],["2026-03-08",48,3,571.8,25.0],["2026-03-08",51,5,850.0,20.0],["2026-03-08",52,5,848.5,20.0],["2026-03-08",53,5,924.0,60.0],["2026-03-09",10,6,960.0,30.0],["2026-03-09",12,6,1020.0,30.0],["2026-03-09",24,8,1360.0,40.0],["2026-03-09",25,13,2210.0,50.0],["2026-03-09",27,6,960.0,25.0],["2026-03-09",29,6,1023.6,20.0],["2026-03-09",47,8,1358.4,30.0],["2026-03-09",48,4,762.4,35.0],["2026-03-09",59,1,180.0,5.0],["2026-03-10",10,7,1120.0,45.0],["2026-03-10",24,17,2890.0,80.0],["2026-03-10",25,17,2890.0,65.0],["2026-03-10",26,15,2926.5,180.0],["2026-03-10",47,9,1528.2,35.0],["2026-03-10",48,8,1524.8,85.0],["2026-03-11",25,3,510.0,20.0],["2026-03-11",31,11,1759.78,70.0],["2026-03-11",59,2,360.0,10.0],["2026-03-12",31,12,1919.76,80.0],["2026-03-12",47,4,679.2,30.0],["2026-03-12",48,4,762.4,60.0],["2026-03-13",14,16,2720.0,80.0],["2026-03-13",15,17,2893.4,85.0],["2026-03-13",31,16,2559.68,115.0],["2026-03-13",47,14,2377.2,80.0],["2026-03-13",48,12,2287.2,120.0],["2026-03-14",10,5,800.0,20.0],["2026-03-14",26,12,2341.2,115.0],["2026-03-14",59,2,360.0,10.0],["2026-03-14",64,11,1760.0,55.0],["2026-03-14",66,11,1865.6,60.0],["2026-03-15",24,10,1700.0,45.0],["2026-03-15",31,24,3839.52,125.0],["2026-03-15",47,7,1188.6,30.0],["2026-03-15",48,6,1143.6,70.0],["2026-03-15",53,3,554.4,35.0],["2026-03-16",3,1,230.0,10.0],["2026-03-16",6,4,680.0,20.0],["2026-03-16",12,10,1700.0,40.0],["2026-03-16",25,13,2210.0,55.0],["2026-03-16",31,4,639.92,20.0],["2026-03-16",51,3,510.0,12.0],["2026-03-16",52,3,509.1,15.0],["2026-03-16",64,3,480.0,10.0],["2026-03-16",66,2,339.2,10.0],["2026-03-17",24,8,1360.0,35.0],["2026-03-17",26,20,3902.0,235.0],["2026-03-17",31,10,1599.8,55.0],["2026-03-17",47,6,1018.8,25.0],["2026-03-17",48,6,1143.6,90.0],["2026-03-17",68,3,630.0,40.0],["2026-03-18",2,1,60.0,20.0],["2026-03-18",24,18,3060.0,100.0],["2026-03-18",25,25,4250.0,110.0],["2026-03-18",47,3,509.4,15.0],["2026-03-18",48,3,571.8,35.0],["2026-03-18",58,2,340.0,10.0],["2026-03-18",64,13,2080.0,55.0],["2026-03-18",66,5,848.0,55.0],["2026-03-18",68,3,630.0,40.0],["2026-03-19",2,1,60.0,15.0],["2026-03-19",31,22,3519.56,135.0],["2026-03-19",66,8,1356.8,35.0],["2026-03-20",47,7,1188.6,30.0],["2026-03-20",48,5,953.0,60.0],["2026-03-21",0,1,200.0,10.0],["2026-03-21",26,10,1951.0,90.0],["2026-03-21",48,2,381.2,15.0],["2026-03-21",58,2,340.0,10.0],["2026-03-21",61,1,160.0,5.0],["2026-03-21",64,10,1600.0,80.0],["2026-03-21",66,10,1696.0,60.0],["2026-03-23",1,1,170.0,10.0],["2026-03-23",6,12,2040.0,50.0],["2026-03-23",8,1,169.9,10.0],["2026-03-23",9,1,219.99,20.0],["2026-03-23",17,1,169.87,10.0],["2026-03-23",18,1,185.05,20.0],["2026-03-23",47,15,2547.0,95.0],["2026-03-23",48,12,2287.2,140.0],["2026-03-25",26,1,195.1,9.0],["2026-03-25",27,12,1920.0,45.0],["2026-03-25",29,12,2047.2,60.0],["2026-03-25",31,10,1599.8,45.0],["2026-03-25",47,15,2547.0,80.0],["2026-03-25",48,13,2477.8,120.0],["2026-03-25",51,5,850.0,25.0],["2026-03-25",52,5,848.5,20.0],["2026-03-25",53,5,924.0,45.0],["2026-03-26",20,2,339.0,10.0],["2026-03-26",24,10,1700.0,40.0],["2026-03-26",25,10,1700.0,35.0],["2026-03-26",31,10,1599.8,40.0],["2026-03-26",47,13,2207.4,70.0],["2026-03-26",48,12,2287.2,115.0],["2026-03-26",64,10,1600.0,55.0],["2026-03-26",66,6,1017.6,25.0],["2026-03-28",20,1,169.5,5.0],["2026-03-28",27,11,1760.0,40.0],["2026-03-28",29,12,2047.2,60.0],["2026-03-28",31,20,3199.6,97.0],["2026-03-28",34,11,1870.0,40.0],["2026-03-28",35,12,2036.4,70.0],["2026-03-28",48,6,1143.6,65.0],["2026-03-28",66,4,678.4,15.0],["2026-03-29",20,2,339.0,7.0],["2026-03-29",24,15,2550.0,55.0],["2026-03-29",25,15,2550.0,65.0],["2026-03-29",26,10,1951.0,100.0],["2026-03-29",31,6,959.88,25.0],["2026-03-29",48,2,381.2,15.0],["2026-03-29",64,5,800.0,20.0],["2026-03-29",66,5,848.0,40.0],["2026-03-30",15,6,1021.2,25.0],["2026-03-30",16,5,999.0,50.0],["2026-03-30",26,2,390.2,15.0],["2026-03-30",27,6,960.0,20.0],["2026-03-30",29,6,1023.6,30.0],["2026-03-30",31,12,1919.76,60.0],["2026-03-30",34,6,1020.0,35.0],["2026-03-30",35,6,1018.2,20.0],["2026-03-30",47,9,1528.2,35.0],["2026-03-30",48,2,381.2,15.0],["2026-03-30",55,6,1019.94,25.0],["2026-03-30",56,5,999.5,55.0],["2026-03-30",64,10,1600.0,45.0],["2026-03-30",66,10,1696.0,45.0],["2026-03-31",15,7,1191.4,20.0],["2026-03-31",16,9,1798.2,50.0],["2026-03-31",29,10,1706.0,40.0],["2026-03-31",30,8,1761.6,90.0],["2026-03-31",31,9,1439.82,60.0],["2026-03-31",35,7,1187.9,25.0],["2026-03-31",36,6,1197.0,50.0],["2026-03-31",64,7,1120.0,25.0],["2026-03-31",66,7,1187.2,25.0],["2026-04-02",12,3,510.0,10.0],["2026-04-02",14,11,1870.0,40.0],["2026-04-02",15,12,2042.4,40.0],["2026-04-02",27,5,800.0,30.0],["2026-04-02",29,15,2559.0,65.0],["2026-04-02",30,8,1761.6,100.0],["2026-04-02",31,16,2559.68,95.0],["2026-04-02",34,6,1020.0,20.0],["2026-04-02",35,5,848.5,20.0],["2026-04-02",64,10,1600.0,40.0],["2026-04-02",66,7,1187.2,35.0],["2026-04-03",24,10,1700.0,50.0],["2026-04-03",25,6,1020.0,20.0],["2026-04-03",26,15,2926.5,170.0],["2026-04-03",31,11,1759.78,45.0],["2026-04-03",47,10,1698.0,35.0],["2026-04-03",48,6,1143.6,55.0],["2026-04-04",24,14,2380.0,55.0],["2026-04-04",25,15,2550.0,75.0],["2026-04-04",26,1,195.1,10.0],["2026-04-04",31,18,2879.64,105.0],["2026-04-04",34,5,850.0,20.0],["2026-04-04",35,6,1018.2,25.0],["2026-04-04",48,1,190.6,10.0],["2026-04-04",64,12,1920.0,70.0],["2026-04-04",66,15,2544.0,105.0],["2026-04-07",24,21,3570.0,90.0],["2026-04-07",25,15,2550.0,100.0],["2026-04-07",26,15,2926.5,205.0],["2026-04-07",31,10,1599.8,65.0],["2026-04-07",60,1,150.0,10.0],["2026-04-08",25,7,1190.0,45.0],["2026-04-08",26,15,2926.5,195.0],["2026-04-08",29,8,1364.8,30.0],["2026-04-08",30,6,1321.2,55.0],["2026-04-08",31,11,1759.78,60.0],["2026-04-17",27,6,960.0,30.0],["2026-04-17",29,6,1023.6,25.0],["2026-04-17",64,6,960.0,35.0],["2026-04-18",14,12,2040.0,50.0],["2026-04-18",15,12,2042.4,40.0],["2026-04-18",27,15,2400.0,50.0],["2026-04-18",29,15,2559.0,60.0],["2026-04-18",31,10,1599.8,50.0],["2026-04-18",66,6,1017.6,30.0],["2026-04-19",10,12,1920.0,80.0],["2026-04-19",12,12,2040.0,40.0],["2026-04-19",14,12,2040.0,50.0],["2026-04-19",15,12,2042.4,60.0],["2026-04-19",31,15,2399.7,120.0],["2026-04-20",14,4,680.0,15.0],["2026-04-20",24,18,3060.0,75.0],["2026-04-20",25,17,2890.0,105.0],["2026-04-20",26,4,780.4,50.0],["2026-04-20",44,1,168.47,5.0],["2026-04-20",46,1,183.94,20.0],["2026-04-20",47,4,679.2,25.0],["2026-04-20",48,3,571.8,35.0],["2026-04-20",60,1,150.0,10.0],["2026-04-21",26,2,390.2,20.0],["2026-04-21",31,12,1919.76,50.0],["2026-04-21",34,6,1020.0,25.0],["2026-04-21",35,6,1018.2,20.0],["2026-04-21",48,2,381.2,15.0],["2026-04-21",54,7,1179.29,25.0],["2026-04-21",55,7,1189.93,30.0],["2026-04-22",24,13,2210.0,60.0],["2026-04-22",25,13,2210.0,70.0],["2026-04-22",26,6,1170.6,55.0],["2026-04-22",31,17,2719.66,70.0],["2026-04-22",47,2,339.6,15.0],["2026-04-23",24,8,1360.0,30.0],["2026-04-23",25,9,1530.0,45.0],["2026-04-23",26,7,1365.7,75.0],["2026-04-23",31,23,3679.54,150.0],["2026-04-23",47,7,1188.6,25.0],["2026-04-23",48,6,1143.6,65.0],["2026-04-24",24,13,2210.0,55.0],["2026-04-24",25,13,2210.0,45.0],["2026-04-24",26,12,2341.2,170.0],["2026-04-24",45,1,168.47,10.0],["2026-04-24",47,7,1188.6,35.0],["2026-04-24",48,6,1143.6,55.0],["2026-04-24",51,7,1190.0,30.0],["2026-04-24",52,8,1357.6,50.0],["2026-04-24",53,6,1108.8,55.0],["2026-04-29",12,3,510.0,15.0],["2026-04-29",13,3,600.0,30.0],["2026-04-29",31,54,8638.92,200.0],["2026-04-29",44,2,336.94,5.0],["2026-04-29",45,1,168.47,10.0],["2026-04-29",46,1,183.94,10.0],["2026-04-30",24,8,1360.0,25.0],["2026-04-30",25,8,1360.0,25.0],["2026-04-30",26,8,1560.8,65.0],["2026-04-30",31,19,3039.62,115.0],["2026-04-30",44,1,168.47,5.0],["2026-04-30",47,3,509.4,15.0],["2026-04-30",48,4,762.4,50.0],["2026-04-30",55,1,169.99,5.0],["2026-04-30",57,1,150.0,10.0],["2026-04-30",60,1,150.0,10.0],["2026-04-30",68,4,840.0,65.0],["2026-05-02",22,3,512.7,12.0],["2026-05-02",24,15,2550.0,90.0],["2026-05-02",25,15,2550.0,60.0],["2026-05-02",26,14,2731.4,145.0],["2026-05-02",31,24,3839.52,135.0],["2026-05-02",51,4,680.0,15.0],["2026-05-02",52,4,678.8,15.0],["2026-05-02",53,4,739.2,35.0],["2026-05-03",14,11,1870.0,50.0],["2026-05-03",15,12,2042.4,55.0],["2026-05-03",24,14,2380.0,65.0],["2026-05-03",25,15,2550.0,60.0],["2026-05-03",26,12,2341.2,115.0],["2026-05-03",44,1,168.47,5.0],["2026-05-03",46,1,183.94,10.0],["2026-05-03",47,3,509.4,15.0],["2026-05-03",48,3,571.8,30.0],["2026-05-03",49,6,959.58,20.0],["2026-05-03",54,6,1010.82,25.0],["2026-05-03",55,6,1019.94,30.0],["2026-05-04",12,5,850.0,22.0],["2026-05-04",14,5,850.0,25.0],["2026-05-04",15,5,851.0,15.0],["2026-05-04",24,9,1530.0,40.0],["2026-05-04",25,7,1190.0,30.0],["2026-05-04",26,4,780.4,40.0],["2026-05-04",27,12,1920.0,40.0],["2026-05-04",29,13,2217.8,45.0],["2026-05-04",31,8,1279.84,40.0],["2026-05-04",47,3,509.4,15.0],["2026-05-04",48,2,381.2,15.0],["2026-05-04",49,12,1919.16,80.0],["2026-05-04",54,6,1010.82,20.0],["2026-05-04",55,6,1019.94,55.0],["2026-05-05",24,16,2720.0,60.0],["2026-05-05",25,16,2720.0,55.0],["2026-05-05",26,14,2731.4,140.0],["2026-05-05",31,16,2559.68,85.0],["2026-05-05",34,6,1020.0,30.0],["2026-05-05",35,7,1187.9,30.0],["2026-05-05",48,2,381.2,15.0],["2026-05-05",51,2,340.0,7.0],["2026-05-05",52,2,339.4,7.0],["2026-05-05",53,2,369.6,15.0],["2026-05-06",24,11,1870.0,60.0],["2026-05-06",25,6,1020.0,15.0],["2026-05-06",26,10,1951.0,100.0],["2026-05-06",27,5,800.0,15.0],["2026-05-06",29,5,853.0,20.0],["2026-05-06",31,20,3199.6,115.0],["2026-05-06",47,4,679.2,15.0],["2026-05-06",48,2,381.2,20.0],["2026-05-06",61,3,480.0,15.0],["2026-05-06",68,5,1050.0,60.0],["2026-05-07",24,6,1020.0,20.0],["2026-05-07",25,12,2040.0,70.0],["2026-05-07",26,10,1951.0,120.0],["2026-05-07",27,3,480.0,10.0],["2026-05-07",29,3,511.8,15.0],["2026-05-07",31,20,3199.6,90.0],["2026-05-07",47,7,1188.6,35.0],["2026-05-07",48,5,953.0,45.0],["2026-05-07",49,7,1119.51,45.0],["2026-05-07",60,1,150.0,10.0],["2026-05-08",14,8,1360.0,30.0],["2026-05-08",15,7,1191.4,25.0],["2026-05-08",25,23,3910.0,130.0],["2026-05-08",26,13,2536.3,165.0],["2026-05-08",31,5,799.9,30.0],["2026-05-08",34,8,1360.0,30.0],["2026-05-08",35,9,1527.3,40.0],["2026-05-08",47,3,509.4,15.0],["2026-05-08",48,3,571.8,25.0],["2026-05-08",49,6,959.58,25.0],["2026-05-08",54,7,1179.29,25.0],["2026-05-08",55,7,1189.93,25.0],["2026-05-09",8,1,169.9,5.0],["2026-05-09",9,1,219.99,10.0],["2026-05-09",14,10,1700.0,35.0],["2026-05-09",15,10,1702.0,35.0],["2026-05-09",18,1,185.05,10.0],["2026-05-09",31,20,3199.6,75.0],["2026-05-09",47,6,1018.8,30.0],["2026-05-09",48,5,953.0,55.0],["2026-05-09",54,14,2358.58,50.0],["2026-05-09",55,15,2549.85,70.0],["2026-05-10",12,20,3400.0,80.0],["2026-05-10",27,7,1120.0,30.0],["2026-05-10",29,7,1194.2,25.0],["2026-05-10",31,12,1919.76,50.0],["2026-05-10",49,4,639.72,15.0],["2026-05-10",64,12,1920.0,55.0],["2026-05-10",66,12,2035.2,40.0],["2026-05-11",14,10,1700.0,35.0],["2026-05-11",15,10,1702.0,35.0],["2026-05-11",25,5,850.0,20.0],["2026-05-11",26,4,780.4,40.0],["2026-05-11",31,7,1119.86,30.0],["2026-05-11",47,9,1528.2,30.0],["2026-05-11",48,8,1524.8,90.0],["2026-05-11",49,9,1439.37,55.0],["2026-05-11",50,6,1199.94,120.0],["2026-05-11",60,1,150.0,10.0],["2026-05-11",61,2,320.0,10.0],["2026-05-12",17,1,169.87,10.0],["2026-05-12",25,10,1700.0,40.0],["2026-05-12",26,4,780.4,40.0],["2026-05-12",31,1,159.98,155.0],["2026-05-12",47,3,509.4,15.0],["2026-05-12",48,3,571.8,30.0],["2026-05-12",49,7,1119.51,45.0],["2026-05-13",12,2,340.0,10.0],["2026-05-13",25,10,1700.0,40.0],["2026-05-13",26,6,1170.6,50.0],["2026-05-13",31,3,479.94,10.0],["2026-05-13",47,5,849.0,20.0],["2026-05-13",48,4,762.4,30.0],["2026-05-14",6,2,340.0,10.0],["2026-05-14",31,14,2239.72,60.0],["2026-05-14",34,6,1020.0,25.0],["2026-05-14",35,6,1018.2,25.0],["2026-05-15",24,9,1530.0,35.0],["2026-05-15",25,11,1870.0,40.0],["2026-05-15",26,9,1755.9,70.0],["2026-05-15",31,16,2559.68,60.0],["2026-05-15",48,2,381.2,20.0],["2026-05-16",12,6,1020.0,25.0],["2026-05-16",24,13,2210.0,50.0],["2026-05-16",25,14,2380.0,50.0],["2026-05-16",26,12,2341.2,120.0],["2026-05-16",27,11,1760.0,40.0],["2026-05-16",29,12,2047.2,40.0],["2026-05-16",31,14,2239.72,80.0],["2026-05-16",47,7,1188.6,25.0],["2026-05-16",48,4,762.4,40.0],["2026-05-16",51,3,510.0,10.0],["2026-05-16",52,4,678.8,15.0],["2026-05-16",53,3,554.4,25.0],["2026-05-17",12,11,1870.0,45.0],["2026-05-17",14,14,2380.0,50.0],["2026-05-17",15,15,2553.0,60.0],["2026-05-17",24,7,1190.0,15.0],["2026-05-17",25,8,1360.0,30.0],["2026-05-17",26,7,1365.7,60.0],["2026-05-17",27,6,960.0,25.0],["2026-05-17",29,6,1023.6,25.0],["2026-05-17",31,8,1279.84,30.0],["2026-05-17",48,2,381.2,20.0],["2026-05-17",49,9,1439.37,35.0],["2026-05-17",54,12,2021.64,50.0],["2026-05-17",55,13,2209.87,55.0],["2026-05-18",15,12,2042.4,55.0],["2026-05-18",16,10,1998.0,95.0],["2026-05-18",24,11,1870.0,40.0],["2026-05-18",25,12,2040.0,45.0],["2026-05-18",26,10,1951.0,85.0],["2026-05-18",29,8,1364.8,45.0],["2026-05-18",30,6,1321.2,50.0],["2026-05-18",31,8,1279.84,35.0],["2026-05-18",49,4,639.72,20.0],["2026-05-18",61,1,160.0,5.0],["2026-05-19",15,10,1702.0,45.0],["2026-05-19",16,8,1598.4,85.0],["2026-05-19",24,5,850.0,20.0],["2026-05-19",25,5,850.0,20.0],["2026-05-19",26,5,975.5,50.0],["2026-05-19",29,4,682.4,15.0],["2026-05-19",30,6,1321.2,55.0],["2026-05-19",31,13,2079.74,55.0],["2026-05-19",48,2,381.2,20.0],["2026-05-19",49,4,639.72,20.0],["2026-05-19",60,1,150.0,10.0],["2026-05-19",61,6,960.0,25.0],["2026-05-19",62,4,860.0,40.0],["2026-05-20",24,19,3230.0,70.0],["2026-05-20",25,14,2380.0,70.0],["2026-05-20",26,17,3316.7,130.0],["2026-05-20",31,25,3999.5,95.0],["2026-05-20",34,4,680.0,15.0],["2026-05-20",35,4,678.8,15.0],["2026-05-20",48,1,190.6,10.0],["2026-05-20",68,4,840.0,45.0],["2026-05-21",12,4,680.0,20.0],["2026-05-21",13,4,800.0,30.0],["2026-05-21",24,12,2040.0,50.0],["2026-05-21",25,13,2210.0,50.0],["2026-05-21",26,10,1951.0,85.0],["2026-05-21",31,11,1759.78,60.0],["2026-05-21",51,8,1360.0,35.0],["2026-05-21",52,8,1357.6,35.0],["2026-05-21",53,8,1478.4,80.0],["2026-05-21",63,3,510.0,10.0],["2026-05-22",24,9,1530.0,35.0],["2026-05-22",25,10,1700.0,40.0],["2026-05-22",26,8,1560.8,80.0],["2026-05-22",31,22,3519.56,100.0],["2026-05-22",35,5,848.5,20.0],["2026-05-22",36,4,798.0,35.0],["2026-05-22",48,1,190.6,10.0],["2026-05-23",7,3,555.0,25.0],["2026-05-23",12,7,1190.0,35.0],["2026-05-23",13,6,1200.0,55.0],["2026-05-23",14,16,2720.0,55.0],["2026-05-23",15,16,2723.2,60.0],["2026-05-23",24,6,1020.0,20.0],["2026-05-23",25,6,1020.0,25.0],["2026-05-23",26,5,975.5,45.0],["2026-05-23",29,4,682.4,15.0],["2026-05-23",34,5,850.0,20.0],["2026-05-23",35,5,848.5,20.0],["2026-05-23",47,7,1188.6,25.0],["2026-05-23",48,1,190.6,10.0],["2026-05-23",59,2,360.0,5.0],["2026-05-23",60,1,150.0,10.0],["2026-05-23",64,7,1120.0,30.0],["2026-05-23",66,7,1187.2,30.0],["2026-05-24",6,3,510.0,10.0],["2026-05-24",12,6,1020.0,25.0],["2026-05-24",31,15,2399.7,60.0],["2026-05-25",12,9,1530.0,45.0],["2026-05-25",13,8,1600.0,70.0],["2026-05-25",14,7,1190.0,25.0],["2026-05-25",15,11,1872.2,40.0],["2026-05-25",29,13,2217.8,45.0],["2026-05-25",30,10,2202.0,80.0],["2026-05-25",31,7,1119.86,25.0],["2026-05-25",55,15,2549.85,60.0],["2026-05-25",56,10,1999.0,80.0],["2026-05-26",12,4,680.0,15.0],["2026-05-26",13,4,800.0,40.0],["2026-05-26",15,5,851.0,20.0],["2026-05-26",16,4,799.2,30.0],["2026-05-26",24,7,1190.0,25.0],["2026-05-26",25,7,1190.0,25.0],["2026-05-26",26,7,1365.7,55.0],["2026-05-26",30,12,2642.4,95.0],["2026-05-26",31,17,2719.66,60.0],["2026-05-26",35,7,1187.9,30.0],["2026-05-26",36,6,1197.0,50.0],["2026-05-26",47,4,679.2,30.0],["2026-05-26",48,4,762.4,30.0],["2026-05-26",60,1,150.0,30.0],["2026-05-26",63,2,340.0,10.0],["2026-05-27",24,17,2890.0,60.0],["2026-05-27",25,18,3060.0,65.0],["2026-05-27",26,14,2731.4,120.0],["2026-05-27",31,17,2719.66,70.0],["2026-05-27",51,6,1020.0,25.0],["2026-05-27",52,5,848.5,20.0],["2026-05-27",53,10,1848.0,90.0],["2026-05-28",24,9,1530.0,35.0],["2026-05-28",25,9,1530.0,35.0],["2026-05-28",26,8,1560.8,65.0],["2026-05-28",31,10,1599.8,50.0],["2026-05-28",47,7,1188.6,30.0],["2026-05-28",48,6,1143.6,70.0],["2026-05-28",51,6,1020.0,25.0],["2026-05-28",52,6,1018.2,25.0],["2026-05-28",53,2,369.6,15.0],["2026-05-28",64,9,1440.0,40.0],["2026-05-28",66,9,1526.4,35.0],["2026-05-28",68,3,630.0,35.0],["2026-05-29",12,16,2720.0,70.0],["2026-05-29",24,10,1700.0,35.0],["2026-05-29",25,10,1700.0,35.0],["2026-05-29",26,18,3511.8,155.0],["2026-05-29",29,8,1364.8,30.0],["2026-05-29",31,16,2559.68,75.0],["2026-05-29",48,2,381.2,15.0],["2026-05-29",63,2,340.0,10.0],["2026-06-01",24,7,1190.0,25.0],["2026-06-01",25,6,1020.0,23.0],["2026-06-01",26,1,195.1,10.0],["2026-06-01",47,4,679.2,20.0],["2026-06-01",48,1,190.6,10.0],["2026-06-01",51,7,1190.0,25.0],["2026-06-01",52,7,1187.9,30.0],["2026-06-01",53,6,1108.8,50.0],["2026-06-02",24,10,1700.0,35.0],["2026-06-02",25,12,2040.0,45.0],["2026-06-02",26,15,2926.5,130.0],["2026-06-02",31,15,2399.7,65.0],["2026-06-02",49,7,1119.51,30.0],["2026-06-02",61,2,320.0,10.0],["2026-06-02",68,4,840.0,65.0],["2026-06-03",24,7,1190.0,25.0],["2026-06-03",25,7,1190.0,35.0],["2026-06-03",26,6,1170.6,60.0],["2026-06-03",31,22,3519.56,80.0],["2026-06-03",39,1,185.2,10.0],["2026-06-03",47,4,679.2,15.0],["2026-06-03",48,3,571.8,25.0],["2026-06-03",61,3,480.0,20.0],["2026-06-03",62,4,860.0,50.0],["2026-06-04",24,6,1020.0,25.0],["2026-06-04",25,6,1020.0,25.0],["2026-06-04",26,4,780.4,40.0],["2026-06-04",31,31,4959.38,140.0],["2026-06-04",34,6,1020.0,30.0],["2026-06-04",47,7,1188.6,35.0],["2026-06-04",48,6,1143.6,60.0],["2026-06-05",24,13,2210.0,50.0],["2026-06-05",25,13,2210.0,55.0],["2026-06-05",29,8,1364.8,30.0],["2026-06-06",3,1,230.0,10.0],["2026-06-06",22,1,170.9,5.0],["2026-06-06",24,14,2380.0,75.0],["2026-06-06",25,14,2380.0,55.0],["2026-06-06",26,12,2341.2,115.0],["2026-06-06",47,3,509.4,15.0],["2026-06-06",48,3,571.8,25.0],["2026-06-06",51,6,1020.0,25.0],["2026-06-06",52,6,1018.2,25.0],["2026-06-06",53,6,1108.8,60.0],["2026-06-06",57,1,150.0,10.0],["2026-06-06",59,1,180.0,5.0],["2026-06-06",61,3,480.0,20.0],["2026-06-06",63,1,170.0,5.0],["2026-06-07",26,18,3511.8,155.0],["2026-06-07",31,16,2559.68,70.0],["2026-06-07",48,3,571.8,25.0],["2026-06-07",64,10,1600.0,40.0],["2026-06-07",66,10,1696.0,35.0],["2026-06-08",12,5,850.0,20.0],["2026-06-08",14,10,1700.0,35.0],["2026-06-08",15,10,1702.0,35.0],["2026-06-08",22,1,170.9,5.0],["2026-06-08",23,1,201.8,10.0],["2026-06-08",24,21,3570.0,85.0],["2026-06-08",25,22,3740.0,85.0],["2026-06-08",31,6,959.88,25.0],["2026-06-08",47,4,679.2,30.0],["2026-06-08",54,6,1010.82,25.0],["2026-06-08",55,6,1019.94,25.0],["2026-06-08",61,4,640.0,15.0],["2026-06-08",62,3,645.0,30.0],["2026-06-08",64,10,1600.0,40.0],["2026-06-08",66,10,1696.0,35.0],["2026-06-09",14,8,1360.0,35.0],["2026-06-09",15,8,1361.6,35.0],["2026-06-09",24,8,1360.0,30.0],["2026-06-09",25,7,1190.0,25.0],["2026-06-09",26,6,1170.6,55.0],["2026-06-09",31,25,3999.5,100.0],["2026-06-09",42,1,170.3,5.0],["2026-06-09",43,1,193.5,10.0],["2026-06-09",47,5,849.0,20.0],["2026-06-09",48,5,953.0,40.0],["2026-06-09",49,8,1279.44,30.0],["2026-06-09",55,4,679.96,30.0],["2026-06-09",56,3,599.7,25.0],["2026-06-10",12,4,680.0,20.0],["2026-06-10",24,25,4250.0,100.0],["2026-06-10",25,23,3910.0,100.0],["2026-06-10",26,20,3902.0,180.0],["2026-06-10",31,8,1279.84,40.0],["2026-06-10",48,1,190.6,10.0],["2026-06-10",68,1,210.0,10.0],["2026-06-11",2,1,60.0,10.0],["2026-06-11",12,7,1190.0,30.0],["2026-06-11",13,6,1200.0,80.0],["2026-06-11",31,34,5439.32,170.0],["2026-06-11",47,7,1188.6,25.0],["2026-06-11",48,8,1524.8,75.0],["2026-06-12",12,11,1870.0,40.0],["2026-06-12",14,6,1020.0,25.0],["2026-06-12",15,6,1021.2,25.0],["2026-06-12",28,12,2040.0,45.0],["2026-06-12",29,12,2047.2,45.0],["2026-06-12",47,11,1867.8,45.0],["2026-06-12",48,11,2096.6,100.0],["2026-06-12",49,8,1279.44,30.0],["2026-06-12",61,6,960.0,25.0],["2026-06-12",62,5,1075.0,50.0],["2026-06-13",12,11,1870.0,40.0],["2026-06-13",24,10,1700.0,45.0],["2026-06-13",25,10,1700.0,50.0],["2026-06-13",26,8,1560.8,80.0],["2026-06-13",47,9,1528.2,40.0],["2026-06-13",48,5,953.0,45.0],["2026-06-13",51,7,1190.0,25.0],["2026-06-13",52,7,1187.9,30.0],["2026-06-13",53,6,1108.8,45.0],["2026-06-13",54,11,1853.17,40.0],["2026-06-13",55,12,2039.88,50.0],["2026-06-14",11,4,680.0,20.0],["2026-06-14",12,12,2040.0,45.0],["2026-06-14",13,8,1600.0,65.0],["2026-06-14",14,18,3060.0,65.0],["2026-06-14",15,18,3063.6,65.0],["2026-06-14",28,7,1190.0,30.0],["2026-06-14",29,8,1364.8,30.0],["2026-06-14",34,8,1360.0,20.0],["2026-06-14",35,9,1527.3,35.0],["2026-06-14",62,1,215.0,10.0],["2026-06-14",64,11,1760.0,40.0],["2026-06-14",66,11,1865.6,50.0],["2026-06-15",12,9,1530.0,35.0],["2026-06-15",13,8,1600.0,60.0],["2026-06-15",15,7,1191.4,30.0],["2026-06-15",28,8,1360.0,30.0],["2026-06-15",29,9,1535.4,40.0],["2026-06-15",31,9,1439.82,35.0],["2026-06-15",34,8,1360.0,30.0],["2026-06-15",35,8,1357.6,30.0],["2026-06-15",42,1,170.3,5.0],["2026-06-15",43,1,193.5,8.0],["2026-06-15",48,2,381.2,20.0],["2026-06-15",49,9,1439.37,40.0],["2026-06-15",54,9,1516.23,35.0],["2026-06-15",55,9,1529.91,35.0],["2026-06-15",64,4,640.0,15.0],["2026-06-15",66,4,678.4,15.0],["2026-06-16",12,6,1020.0,25.0],["2026-06-16",14,5,850.0,20.0],["2026-06-16",29,5,853.0,20.0],["2026-06-16",30,4,880.8,30.0],["2026-06-16",31,16,2559.68,80.0],["2026-06-16",34,5,850.0,25.0],["2026-06-16",35,5,848.5,20.0],["2026-06-16",47,6,1018.8,25.0],["2026-06-16",48,4,762.4,40.0],["2026-06-16",49,5,799.65,20.0],["2026-06-16",50,5,999.95,60.0],["2026-06-16",55,10,1699.9,40.0],["2026-06-16",56,7,1399.3,70.0],["2026-06-17",15,13,2212.6,55.0],["2026-06-17",16,6,1198.8,50.0],["2026-06-17",26,3,585.3,25.0],["2026-06-17",28,6,1020.0,25.0],["2026-06-17",29,14,2388.4,55.0],["2026-06-17",30,6,1321.2,60.0],["2026-06-17",42,1,170.3,5.0],["2026-06-17",43,1,193.5,10.0],["2026-06-17",47,7,1188.6,30.0],["2026-06-17",48,6,1143.6,55.0],["2026-06-17",49,2,319.86,10.0],["2026-06-17",61,4,640.0,15.0],["2026-06-18",24,12,2040.0,55.0],["2026-06-18",25,12,2040.0,40.0],["2026-06-18",26,7,1365.7,60.0],["2026-06-18",31,19,3039.62,80.0],["2026-06-18",42,1,170.3,5.0],["2026-06-18",51,6,1020.0,25.0],["2026-06-18",52,6,1018.2,25.0],["2026-06-18",53,6,1108.8,45.0],["2026-06-18",68,4,840.0,45.0],["2026-06-19",12,11,1870.0,40.0],["2026-06-19",31,13,2079.74,50.0],["2026-06-19",58,3,510.0,15.0],["2026-06-20",12,5,850.0,35.0],["2026-06-20",24,10,1700.0,35.0],["2026-06-20",25,10,1700.0,35.0],["2026-06-20",26,9,1755.9,90.0],["2026-06-20",44,2,336.94,15.0],["2026-06-20",47,10,1698.0,55.0],["2026-06-20",48,9,1715.4,85.0],["2026-06-21",12,12,2040.0,50.0],["2026-06-21",31,18,2879.64,90.0],["2026-06-21",49,2,319.86,10.0],["2026-06-21",50,1,199.99,10.0],["2026-06-21",61,2,320.0,10.0],["2026-06-21",62,3,645.0,25.0],["2026-06-22",12,12,2040.0,45.0],["2026-06-22",14,6,1020.0,25.0],["2026-06-22",15,6,1021.2,25.0],["2026-06-22",31,15,2399.7,65.0],["2026-06-22",33,5,850.0,25.0],["2026-06-22",49,7,1119.51,40.0],["2026-06-22",50,5,999.95,45.0],["2026-06-22",55,7,1189.93,25.0],["2026-06-22",56,5,999.5,45.0],["2026-06-22",61,3,480.0,15.0],["2026-06-22",64,9,1440.0,35.0],["2026-06-22",66,9,1526.4,35.0],["2026-06-23",23,1,201.8,15.0],["2026-06-23",31,4,639.92,20.0],["2026-06-23",61,2,320.0,10.0],["2026-06-23",62,3,645.0,30.0],["2026-06-23",64,6,960.0,40.0],["2026-06-23",66,6,1017.6,20.0],["2026-06-24",24,9,1530.0,45.0],["2026-06-24",25,10,1700.0,35.0],["2026-06-24",26,8,1560.8,70.0],["2026-06-24",31,10,1599.8,40.0],["2026-06-24",34,5,850.0,25.0],["2026-06-24",35,5,848.5,25.0],["2026-06-24",42,1,170.3,5.0],["2026-06-24",43,1,193.5,10.0],["2026-06-24",47,9,1528.2,35.0],["2026-06-24",48,8,1524.8,70.0],["2026-06-24",49,6,959.58,25.0],["2026-06-24",58,5,850.0,20.0],["2026-06-24",64,6,960.0,25.0],["2026-06-24",66,6,1017.6,25.0],["2026-06-25",24,7,1190.0,30.0],["2026-06-25",25,7,1190.0,30.0],["2026-06-25",26,6,1170.6,45.0],["2026-06-25",31,22,3519.56,100.0],["2026-06-25",34,6,1020.0,25.0],["2026-06-25",35,6,1018.2,30.0],["2026-06-25",42,1,170.3,5.0],["2026-06-25",43,2,387.0,15.0],["2026-06-25",47,5,849.0,20.0],["2026-06-25",48,4,762.4,40.0],["2026-06-26",24,12,2040.0,50.0],["2026-06-26",25,12,2040.0,50.0],["2026-06-26",26,10,1951.0,80.0],["2026-06-26",42,1,170.3,5.0],["2026-06-26",47,12,2037.6,50.0],["2026-06-26",48,11,2096.6,90.0],["2026-06-26",59,2,360.0,10.0],["2026-06-26",61,2,320.0,10.0],["2026-06-27",2,2,120.0,10.0],["2026-06-27",14,12,2040.0,45.0],["2026-06-27",15,12,2042.4,45.0],["2026-06-27",24,8,1360.0,35.0],["2026-06-27",25,5,850.0,25.0],["2026-06-27",26,4,780.4,35.0],["2026-06-27",31,12,1919.76,50.0],["2026-06-27",47,3,509.4,15.0],["2026-06-27",48,3,571.8,30.0],["2026-06-27",49,8,1279.44,30.0],["2026-06-27",54,5,842.35,20.0],["2026-06-27",55,5,849.95,20.0],["2026-06-30",12,12,2040.0,40.0],["2026-06-30",13,10,2000.0,80.0],["2026-06-30",15,3,510.6,12.0],["2026-06-30",16,2,399.6,15.0],["2026-06-30",22,1,170.9,5.0],["2026-06-30",24,7,1190.0,25.0],["2026-06-30",25,7,1190.0,35.0],["2026-06-30",26,6,1170.6,50.0],["2026-06-30",29,7,1194.2,25.0],["2026-06-30",30,6,1321.2,45.0],["2026-06-30",40,2,350.0,12.0],["2026-06-30",41,2,350.0,15.0],["2026-06-30",42,1,170.3,5.0],["2026-06-30",43,1,193.5,10.0],["2026-06-30",47,2,339.6,7.0],["2026-06-30",48,2,381.2,15.0],["2026-06-30",59,2,360.0,10.0],["2026-06-30",61,2,320.0,10.0],["2026-07-01",16,12,2397.6,120.0],["2026-07-01",23,1,201.8,8.0],["2026-07-01",31,18,2879.64,100.0],["2026-07-01",44,1,168.47,5.0],["2026-07-01",59,3,540.0,15.0],["2026-07-01",61,3,480.0,15.0],["2026-07-01",62,6,1290.0,55.0],["2026-07-02",24,9,1530.0,35.0],["2026-07-02",25,5,850.0,20.0],["2026-07-02",26,8,1560.8,65.0],["2026-07-02",31,16,2559.68,100.0],["2026-07-02",42,2,340.6,10.0],["2026-07-02",43,1,193.5,10.0],["2026-07-02",47,14,2377.2,50.0],["2026-07-02",48,12,2287.2,95.0],["2026-07-02",64,5,800.0,30.0],["2026-07-02",66,5,848.0,25.0],["2026-07-03",8,2,339.8,10.0],["2026-07-03",9,2,439.98,20.0],["2026-07-03",17,2,339.74,10.0],["2026-07-03",18,2,370.1,20.0],["2026-07-03",25,5,850.0,20.0],["2026-07-03",31,8,1279.84,30.0],["2026-07-03",34,9,1530.0,40.0],["2026-07-03",35,10,1697.0,35.0],["2026-07-03",48,12,2287.2,110.0],["2026-07-03",49,6,959.58,15.0],["2026-07-03",50,4,799.96,40.0],["2026-07-04",24,14,2380.0,60.0],["2026-07-04",25,14,2380.0,60.0],["2026-07-04",26,12,2341.2,110.0],["2026-07-04",31,9,1439.82,40.0],["2026-07-04",43,2,387.0,15.0],["2026-07-04",47,12,2037.6,55.0],["2026-07-04",59,5,900.0,30.0],["2026-07-04",68,3,630.0,30.0],["2026-07-05",14,10,1700.0,35.0],["2026-07-05",15,10,1702.0,35.0],["2026-07-05",22,1,170.9,5.0],["2026-07-05",24,9,1530.0,35.0],["2026-07-05",25,9,1530.0,35.0],["2026-07-05",26,8,1560.8,80.0],["2026-07-05",31,6,959.88,25.0],["2026-07-05",42,2,340.6,10.0],["2026-07-05",64,10,1600.0,60.0],["2026-07-05",66,10,1696.0,40.0],["2026-07-06",24,8,1360.0,30.0],["2026-07-06",25,9,1530.0,40.0],["2026-07-06",26,7,1365.7,60.0],["2026-07-06",29,11,1876.6,40.0],["2026-07-06",30,8,1761.6,75.0],["2026-07-06",31,18,2879.64,80.0],["2026-07-06",35,7,1187.9,25.0],["2026-07-06",36,6,1197.0,55.0],["2026-07-06",48,2,381.2,20.0],["2026-07-06",66,4,678.4,20.0],["2026-07-07",24,5,850.0,20.0],["2026-07-07",25,6,1020.0,25.0],["2026-07-07",26,5,975.5,45.0],["2026-07-07",31,13,2079.74,50.0],["2026-07-07",34,5,850.0,20.0],["2026-07-07",35,5,848.5,25.0],["2026-07-07",48,2,381.2,15.0],["2026-07-08",23,2,403.6,15.0],["2026-07-08",24,18,3060.0,65.0],["2026-07-08",25,19,3230.0,80.0],["2026-07-08",26,16,3121.6,135.0],["2026-07-08",29,8,1364.8,30.0],["2026-07-08",30,6,1321.2,60.0],["2026-07-08",31,8,1279.84,30.0],["2026-07-08",39,2,370.4,15.0],["2026-07-08",47,5,849.0,35.0],["2026-07-08",57,1,150.0,10.0],["2026-07-08",63,3,510.0,15.0],["2026-07-09",26,6,1170.6,55.0],["2026-07-09",28,3,510.0,20.0],["2026-07-09",29,13,2217.8,50.0],["2026-07-09",30,10,2202.0,80.0],["2026-07-09",31,37,5919.26,160.0],["2026-07-09",38,2,341.2,15.0],["2026-07-09",47,6,1018.8,20.0],["2026-07-09",48,6,1143.6,60.0],["2026-07-10",14,12,2040.0,55.0],["2026-07-10",15,12,2042.4,45.0],["2026-07-10",22,2,341.8,10.0],["2026-07-10",24,7,1190.0,25.0],["2026-07-10",25,7,1190.0,25.0],["2026-07-10",31,9,1439.82,30.0],["2026-07-10",34,5,850.0,20.0],["2026-07-10",35,5,848.5,20.0],["2026-07-10",42,2,340.6,10.0],["2026-07-10",43,2,387.0,20.0],["2026-07-10",47,10,1698.0,35.0],["2026-07-10",48,8,1524.8,65.0],["2026-07-11",5,6,1020.0,30.0],["2026-07-11",6,6,1020.0,25.0],["2026-07-11",12,2,340.0,10.0],["2026-07-11",24,12,2040.0,45.0],["2026-07-11",25,12,2040.0,45.0],["2026-07-11",26,10,1951.0,90.0],["2026-07-11",28,6,1020.0,20.0],["2026-07-11",29,6,1023.6,20.0],["2026-07-11",31,10,1599.8,40.0],["2026-07-11",48,2,381.2,25.0],["2026-07-11",54,6,1010.82,20.0],["2026-07-11",55,6,1019.94,25.0],["2026-07-11",61,4,640.0,20.0],["2026-07-13",12,13,2210.0,70.0],["2026-07-13",24,8,1360.0,40.0],["2026-07-13",25,8,1360.0,35.0],["2026-07-13",26,8,1560.8,70.0],["2026-07-13",31,10,1599.8,40.0],["2026-07-13",47,5,849.0,20.0],["2026-07-13",48,3,571.8,30.0],["2026-07-13",51,2,340.0,10.0],["2026-07-13",52,2,339.4,5.0],["2026-07-13",53,2,369.6,15.0],["2026-07-13",68,6,1260.0,80.0],["2026-07-14",5,6,1020.0,30.0],["2026-07-14",8,2,339.8,10.0],["2026-07-14",9,2,439.98,20.0],["2026-07-14",18,1,185.05,10.0],["2026-07-14",24,12,2040.0,55.0],["2026-07-14",25,13,2210.0,60.0],["2026-07-14",26,10,1951.0,90.0],["2026-07-14",31,13,2079.74,65.0],["2026-07-14",37,2,340.0,10.0],["2026-07-14",47,6,1018.8,25.0],["2026-07-14",48,5,953.0,45.0],["2026-07-15",6,7,1190.0,35.0],["2026-07-15",24,14,2380.0,50.0],["2026-07-15",25,15,2550.0,60.0],["2026-07-15",26,12,2341.2,110.0],["2026-07-15",31,26,4159.48,100.0],["2026-07-15",47,7,1188.6,30.0],["2026-07-15",48,6,1143.6,55.0],["2026-07-16",24,22,3740.0,90.0],["2026-07-16",25,24,4080.0,90.0],["2026-07-16",26,20,3902.0,180.0],["2026-07-16",31,9,1439.82,40.0],["2026-07-16",44,1,168.47,5.0],["2026-07-16",51,1,170.0,5.0],["2026-07-16",52,1,169.7,5.0],["2026-07-16",53,1,184.8,10.0],["2026-07-17",31,20,3199.6,75.0],["2026-07-17",61,3,480.0,15.0],["2026-07-17",62,2,430.0,20.0],["2026-07-18",24,15,2550.0,65.0],["2026-07-18",25,8,1360.0,35.0],["2026-07-18",26,20,3902.0,170.0],["2026-07-18",31,16,2559.68,70.0],["2026-07-18",48,6,1143.6,50.0],["2026-07-18",52,1,169.7,5.0],["2026-07-18",53,1,184.8,10.0],["2026-07-18",58,2,340.0,10.0],["2026-07-19",24,12,2040.0,45.0],["2026-07-19",25,14,2380.0,60.0],["2026-07-19",26,8,1560.8,70.0],["2026-07-19",31,22,3519.56,100.0],["2026-07-19",42,2,340.6,10.0],["2026-07-19",43,2,387.0,15.0],["2026-07-19",47,5,849.0,20.0],["2026-07-19",58,1,170.0,5.0],["2026-07-20",12,4,680.0,15.0],["2026-07-20",24,5,850.0,30.0],["2026-07-20",25,11,1870.0,55.0],["2026-07-20",29,11,1876.6,40.0],["2026-07-20",30,8,1761.6,75.0],["2026-07-20",31,13,2079.74,50.0],["2026-07-20",32,8,1681.6,70.0],["2026-07-20",62,4,860.0,40.0],["2026-07-20",68,3,630.0,35.0],["2026-07-21",22,1,170.9,5.0],["2026-07-21",24,8,1360.0,30.0],["2026-07-21",25,9,1530.0,35.0],["2026-07-21",26,7,1365.7,58.0],["2026-07-21",31,27,4319.46,170.0],["2026-07-21",47,7,1188.6,28.0],["2026-07-21",48,6,1143.6,45.0],["2026-07-21",52,1,169.7,5.0],["2026-07-21",55,8,1359.92,22.0],["2026-07-21",56,6,1199.4,55.0],["2026-07-21",57,1,150.0,7.0],["2026-07-22",8,2,339.8,10.0],["2026-07-22",9,2,439.98,30.0],["2026-07-22",24,14,2380.0,65.0],["2026-07-22",25,14,2380.0,60.0],["2026-07-22",26,12,2341.2,90.0],["2026-07-22",31,22,3519.56,100.0],["2026-07-22",48,6,1143.6,65.0],["2026-07-23",24,18,3060.0,70.0],["2026-07-23",25,18,3060.0,70.0],["2026-07-23",26,15,2926.5,130.0],["2026-07-23",31,18,2879.64,80.0],["2026-07-23",47,7,1188.6,30.0],["2026-07-23",48,1,190.6,10.0],["2026-07-23",58,4,680.0,20.0],["2026-07-24",31,20,3199.6,85.0],["2026-07-24",44,1,168.47,5.0],["2026-07-24",47,3,509.4,15.0],["2026-07-24",48,2,381.2,20.0],["2026-07-24",61,4,640.0,20.0],["2026-07-25",12,6,1020.0,25.0],["2026-07-25",13,6,1200.0,50.0],["2026-07-25",24,8,1360.0,30.0],["2026-07-25",25,10,1700.0,35.0],["2026-07-25",26,8,1560.8,65.0],["2026-07-25",28,3,510.0,10.0],["2026-07-25",29,10,1706.0,40.0],["2026-07-25",30,8,1761.6,60.0],["2026-07-25",31,11,1759.78,45.0],["2026-07-26",12,9,1530.0,35.0],["2026-07-26",13,8,1600.0,65.0],["2026-07-26",17,1,169.87,5.0],["2026-07-26",24,6,1020.0,25.0],["2026-07-26",25,7,1190.0,35.0],["2026-07-26",26,6,1170.6,40.0],["2026-07-26",28,18,3060.0,65.0],["2026-07-26",29,36,6141.6,130.0],["2026-07-26",30,14,3082.8,105.0],["2026-07-26",31,9,1439.82,35.0],["2026-07-26",42,1,170.3,5.0],["2026-07-26",48,3,571.8,20.0],["2026-07-27",12,7,1190.0,30.0],["2026-07-27",13,6,1200.0,45.0],["2026-07-27",24,9,1530.0,35.0],["2026-07-27",25,9,1530.0,35.0],["2026-07-27",26,8,1560.8,70.0],["2026-07-27",29,12,2047.2,45.0],["2026-07-27",30,10,2202.0,85.0],["2026-07-27",31,10,1599.8,40.0],["2026-07-27",32,6,1261.2,50.0],["2026-07-27",66,7,1187.2,30.0],["2026-07-27",67,6,1198.8,50.0],["2026-07-28",8,1,169.9,5.0],["2026-07-28",24,12,2040.0,60.0],["2026-07-28",25,12,2040.0,50.0],["2026-07-28",26,11,2146.1,85.0],["2026-07-28",31,27,4319.46,120.0],["2026-07-28",47,9,1528.2,40.0],["2026-07-28",48,4,762.4,30.0],["2026-07-28",58,1,170.0,5.0],["2026-07-28",61,2,320.0,15.0],["2026-07-28",68,3,630.0,40.0],["2026-07-29",24,13,2210.0,50.0],["2026-07-29",25,14,2380.0,60.0],["2026-07-29",26,12,2341.2,110.0],["2026-07-29",29,11,1876.6,40.0],["2026-07-29",30,8,1761.6,60.0],["2026-07-29",31,9,1439.82,45.0],["2026-07-29",63,2,340.0,10.0],["2026-07-30",12,2,340.0,10.0],["2026-07-30",13,8,1600.0,60.0],["2026-07-30",14,13,2210.0,45.0],["2026-07-30",15,13,2212.6,45.0],["2026-07-30",24,8,1360.0,25.0],["2026-07-30",25,8,1360.0,25.0],["2026-07-30",26,7,1365.7,55.0],["2026-07-30",31,6,959.88,20.0],["2026-07-30",42,1,170.3,5.0],["2026-07-30",43,1,193.5,7.0],["2026-07-30",47,7,1188.6,25.0],["2026-07-30",48,6,1143.6,45.0],["2026-07-30",49,9,1439.37,35.0],["2026-07-30",54,6,1010.82,25.0],["2026-07-30",55,7,1189.93,25.0],["2026-07-31",12,7,1190.0,25.0],["2026-07-31",24,12,2040.0,45.0],["2026-07-31",25,10,1700.0,40.0],["2026-07-31",26,10,1951.0,75.0],["2026-07-31",28,2,340.0,10.0],["2026-07-31",31,32,5119.36,110.0],["2026-07-31",47,3,509.4,10.0],["2026-07-31",48,3,571.8,25.0],["2026-08-02",11,10,1700.0,40.0],["2026-08-02",12,10,1700.0,35.0],["2026-08-02",14,15,2550.0,55.0],["2026-08-02",15,16,2723.2,55.0],["2026-08-02",24,7,1190.0,25.0],["2026-08-02",25,9,1530.0,35.0],["2026-08-02",26,7,1365.7,60.0],["2026-08-02",31,10,1599.8,35.0],["2026-08-02",42,2,340.6,5.0],["2026-08-02",43,2,387.0,15.0],["2026-08-02",47,9,1528.2,35.0],["2026-08-02",48,8,1524.8,70.0],["2026-08-02",49,8,1279.44,40.0],["2026-08-03",12,2,340.0,10.0],["2026-08-03",14,13,2210.0,50.0],["2026-08-03",15,14,2382.8,55.0],["2026-08-03",20,2,339.0,10.0],["2026-08-03",24,9,1530.0,35.0],["2026-08-03",25,10,1700.0,35.0],["2026-08-03",26,8,1560.8,80.0],["2026-08-03",28,14,2380.0,50.0],["2026-08-03",29,6,1023.6,25.0],["2026-08-03",31,16,2559.68,70.0],["2026-08-03",48,3,571.8,25.0],["2026-08-03",64,10,1600.0,35.0],["2026-08-03",66,8,1356.8,30.0],["2026-08-04",12,9,1530.0,35.0],["2026-08-04",14,4,680.0,15.0],["2026-08-04",15,4,680.8,15.0],["2026-08-04",24,7,1190.0,25.0],["2026-08-04",25,7,1190.0,25.0],["2026-08-04",26,6,1170.6,50.0],["2026-08-04",31,11,1759.78,40.0],["2026-08-04",38,1,170.6,5.0],["2026-08-04",39,1,185.2,8.0],["2026-08-04",42,1,170.3,5.0],["2026-08-04",43,1,193.5,8.0],["2026-08-04",44,1,168.47,8.0],["2026-08-04",46,1,183.94,8.0],["2026-08-04",47,9,1528.2,35.0],["2026-08-04",48,5,953.0,45.0],["2026-08-04",57,1,150.0,12.0],["2026-08-04",64,6,960.0,25.0],["2026-08-04",66,8,1356.8,30.0],["2026-08-04",68,3,630.0,30.0],["2026-08-05",20,4,678.0,15.0],["2026-08-05",24,8,1360.0,30.0],["2026-08-05",25,8,1360.0,20.0],["2026-08-05",26,7,1365.7,55.0],["2026-08-05",31,25,3999.5,105.0],["2026-08-05",33,14,2380.0,50.0],["2026-08-05",42,2,340.6,10.0],["2026-08-05",43,2,387.0,20.0],["2026-08-05",44,1,168.47,5.0],["2026-08-05",46,1,183.94,10.0],["2026-08-05",49,7,1119.51,40.0],["2026-08-05",61,2,320.0,15.0],["2026-08-06",14,5,850.0,20.0],["2026-08-06",15,8,1361.6,35.0],["2026-08-06",24,9,1530.0,35.0],["2026-08-06",25,11,1870.0,45.0],["2026-08-06",26,8,1560.8,70.0],["2026-08-06",28,16,2720.0,60.0],["2026-08-06",29,4,682.4,15.0],["2026-08-06",31,6,959.88,30.0],["2026-08-06",47,6,1018.8,20.0],["2026-08-06",48,6,1143.6,50.0],["2026-08-06",49,2,319.86,10.0],["2026-08-06",51,3,510.0,15.0],["2026-08-06",52,3,509.1,15.0],["2026-08-06",53,3,554.4,25.0],["2026-08-07",8,1,169.9,5.0],["2026-08-07",9,1,219.99,8.0],["2026-08-07",17,2,339.74,15.0],["2026-08-07",18,2,370.1,15.0],["2026-08-07",22,1,170.9,5.0],["2026-08-07",23,1,201.8,10.0],["2026-08-07",24,17,2890.0,65.0],["2026-08-07",25,19,3230.0,80.0],["2026-08-07",26,15,2926.5,115.0],["2026-08-07",31,14,2239.72,65.0],["2026-08-07",47,3,509.4,10.0],["2026-08-07",48,2,381.2,20.0],["2026-08-07",61,1,160.0,5.0],["2026-08-07",62,1,215.0,8.0],["2026-08-08",12,6,1020.0,30.0],["2026-08-08",20,4,678.0,15.0],["2026-08-08",24,11,1870.0,50.0],["2026-08-08",25,11,1870.0,40.0],["2026-08-08",26,11,2146.1,85.0],["2026-08-08",31,23,3679.54,90.0],["2026-08-08",48,2,381.2,15.0],["2026-08-08",57,1,150.0,10.0],["2026-08-08",61,1,160.0,5.0],["2026-08-08",62,1,215.0,10.0],["2026-08-08",68,2,420.0,15.0],["2026-08-09",12,12,2040.0,40.0],["2026-08-09",26,6,1170.6,45.0],["2026-08-09",31,21,3359.58,100.0],["2026-08-09",34,10,1700.0,35.0],["2026-08-09",35,10,1697.0,50.0],["2026-08-09",48,1,190.6,10.0],["2026-08-09",58,5,850.0,35.0],["2026-08-09",61,1,160.0,5.0],["2026-08-10",11,3,510.0,10.0],["2026-08-10",12,3,510.0,10.0],["2026-08-10",13,3,600.0,25.0],["2026-08-10",24,28,4760.0,110.0],["2026-08-10",25,25,4250.0,95.0],["2026-08-10",26,16,3121.6,140.0],["2026-08-10",31,4,639.92,15.0],["2026-08-11",24,1,170.0,5.0],["2026-08-11",26,11,2146.1,100.0],["2026-08-11",31,26,4159.48,125.0],["2026-08-11",47,3,509.4,15.0],["2026-08-11",48,2,381.2,20.0],["2026-08-11",49,17,2718.81,80.0],["2026-08-11",57,1,150.0,15.0],["2026-08-11",61,3,480.0,10.0],["2026-08-11",62,2,430.0,20.0],["2026-08-12",24,32,5440.0,135.0],["2026-08-12",25,29,4930.0,105.0],["2026-08-12",26,16,3121.6,150.0],["2026-08-12",42,2,340.6,15.0],["2026-08-12",43,1,193.5,5.0],["2026-08-12",68,4,840.0,40.0],["2026-08-13",13,1,200.0,10.0],["2026-08-13",19,1,169.87,5.0],["2026-08-13",24,9,1530.0,45.0],["2026-08-13",25,19,3230.0,75.0],["2026-08-13",26,8,1560.8,70.0],["2026-08-13",31,35,5599.3,170.0],["2026-08-13",33,8,1360.0,40.0],["2026-08-13",47,3,509.4,15.0],["2026-08-13",48,1,190.6,10.0],["2026-08-13",62,2,430.0,15.0],["2026-08-14",8,1,169.9,5.0],["2026-08-14",9,1,219.99,10.0],["2026-08-14",61,3,480.0,15.0],["2026-08-15",20,4,678.0,15.0],["2026-08-15",23,4,807.2,35.0],["2026-08-15",33,11,1870.0,40.0],["2026-08-15",46,1,183.94,10.0],["2026-08-15",55,8,1359.92,25.0],["2026-08-15",56,6,1199.4,65.0],["2026-08-15",57,1,150.0,15.0],["2026-08-15",62,12,2580.0,110.0],["2026-08-16",6,5,850.0,20.0],["2026-08-16",7,4,740.0,35.0],["2026-08-16",15,7,1191.4,25.0],["2026-08-16",20,6,1017.0,30.0],["2026-08-16",31,12,1919.76,55.0],["2026-08-16",44,1,168.47,5.0],["2026-08-16",54,2,336.94,10.0],["2026-08-16",55,9,1529.91,35.0],["2026-08-16",56,6,1199.4,45.0],["2026-08-17",15,8,1361.6,30.0],["2026-08-17",26,6,1170.6,50.0],["2026-08-17",28,6,1020.0,25.0],["2026-08-17",29,6,1023.6,20.0],["2026-08-17",31,19,3039.62,70.0],["2026-08-17",47,6,1018.8,30.0],["2026-08-17",48,4,762.4,40.0],["2026-08-17",49,6,959.58,30.0],["2026-08-17",50,6,1199.94,50.0],["2026-08-17",58,1,170.0,5.0],["2026-08-18",24,18,3060.0,65.0],["2026-08-18",25,17,2890.0,60.0],["2026-08-18",26,20,3902.0,165.0],["2026-08-18",34,8,1360.0,40.0],["2026-08-18",35,8,1357.6,40.0],["2026-08-18",42,1,170.3,5.0],["2026-08-18",43,1,193.5,10.0],["2026-08-18",49,9,1439.37,40.0],["2026-08-18",68,3,630.0,35.0],["2026-08-19",24,20,3400.0,70.0],["2026-08-19",26,12,2341.2,105.0],["2026-08-19",31,30,4799.4,150.0],["2026-08-19",48,2,381.2,15.0],["2026-08-19",49,10,1599.3,40.0],["2026-08-19",51,3,510.0,15.0],["2026-08-19",52,3,509.1,15.0],["2026-08-19",53,3,554.4,25.0],["2026-08-20",5,2,340.0,10.0],["2026-08-20",24,8,1360.0,40.0],["2026-08-20",25,28,4760.0,115.0],["2026-08-20",31,24,3839.52,120.0],["2026-08-20",33,5,850.0,25.0],["2026-08-20",34,6,1020.0,25.0],["2026-08-20",35,5,848.5,20.0],["2026-08-20",49,9,1439.37,35.0],["2026-08-20",65,7,1190.0,30.0],["2026-08-22",2,4,240.0,10.0],["2026-08-22",12,1,170.0,5.0],["2026-08-22",26,32,6243.2,300.0],["2026-08-22",47,3,509.4,15.0],["2026-08-22",48,1,190.6,10.0],["2026-08-22",53,4,739.2,55.0],["2026-08-22",58,8,1360.0,30.0],["2026-08-23",3,1,230.0,10.0],["2026-08-23",24,15,2550.0,60.0],["2026-08-23",25,15,2550.0,55.0],["2026-08-23",26,18,3511.8,160.0],["2026-08-23",44,1,168.47,5.0],["2026-08-23",45,1,168.47,10.0],["2026-08-23",46,1,183.94,10.0],["2026-08-23",51,5,850.0,20.0],["2026-08-23",52,5,848.5,15.0],["2026-08-24",8,1,169.9,5.0],["2026-08-24",22,2,341.8,10.0],["2026-08-24",24,14,2380.0,55.0],["2026-08-24",25,6,1020.0,25.0],["2026-08-24",26,1,195.1,10.0],["2026-08-24",31,10,1599.8,40.0],["2026-08-24",33,2,340.0,10.0],["2026-08-24",47,9,1528.2,35.0],["2026-08-24",48,8,1524.8,60.0],["2026-08-24",55,6,1019.94,25.0],["2026-08-24",56,5,999.5,45.0],["2026-08-24",57,1,150.0,10.0],["2026-08-24",61,2,320.0,10.0],["2026-08-24",65,15,2550.0,60.0],["2026-08-24",66,6,1017.6,35.0],["2026-08-25",24,10,1700.0,40.0],["2026-08-25",25,14,2380.0,55.0],["2026-08-25",31,18,2879.64,90.0],["2026-08-25",47,3,509.4,15.0],["2026-08-25",48,3,571.8,30.0],["2026-08-25",51,4,680.0,15.0],["2026-08-25",52,3,509.1,15.0],["2026-08-25",53,4,739.2,30.0],["2026-08-25",57,1,150.0,10.0],["2026-08-25",61,2,320.0,15.0],["2026-08-25",66,13,2204.8,55.0],["2026-08-28",8,2,339.8,10.0],["2026-08-28",9,2,439.98,25.0],["2026-08-28",26,3,585.3,25.0],["2026-08-28",31,18,2879.64,90.0],["2026-08-28",33,8,1360.0,50.0],["2026-08-28",47,2,339.6,10.0],["2026-08-28",48,2,381.2,15.0],["2026-08-28",51,6,1020.0,25.0],["2026-08-28",52,6,1018.2,25.0],["2026-08-28",53,5,924.0,45.0],["2026-08-28",68,5,1050.0,60.0],["2026-08-29",3,2,460.0,20.0],["2026-08-29",11,2,340.0,10.0],["2026-08-29",12,6,1020.0,25.0],["2026-08-29",13,5,1000.0,45.0],["2026-08-29",24,15,2550.0,65.0],["2026-08-29",25,17,2890.0,60.0],["2026-08-29",26,8,1560.8,75.0],["2026-08-29",47,7,1188.6,25.0],["2026-08-29",48,6,1143.6,45.0],["2026-08-29",58,1,170.0,5.0],["2026-08-29",61,7,1120.0,40.0],["2026-08-30",2,5,300.0,20.0],["2026-08-30",12,11,1870.0,55.0],["2026-08-30",13,10,2000.0,85.0],["2026-08-30",23,4,807.2,40.0],["2026-08-30",31,19,3039.62,65.0],["2026-09-01",30,2,440.4,30.0],["2026-09-01",31,12,1919.76,80.0],["2026-09-01",33,14,2380.0,80.0],["2026-09-01",47,4,679.2,20.0],["2026-09-01",48,3,571.8,30.0],["2026-09-02",31,23,3679.54,120.0],["2026-09-02",47,6,1018.8,30.0],["2026-09-02",48,6,1143.6,75.0],["2026-09-03",2,2,120.0,30.0],["2026-09-03",12,9,1530.0,50.0],["2026-09-03",24,16,2720.0,80.0],["2026-09-03",25,15,2550.0,65.0],["2026-09-03",26,3,585.3,30.0],["2026-09-03",47,7,1188.6,45.0],["2026-09-03",48,6,1143.6,60.0],["2026-09-03",51,3,510.0,15.0],["2026-09-03",52,3,509.1,15.0],["2026-09-03",53,3,554.4,25.0],["2026-09-05",2,2,120.0,25.0],["2026-09-05",3,2,460.0,25.0],["2026-09-05",24,10,1700.0,50.0],["2026-09-05",25,9,1530.0,35.0],["2026-09-05",26,10,1951.0,75.0],["2026-09-05",42,2,340.6,10.0],["2026-09-05",43,2,387.0,15.0],["2026-09-05",47,6,1018.8,25.0],["2026-09-05",48,5,953.0,50.0],["2026-09-06",20,6,1017.0,30.0],["2026-09-06",24,16,2720.0,80.0],["2026-09-06",25,16,2720.0,60.0],["2026-09-06",26,6,1170.6,60.0],["2026-09-06",31,17,2719.66,90.0],["2026-09-07",2,2,120.0,20.0],["2026-09-07",26,10,1951.0,85.0],["2026-09-07",28,6,1020.0,25.0],["2026-09-07",29,6,1023.6,25.0],["2026-09-07",31,9,1439.82,35.0],["2026-09-07",42,4,681.2,15.0],["2026-09-07",43,3,580.5,30.0],["2026-09-07",47,9,1528.2,35.0],["2026-09-07",48,8,1524.8,60.0],["2026-09-07",55,9,1529.91,35.0],["2026-09-07",56,6,1199.4,50.0],["2026-09-08",24,8,1360.0,35.0],["2026-09-08",25,8,1360.0,55.0],["2026-09-08",26,16,3121.6,125.0],["2026-09-08",47,8,1358.4,35.0],["2026-09-08",48,7,1334.2,65.0],["2026-09-08",51,3,510.0,10.0],["2026-09-08",52,3,509.1,15.0],["2026-09-08",53,3,554.4,25.0],["2026-09-09",24,15,2550.0,55.0],["2026-09-09",26,18,3511.8,165.0],["2026-09-09",47,9,1528.2,40.0],["2026-09-09",48,8,1524.8,80.0],["2026-09-09",68,1,210.0,10.0],["2026-09-10",0,1,200.0,10.0],["2026-09-10",25,12,2040.0,45.0],["2026-09-10",26,1,195.1,10.0],["2026-09-10",31,27,4319.46,140.0],["2026-09-10",47,6,1018.8,25.0],["2026-09-10",48,6,1143.6,60.0],["2026-09-10",68,4,840.0,55.0],["2026-09-12",9,1,219.99,10.0],["2026-09-12",18,1,185.05,10.0],["2026-09-12",24,22,3740.0,10.0],["2026-09-12",25,29,4930.0,135.0],["2026-09-12",26,1,195.1,10.0],["2026-09-12",31,18,2879.64,130.0],["2026-09-12",44,1,168.47,5.0],["2026-09-12",46,1,183.94,10.0],["2026-09-12",48,2,381.2,25.0],["2026-09-14",22,2,341.8,10.0],["2026-09-14",26,12,2341.2,120.0],["2026-09-14",31,11,1759.78,60.0],["2026-09-14",42,2,340.6,10.0],["2026-09-14",43,2,387.0,20.0],["2026-09-14",47,9,1528.2,35.0],["2026-09-14",48,6,1143.6,75.0],["2026-09-14",58,1,170.0,5.0],["2026-09-15",24,20,3400.0,75.0],["2026-09-15",26,4,780.4,40.0],["2026-09-15",47,12,2037.6,50.0],["2026-09-15",48,11,2096.6,110.0],["2026-09-15",51,2,340.0,10.0],["2026-09-15",52,1,169.7,5.0],["2026-09-15",53,2,369.6,15.0],["2026-09-16",0,1,200.0,10.0],["2026-09-16",24,13,2210.0,80.0],["2026-09-16",25,31,5270.0,140.0],["2026-09-16",47,7,1188.6,25.0],["2026-09-16",48,6,1143.6,50.0],["2026-09-16",49,6,959.58,25.0],["2026-09-16",50,6,1199.94,55.0],["2026-09-17",31,30,4799.4,190.0],["2026-09-17",42,2,340.6,10.0],["2026-09-17",43,2,387.0,30.0],["2026-09-17",47,4,679.2,20.0],["2026-09-17",48,3,571.8,40.0],["2026-09-17",57,1,150.0,10.0],["2026-09-17",58,2,340.0,10.0],["2026-09-17",61,3,480.0,25.0],["2026-09-17",63,1,170.0,5.0],["2026-09-19",26,15,2926.5,150.0],["2026-09-19",31,19,3039.62,120.0],["2026-09-19",47,13,2207.4,60.0],["2026-09-19",48,12,2287.2,120.0],["2026-09-19",52,1,169.7,5.0],["2026-09-20",24,2,340.0,10.0],["2026-09-20",26,1,195.1,10.0],["2026-09-20",31,20,3199.6,130.0],["2026-09-20",34,10,1700.0,40.0],["2026-09-20",35,10,1697.0,45.0],["2026-09-20",48,12,2287.2,110.0],["2026-09-21",24,24,4080.0,100.0],["2026-09-21",25,26,4420.0,110.0],["2026-09-21",47,12,2037.6,60.0],["2026-09-21",49,5,799.65,40.0],["2026-09-21",50,3,599.97,45.0],["2026-09-21",52,1,169.7,5.0],["2026-09-21",63,5,850.0,45.0],["2026-09-22",14,12,2040.0,50.0],["2026-09-22",15,12,2042.4,75.0],["2026-09-22",31,27,4319.46,105.0],["2026-09-22",44,2,336.94,10.0],["2026-09-23",24,12,2040.0,45.0],["2026-09-23",25,9,1530.0,35.0],["2026-09-23",26,25,4877.5,260.0],["2026-09-23",31,19,3039.62,125.0],["2026-09-23",47,4,679.2,15.0],["2026-09-23",48,2,381.2,20.0],["2026-09-25",8,1,169.9,5.0],["2026-09-25",26,9,1755.9,85.0],["2026-09-25",47,6,1018.8,25.0],["2026-09-25",48,16,3049.6,155.0],["2026-09-25",51,3,510.0,15.0],["2026-09-25",52,3,509.1,15.0],["2026-09-25",53,3,554.4,25.0],["2026-09-26",6,4,680.0,15.0],["2026-09-26",7,4,740.0,50.0],["2026-09-26",24,26,4420.0,110.0],["2026-09-26",25,27,4590.0,110.0],["2026-09-26",47,12,2037.6,45.0],["2026-09-26",55,4,679.96,15.0],["2026-09-26",56,3,599.7,40.0],["2026-09-27",34,18,3060.0,75.0],["2026-09-27",35,18,3054.6,65.0],["2026-09-27",49,17,2718.81,65.0],["2026-09-27",55,17,2889.83,60.0],["2026-09-27",56,10,1999.0,85.0],["2026-09-27",65,6,1020.0,25.0],["2026-09-27",66,6,1017.6,35.0],["2026-09-28",5,1,170.0,5.0],["2026-09-28",6,4,680.0,15.0],["2026-09-28",7,4,740.0,45.0],["2026-09-28",28,6,1020.0,20.0],["2026-09-28",29,6,1023.6,25.0],["2026-09-28",30,1,220.2,10.0],["2026-09-28",31,6,959.88,25.0],["2026-09-28",55,9,1529.91,35.0],["2026-09-28",56,6,1199.4,60.0],["2026-09-28",66,5,848.0,25.0],["2026-09-28",67,8,1598.4,70.0],["2026-09-29",17,2,339.74,10.0],["2026-09-29",26,20,3902.0,200.0],["2026-09-29",30,1,220.2,10.0],["2026-09-29",31,12,1919.76,65.0],["2026-09-29",36,3,598.5,25.0],["2026-09-29",47,4,679.2,15.0],["2026-09-29",48,4,762.4,35.0],["2026-09-29",57,1,150.0,15.0],["2026-09-30",2,1,60.0,15.0],["2026-09-30",24,23,3910.0,85.0],["2026-09-30",25,23,3910.0,105.0],["2026-09-30",31,30,4799.4,150.0],["2026-09-30",44,1,168.47,5.0],["2026-09-30",47,8,1358.4,30.0],["2026-09-30",48,7,1334.2,75.0],["2026-09-30",49,2,319.86,10.0],["2026-10-01",24,11,1870.0,55.0],["2026-10-01",25,12,2040.0,55.0],["2026-10-01",26,10,1951.0,130.0],["2026-10-01",31,6,959.88,30.0],["2026-10-01",57,1,150.0,5.0],["2026-10-01",68,4,840.0,60.0],["2026-10-03",24,29,4930.0,140.0],["2026-10-03",26,25,4877.5,270.0],["2026-10-03",42,1,170.3,5.0],["2026-10-03",48,3,571.8,40.0],["2026-10-04",9,2,439.98,25.0],["2026-10-04",17,1,169.87,5.0],["2026-10-04",18,2,370.1,30.0],["2026-10-04",25,29,4930.0,160.0],["2026-10-04",29,10,1706.0,40.0],["2026-10-04",30,6,1321.2,60.0],["2026-10-04",61,4,640.0,15.0],["2026-10-04",63,4,680.0,15.0],["2026-10-05",20,6,1017.0,50.0],["2026-10-05",29,11,1876.6,45.0],["2026-10-05",30,8,1761.6,70.0],["2026-10-05",38,1,170.6,5.0],["2026-10-05",39,1,185.2,10.0],["2026-10-05",55,5,849.95,20.0],["2026-10-05",56,4,799.6,35.0],["2026-10-05",62,4,860.0,40.0],["2026-10-05",63,7,1190.0,40.0],["2026-10-06",20,6,1017.0,30.0],["2026-10-06",24,10,1700.0,55.0],["2026-10-06",26,17,3316.7,150.0],["2026-10-06",31,20,3199.6,120.0],["2026-10-06",42,2,340.6,10.0],["2026-10-06",43,2,387.0,20.0],["2026-10-06",47,3,509.4,20.0],["2026-10-06",48,2,381.2,20.0],["2026-10-07",24,12,2040.0,45.0],["2026-10-07",25,19,3230.0,70.0],["2026-10-07",26,16,3121.6,140.0],["2026-10-07",47,12,2037.6,45.0],["2026-10-07",48,8,1524.8,90.0],["2026-10-08",24,20,3400.0,100.0],["2026-10-08",25,15,2550.0,60.0],["2026-10-08",26,1,195.1,10.0],["2026-10-08",31,28,4479.44,120.0],["2026-10-08",33,26,4420.0,110.0],["2026-10-08",68,4,840.0,60.0],["2026-10-10",24,13,2210.0,65.0],["2026-10-10",25,19,3230.0,70.0],["2026-10-10",26,12,2341.2,120.0],["2026-10-10",47,9,1528.2,35.0],["2026-10-10",48,8,1524.8,60.0],["2026-10-11",26,5,975.5,40.0],["2026-10-11",31,13,2079.74,50.0],["2026-10-11",42,2,340.6,10.0],["2026-10-11",43,2,387.0,15.0],["2026-10-11",49,15,2398.95,90.0],["2026-10-11",54,6,1010.82,25.0],["2026-10-11",55,6,1019.94,25.0],["2026-10-11",64,7,1120.0,25.0],["2026-10-11",66,7,1187.2,25.0],["2026-10-12",26,18,3511.8,200.0],["2026-10-12",43,2,387.0,25.0],["2026-10-12",47,3,509.4,15.0],["2026-10-12",48,6,1143.6,45.0],["2026-10-13",26,2,390.2,20.0],["2026-10-13",31,8,1279.84,55.0],["2026-10-14",24,20,3400.0,75.0],["2026-10-14",25,8,1360.0,40.0],["2026-10-14",26,4,780.4,55.0],["2026-10-14",28,11,1870.0,40.0],["2026-10-14",29,12,2047.2,45.0],["2026-10-14",31,18,2879.64,100.0],["2026-10-14",47,3,509.4,15.0],["2026-10-14",48,2,381.2,15.0],["2026-10-14",51,6,1020.0,25.0],["2026-10-14",52,6,1018.2,25.0],["2026-10-14",53,6,1108.8,50.0],["2026-10-15",24,6,1020.0,25.0],["2026-10-15",25,21,3570.0,110.0],["2026-10-15",26,1,195.1,10.0],["2026-10-15",31,27,4319.46,120.0],["2026-10-15",42,3,510.9,15.0],["2026-10-15",47,3,509.4,15.0],["2026-10-15",55,9,1529.91,35.0],["2026-10-15",56,6,1199.4,60.0],["2026-10-15",61,4,640.0,15.0],["2026-10-17",12,1,170.0,5.0],["2026-10-17",24,4,680.0,15.0],["2026-10-17",49,7,1119.51,40.0],["2026-10-17",65,14,2380.0,80.0],["2026-10-17",66,12,2035.2,45.0],["2026-10-18",24,3,510.0,10.0],["2026-10-18",25,6,1020.0,20.0],["2026-10-18",26,4,780.4,35.0],["2026-10-18",47,7,1188.6,30.0],["2026-10-18",48,6,1143.6,65.0],["2026-10-18",49,6,959.58,30.0],["2026-10-18",51,4,680.0,25.0],["2026-10-18",52,5,848.5,20.0],["2026-10-18",53,4,739.2,30.0],["2026-10-18",54,6,1010.82,20.0],["2026-10-18",55,11,1869.89,40.0],["2026-10-18",56,4,799.6,40.0],["2026-10-19",12,6,1020.0,25.0],["2026-10-19",14,8,1360.0,50.0],["2026-10-19",15,16,2723.2,65.0],["2026-10-19",31,15,2399.7,60.0],["2026-10-19",49,5,799.65,25.0],["2026-10-19",54,5,842.35,25.0],["2026-10-19",55,14,2379.86,65.0],["2026-10-19",56,5,999.5,45.0],["2026-10-20",14,6,1020.0,25.0],["2026-10-20",15,12,2042.4,45.0],["2026-10-20",24,5,850.0,25.0],["2026-10-20",25,6,1020.0,25.0],["2026-10-20",26,4,780.4,35.0],["2026-10-20",31,18,2879.64,100.0],["2026-10-20",34,3,510.0,15.0],["2026-10-20",35,6,1018.2,30.0],["2026-10-20",44,2,336.94,5.0],["2026-10-20",48,2,381.2,15.0],["2026-10-20",49,22,3518.46,80.0],["2026-10-20",55,5,849.95,20.0],["2026-10-20",56,4,799.6,35.0],["2026-10-20",66,4,678.4,40.0],["2026-10-21",34,5,850.0,25.0],["2026-10-21",35,6,1018.2,25.0],["2026-10-21",47,5,849.0,20.0],["2026-10-21",48,3,571.8,15.0],["2026-10-21",55,7,1189.93,30.0],["2026-10-21",56,5,999.5,70.0],["2026-10-21",57,1,150.0,5.0],["2026-10-22",24,12,2040.0,45.0],["2026-10-22",25,13,2210.0,50.0],["2026-10-22",26,10,1951.0,100.0],["2026-10-22",31,15,2399.7,85.0],["2026-10-22",34,3,510.0,25.0],["2026-10-22",35,9,1527.3,35.0],["2026-10-22",47,6,1018.8,30.0],["2026-10-22",48,5,953.0,50.0],["2026-10-22",51,4,680.0,15.0],["2026-10-22",52,4,678.8,20.0],["2026-10-22",53,4,739.2,35.0],["2026-10-23",3,1,230.0,15.0],["2026-10-23",8,2,339.8,10.0],["2026-10-23",17,1,169.87,5.0],["2026-10-23",24,12,2040.0,45.0],["2026-10-23",25,16,2720.0,85.0],["2026-10-23",26,10,1951.0,115.0],["2026-10-23",47,11,1867.8,45.0],["2026-10-23",48,11,2096.6,95.0],["2026-10-23",52,1,169.7,5.0],["2026-10-24",8,1,169.9,5.0],["2026-10-24",9,1,219.99,10.0],["2026-10-24",24,16,2720.0,65.0],["2026-10-24",25,17,2890.0,100.0],["2026-10-24",26,14,2731.4,145.0],["2026-10-24",31,15,2399.7,60.0],["2026-10-24",33,8,1360.0,40.0],["2026-10-25",26,17,3316.7,160.0],["2026-10-25",31,19,3039.62,90.0],["2026-10-25",48,6,1143.6,60.0],["2026-10-26",15,15,2553.0,50.0],["2026-10-26",16,5,999.0,55.0],["2026-10-26",21,1,175.0,15.0],["2026-10-26",24,25,4250.0,95.0],["2026-10-26",25,20,3400.0,100.0],["2026-10-26",43,1,193.5,10.0],["2026-10-26",47,9,1528.2,60.0],["2026-10-26",48,2,381.2,15.0],["2026-10-27",15,17,2893.4,70.0],["2026-10-27",16,15,2997.0,140.0],["2026-10-27",31,7,1119.86,30.0],["2026-10-27",32,2,420.4,20.0],["2026-10-27",44,1,168.47,5.0],["2026-10-27",45,2,336.94,20.0],["2026-10-27",46,2,367.88,40.0],["2026-10-27",49,10,1599.3,75.0]];
+
+  var days = SNAP.map(function (r) {
+    var p = r[0].split('-');
+    return { d: r[0], y: +p[0], m: +p[1], dd: +p[2], w: r[1], kg: r[2], min: r[3], rwKg: r[4], att: null,
+      codes: { '2.03': r[5], '2.04': r[6], '2.05': r[7], '3.52': r[8] } };
+  });
+  var prodByDate = {};
+  function indexProd(rows) {
+    prodByDate = {};
+    rows.forEach(function (r) {
+      var o = { n: DESCS[r[1]][0], t: DESCS[r[1]][1], b: DESCS[r[1]][2], q: r[2], kg: r[3], m: r[4] };
+      (prodByDate[r[0]] = prodByDate[r[0]] || []).push(o);
+    });
+  }
+  indexProd(PROD);
+
+  var tab = 'kpi', view = 'monthly', sel = 0, mfilter = 0, periods = [];
+  var pview = 'monthly', psel = 0, pmf = 0, pperiods = [];
+  var $ = function (id) { return document.getElementById(id); };
+  var qa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  function fmt(v, dp) { return v == null || !isFinite(v) ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }); }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function defAtt() { var v = parseFloat($('defatt').value); return v > 0 ? v : 8; }
+  function baseAtt(d) { if (d.att != null) return d.att; var a = attFor(d.d); return a != null ? a : defAtt(); }   function dayAtt(d) { return baseAtt(d) + (EXTRA[d.d] || 0); }
+  function activeCodes() { return qa('.code:checked').map(function (c) { return c.value; }); }
+  function dow(d) { return DN[new Date(d.y, d.m - 1, d.dd).getDay()]; }
+  function dlabel(d) { return dow(d) + ' ' + d.dd + ' ' + MN[d.m - 1]; }
+  function fmtAtt(v) { return (Math.round(v * 100) / 100).toString(); }
+
+  /* ---- Targets, saved per year in this browser ---- */
+  var targets = {};
+  try { targets = JSON.parse(localStorage.getItem('mixing-kpi-targets') || '{}') || {}; } catch (e) { targets = {}; }
+
+  /* ---- KPI 3.5: compound delay taken from the production down time report ---- */
+  var PLATT = 84, DL = {}, DLSRC = '', CHOSEN = null;
+  try { var _s = JSON.parse(localStorage.getItem('mixing-downtime-v1') || 'null'); if (_s) { DL = _s.DL || {}; DLSRC = _s.src || ''; CHOSEN = _s.chosen || null; } } catch (e) {}
+  try { var _p = parseFloat(localStorage.getItem('mixing-platterns')); if (_p > 0) PLATT = _p; } catch (e) {}
+  function saveDL() { try { localStorage.setItem('mixing-downtime-v1', JSON.stringify({ DL: DL, src: DLSRC, chosen: CHOSEN })); } catch (e) {} }
+  function isChosen(c) { return CHOSEN ? CHOSEN.indexOf(c) >= 0 : /compound/i.test(c); }
+  function isoD(d) { return d.toISOString().slice(0, 10); }
+  /* calendar span of a period: day, Sunday-Saturday week (kept inside its year), month or year */
+  function calRange(p) {
+    var f = p.first.d, y = p.first.y, mo = p.first.m, t = new Date(f + 'T00:00:00Z');
+    if (view === 'daily') return [f, f, 1];
+    if (view === 'weekly') {
+      var s = isoD(new Date(t.getTime() - t.getUTCDay() * 864e5)), e = isoD(new Date(t.getTime() + (6 - t.getUTCDay()) * 864e5));
+      if (s < y + '-01-01') s = y + '-01-01'; if (e > y + '-12-31') e = y + '-12-31';
+      return [s, e, Math.round((new Date(e + 'T00:00:00Z') - new Date(s + 'T00:00:00Z')) / 864e5) + 1];
+    }
+    if (view === 'monthly') { var n = new Date(Date.UTC(y, mo, 0)).getUTCDate(); return [y + '-' + pad(mo) + '-01', y + '-' + pad(mo) + '-' + pad(n), n]; }
+    var leap = (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)); return [y + '-01-01', y + '-12-31', leap ? 366 : 365];
+  }
+  function delayIn(a, b) {
+    var sum = 0, any = false;
+    Object.keys(DL).forEach(function (d) { if (d >= a && d <= b) { any = true; Object.keys(DL[d]).forEach(function (c) { if (isChosen(c)) sum += DL[d][c]; }); } });
+    return { sum: sum, any: any };
+  }
+  function causeTotals() { var t = {}; Object.keys(DL).forEach(function (d) { Object.keys(DL[d]).forEach(function (c) { t[c] = (t[c] || 0) + DL[d][c]; }); }); return t; }
+  function renderCauses() {
+    var t = causeTotals(), names = Object.keys(t).sort(function (a, b) { return t[b] - t[a]; }), n = 0;
+    $('causes').innerHTML = names.length ? names.map(function (c, i) { var on = isChosen(c); if (on) n++;
+      return '<label class="chk"><input type="checkbox" class="cd" data-c="' + c.replace(/"/g, '&quot;') + '"' + (on ? ' checked' : '') + '> ' + c + ' <span class="range">(' + fmt(t[c], 0) + ' min)</span></label>'; }).join('') : '<span class="range">No down time report received yet.</span>';
+    $('cdsum').textContent = 'Down time causes counted as compound delay' + (names.length ? ' — ' + n + ' selected' : '');
+    $('dlnote').textContent = DLSRC ? 'Down time report: ' + DLSRC : 'Waiting for the production down time report (Press Downtime Dashboard tab).';
+    qa('#causes .cd').forEach(function (el) { el.addEventListener('change', function () {
+      CHOSEN = qa('#causes .cd').filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-c'); });
+      saveDL(); renderCauses(); refresh(); }); });
+  }
+  $('platt').value = PLATT;
+  $('platt').addEventListener('change', function () { var v = parseFloat(this.value); PLATT = v > 0 ? v : 84; this.value = PLATT; try { localStorage.setItem('mixing-platterns', String(PLATT)); } catch (e) {} refresh(); });
+  function readDowntime(f) {
+    var names = XLSX.read(f.buffer, { type: 'array', bookSheets: true }).SheetNames;
+    var sd = names.filter(function (n) { return /daily/i.test(n); })[0], sp = names.filter(function (n) { return /db\s*press/i.test(n); })[0];
+    if (!sd) return false;
+    var wb = XLSX.read(f.buffer, { type: 'array', sheets: [sd].concat(sp ? [sp] : []) }), DB = {};
+    if (sp) XLSX.utils.sheet_to_json(wb.Sheets[sp], { header: 1 }).forEach(function (r) {
+      var c = String(r[9] == null ? '' : r[9]).trim().toUpperCase(); if (c && r[10] && c !== 'EFF') DB[c] = String(r[10]).trim().replace(/\s+/g, ' '); });
+    var a = XLSX.utils.sheet_to_json(wb.Sheets[sd], { header: 1 }), H = (a[0] || []).map(function (x) { return String(x == null ? '' : x).trim().toUpperCase(); });
+    var iD = H.indexOf('DATE'), iC = H.indexOf('CODE DOWN TIME'), iT = H.indexOf('TIME'); if (iD < 0 || iC < 0 || iT < 0) return false;
+    var nd = {}, rows = 0;
+    for (var i = 1; i < a.length; i++) {
+      var r = a[i], v = r[iD], n = +r[iT]; if (v instanceof Date) v = v.getTime() / 864e5 + 25569; else if (typeof v === 'string') v = Date.parse(v) / 864e5 + 25569;
+      if (!(v > 0) || !(n > 0)) continue;
+      var d = isoD(new Date(Math.round((Math.floor(v) - 25569) * 864e5))), code = String(r[iC] == null ? '' : r[iC]).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      var cause = DB[code] || (code ? 'Code ' + code : 'No code'); nd[d] = nd[d] || {}; nd[d][cause] = (nd[d][cause] || 0) + n; rows++;
+    }
+    if (!rows) return false;
+    DL = nd; DLSRC = f.name + ' · ' + rows + ' rows'; saveDL(); renderCauses(); refresh(); return true;
+  }
+  window.addEventListener('message', function (ev) {
+    if (ev.source !== window.parent) return; var d = ev.data;
+    if (d && d.type === 'fitl-downtime-workbook' && Array.isArray(d.files)) d.files.forEach(function (f) { try { readDowntime(f); } catch (e) {} });
+  });
+
+  /* ---- KPI 3.4: attendance from the HR daily attendance report ---- */
+  var ATT = {}, GRPD = {}, ASSIGNED = {}, EXTRA = {}, ATTSEL = { locs: null, mode: 'assigned', classes: ['Day', 'Night', 'General', 'Office', 'Off shift', 'Other'] };
+  try { var _g = JSON.parse(localStorage.getItem('mixing-att-groups-v1') || 'null'); if (_g) { GRPD = _g.groups || {}; ASSIGNED = _g.assigned || {}; } } catch (e) {}
+  try { EXTRA = JSON.parse(localStorage.getItem('mixing-extra-manpower-v1') || '{}') || {}; } catch (e) { EXTRA = {}; }
+  function saveExtra() { try { localStorage.setItem('mixing-extra-manpower-v1', JSON.stringify(EXTRA)); } catch (e) {} }
+  try { ATT = JSON.parse(localStorage.getItem('mixing-attendance-v1') || '{}') || {}; } catch (e) { ATT = {}; }
+  try { var _as = JSON.parse(localStorage.getItem('mixing-att-sel-v1') || 'null'); if (_as && _as.classes) { ATTSEL = _as; if (ATTSEL.classes.indexOf('Off shift') < 0) ATTSEL.classes.push('Off shift'); } } catch (e) {}
+  function saveAtt() { try { localStorage.setItem('mixing-attendance-v1', JSON.stringify(ATT)); localStorage.setItem('mixing-att-sel-v1', JSON.stringify(ATTSEL)); localStorage.setItem('mixing-att-groups-v1', JSON.stringify({ groups: GRPD, assigned: ASSIGNED })); } catch (e) {} }
+  function attLocs() { var s = {}; Object.keys(ATT).forEach(function (d) { Object.keys(ATT[d]).forEach(function (l) { s[l] = 1; }); }); return Object.keys(s).sort(); }
+  function chosenLocs() { return ATTSEL.locs ? ATTSEL.locs : attLocs().filter(function (l) { return /mix/i.test(l); }); }
+  function useAssigned() { return ATTSEL.mode !== 'locations' && (ASSIGNED.MIX || 0) > 0; }
+  function attFor(date) {
+    if (useAssigned()) { var g = GRPD[date]; return g && ATT[date] ? (g.MIX || 0) : null; }
+    return attByLocation(date);
+  }
+  function attByLocation(date) {
+    var day = ATT[date]; if (!day) return null; var n = 0, any = false;
+    chosenLocs().forEach(function (l) { var x = day[l]; if (x) { any = true; ATTSEL.classes.forEach(function (c) { n += x[c] || 0; }); } });
+    return any && n > 0 ? n : null;
+  }
+  function renderAtt() {
+    var ls = attLocs(), ch = chosenLocs();
+    $('atlocs').innerHTML = ls.length ? ls.map(function (l) { return '<label class="chk"><input type="checkbox" class="atl" data-l="' + l.replace(/"/g, '&quot;') + '"' + (ch.indexOf(l) >= 0 ? ' checked' : '') + '> ' + l + '</label>'; }).join('') : '<span class="range">No attendance received yet.</span>';
+    $('atcls').innerHTML = '<span class="range">Shift types:</span>' + ['Day', 'Night', 'General', 'Office', 'Off shift', 'Other'].map(function (c) { return '<label class="chk"><input type="checkbox" class="atc" data-c="' + c + '"' + (ATTSEL.classes.indexOf(c) >= 0 ? ' checked' : '') + '> ' + c + '</label>'; }).join('');
+    var days = Object.keys(ATT).length;
+    var nm = ASSIGNED.MIX || 0;
+    qa('#atbox .atm').forEach(function (r) { r.checked = r.value === (ATTSEL.mode === 'locations' ? 'locations' : 'assigned'); });
+    $('atnote').textContent = !days ? 'Waiting for the attendance report (HR Department · Attendance tab).' : useAssigned() ? days + ' day(s) of attendance received · counting the ' + nm + ' employee(s) assigned to Mixing' : days + ' day(s) of attendance received · ' + (ATTSEL.mode !== 'locations' ? 'nobody is assigned to Mixing yet (Shift Groups tab), so ' : '') + (ch.length ? 'counting everyone at ' + ch.length + ' location(s)' : 'tick the mixing location below');
+    $('atsum').textContent = 'Locations and shift types counted' + (ch.length ? ' — ' + ch.length + ' location(s)' : '');
+    qa('#atbox .atm').forEach(function (el) { el.addEventListener('change', function () { ATTSEL.mode = el.value; saveAtt(); renderAtt(); refresh(); }); });
+    qa('#atlocs .atl').forEach(function (el) { el.addEventListener('change', function () { ATTSEL.locs = qa('#atlocs .atl').filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-l'); }); saveAtt(); renderAtt(); refresh(); }); });
+    qa('#atcls .atc').forEach(function (el) { el.addEventListener('change', function () { ATTSEL.classes = qa('#atcls .atc').filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-c'); }); saveAtt(); refresh(); }); });
+  }
+  window.addEventListener('message', function (ev) {
+    if (ev.source !== window.parent) return; var d = ev.data;
+    if (d && d.type === 'fitl-attendance' && d.days) { ATT = d.days; GRPD = d.groups || {}; ASSIGNED = d.assigned || {}; saveAtt(); renderAtt(); refresh(); }
+  });
+  function saveTargets() { try { localStorage.setItem('mixing-kpi-targets', JSON.stringify(targets)); } catch (e) {} }
+  function getTarget(y, j) {
+    var t = targets[y]; var v = t ? t[j] : null;
+    return v != null && isFinite(v) ? v : KPIS[j].def;
+  }
+  var tyear = 2026;
+  function dataYears() {
+    var s = {}, out = [];
+    days.forEach(function (d) { if (!s[d.y]) { s[d.y] = 1; out.push(d.y); } });
+    out.sort(function (a, b) { return a - b; });
+    var next = out[out.length - 1] + 1; if (out.indexOf(next) < 0) out.push(next);
+    return out;
+  }
+  function renderTargets() {
+    var ys = dataYears(), s = $('tyear'); s.innerHTML = '';
+    if (ys.indexOf(tyear) < 0) tyear = ys[ys.length - 2] || ys[0];
+    ys.forEach(function (y) { var o = document.createElement('option'); o.value = y; o.textContent = y; s.appendChild(o); });
+    s.value = tyear;
+    var h = '';
+    KPIS.forEach(function (k, j) {
+      h += '<div class="tfield"><label class="l" for="tg' + j + '">KPI ' + k.id + ' ' + k.name + '</label><div class="row">' +
+        '<input type="number" id="tg' + j + '" step="any" min="0" value="' + (getTarget(tyear, j) == null ? '' : getTarget(tyear, j)) + '" placeholder="not set"><span class="u">' + k.unit + '</span></div>' +
+        '<span class="dir">' + (k.dir === 'low' ? 'Lower is better (at most this)' : 'Higher is better (at least this)') + '</span></div>';
+    });
+    $('tgrid').innerHTML = h;
+    $('tnote').textContent = targets[tyear] ? 'Custom targets for ' + tyear + '.' : 'Using the QMS KPI sheet values for ' + tyear + '.';
+    KPIS.forEach(function (k, j) {
+      $('tg' + j).addEventListener('change', function () {
+        var v = parseFloat(this.value);
+        targets[tyear] = targets[tyear] || {};
+        if (isFinite(v) && v >= 0) targets[tyear][j] = v; else delete targets[tyear][j];
+        if (!Object.keys(targets[tyear]).length) delete targets[tyear];
+        saveTargets(); renderTargets(); refresh();
+      });
+    });
+  }
+
+  /* ---- Period building (shared by the KPI tabs and the Production tab) ---- */
+  function makePeriod(key, label, short, list) {
+    var p = { key: key, label: label, short: short, days: list, kg: 0, min: 0, rwKg: 0, codes: { '2.03': 0, '2.04': 0, '2.05': 0, '3.52': 0 } };
+    list.forEach(function (d) {
+      p.kg += d.kg; p.min += d.min; p.rwKg += d.rwKg;
+      CODES.forEach(function (c) { p.codes[c] += d.codes[c] || 0; });
+    });
+    p.first = list[0]; p.last = list[list.length - 1];
+    return p;
+  }
+  function groupBy(keyFn, labelFn, shortFn) {
+    var map = {}, order = [];
+    days.forEach(function (d) {
+      var k = keyFn(d);
+      if (!map[k]) { map[k] = []; order.push(k); }
+      map[k].push(d);
+    });
+    order.sort(function (a, b) { return a - b; });
+    return order.map(function (k) { return makePeriod(k, labelFn(map[k][0], map[k]), shortFn(map[k][0], map[k]), map[k]); });
+  }
+  function monthKeys() {
+    var seen = {}, out = [];
+    days.forEach(function (d) { var k = d.y * 100 + d.m; if (!seen[k]) { seen[k] = 1; out.push(k); } });
+    return out.sort(function (a, b) { return a - b; });
+  }
+  function periodsFor(v, mf) {
+    if (v === 'daily') {
+      var mk = monthKeys()[mf];
+      return days.filter(function (d) { return d.y * 100 + d.m === mk; })
+        .map(function (d) { return makePeriod(d.y * 10000 + d.m * 100 + d.dd, dlabel(d), String(d.dd), [d]); });
+    }
+    if (v === 'weekly') return groupBy(function (d) { return d.y * 100 + d.w; }, function (d) { return 'Week ' + d.w + ', ' + d.y; }, function (d) { return 'W' + d.w; });
+    if (v === 'monthly') return groupBy(function (d) { return d.y * 100 + d.m; }, function (d) { return MN[d.m - 1] + ' ' + d.y; }, function (d) { return MN[d.m - 1]; });
+    return groupBy(function (d) { return d.y; }, function (d) { return String(d.y); }, function (d) { return String(d.y); });
+  }
+  function fillMonthSelect(sel, idx) {
+    sel.innerHTML = '';
+    monthKeys().forEach(function (k, i) {
+      var o = document.createElement('option'); o.value = i; o.textContent = MN[k % 100 - 1] + ' ' + Math.floor(k / 100); sel.appendChild(o);
+    });
+    sel.value = idx;
+  }
+  function fillPeriodSelect(s, list, idx) {
+    s.innerHTML = '';
+    list.forEach(function (p, i) { var o = document.createElement('option'); o.value = i; o.textContent = p.label; s.appendChild(o); });
+    s.value = idx;
+  }
+  function rangeText(p, v) {
+    if (v === 'daily') return dlabel(p.first) + ' ' + p.first.y;
+    var a = p.first, b = p.last;
+    return a.dd + ' ' + MN[a.m - 1] + ' ' + a.y + ' to ' + b.dd + ' ' + MN[b.m - 1] + ' ' + b.y + ' (' + p.days.length + ' production day' + (p.days.length === 1 ? '' : 's') + ')';
+  }
+
+  /* ---- KPI views ---- */
+  var NAMES = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+  var PLABEL = { daily: 'Day', weekly: 'Week', monthly: 'Month', yearly: 'Year' };
+  function buildPeriods() { periods = periodsFor(view, mfilter); }
+  function calc(p) {
+    var rt = 0; activeCodes().forEach(function (c) { rt += p.codes[c] || 0; });
+    var att = 0; p.days.forEach(function (d) { att += dayAtt(d); }); att = att / p.days.length;
+    var hours = p.min / 60;
+    var k31 = p.min > 0 ? rt / p.min * 100 : null;
+    var k32 = hours > 0 ? p.kg / hours : null;
+    var k33 = p.kg > 0 ? p.rwKg / p.kg * 100 : null;
+    var k34 = k32 != null && att > 0 ? k32 / att : null;
+    var k35 = null, dl = null;
+    if (Object.keys(DL).length) { var rg = calRange(p), dd = delayIn(rg[0], rg[1]); if (dd.any) { k35 = dd.sum / (PLATT * 1440 * rg[2]) * 100; dl = { min: dd.sum, days: rg[2] }; } }
+    var attN = p.days.filter(function (d) { return d.att == null && attFor(d.d) != null; }).length;
+    var base = 0, extra = 0; p.days.forEach(function (d) { base += baseAtt(d); extra += EXTRA[d.d] || 0; }); base /= p.days.length; extra /= p.days.length;
+    return { rt: rt, att: att, base: base, extra: extra, v: [k31, k32, k33, k34, k35], dl: dl, attN: attN };
+  }
+  function meets(k, v, t) { return v == null || t == null ? null : (k.dir === 'low' ? v <= t : v >= t); }
+
+  function updateTabs() {
+    qa('.tab').forEach(function (t) {
+      var on = t.getAttribute('data-view') === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
+      if (on) t.setAttribute('aria-controls', tab === 'production' ? 'pview' : 'view'); else t.removeAttribute('aria-controls');
+    });
+    $('view').hidden = tab === 'production'; $('pview').hidden = tab !== 'production';
+    $('view').setAttribute('aria-labelledby', 'tab-kpi');
+  }
+  function renderControls() {
+    qa('#kseg button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-kv') === view ? 'true' : 'false'); });
+    $('monthfilter').hidden = view !== 'daily';
+    if (view === 'daily') fillMonthSelect($('mfilter'), mfilter);
+    $('plabel').textContent = PLABEL[view];
+    fillPeriodSelect($('period'), periods, sel);
+    $('th-p').textContent = PLABEL[view];
+    var tr = NAMES[view] + ' trend', tb = NAMES[view] + ' table';
+    if (view === 'daily' && periods[0]) { var f = periods[0].first, sfx = ' (' + MN[f.m - 1] + ' ' + f.y + ')'; tr += sfx; tb += sfx; }
+    $('trend-h').textContent = tr; $('tbl-h').textContent = tb;
+  }
+  function renderTiles() {
+    var p = periods[sel]; if (!p) { $('tiles').innerHTML = ''; $('range').textContent = ''; return; }
+    var r = calc(p), h = '';
+    $('range').textContent = rangeText(p, view);
+    KPIS.forEach(function (k, i) {
+      var v = r.v[i], t = getTarget(p.last.y, i), ok = meets(k, v, t);
+      h += '<div class="tile"><span class="id">KPI ' + k.id + '</span><span class="name">' + k.name + '</span>' +
+        '<span class="val">' + fmt(v, k.dp) + '</span><span class="unit">' + k.unit + '</span>' +
+        '<span class="tgt">' + (t == null ? 'Target not set (enter it under KPI targets)' : 'Target ' + (k.dir === 'low' ? 'at most ' : 'at least ') + fmt(t, t % 1 ? 2 : 0)) +
+        (ok == null ? '' : ' <span class="pill ' + (ok ? 'good">Meets target' : 'bad">Misses target') + '</span>') + '</span></div>';
+    });
+    $('tiles').innerHTML = h;
+    var t34 = qa('#tiles .tile')[3]; if (t34) t34.insertAdjacentHTML('beforeend', '<span class="tgt">Manpower ' + fmtAtt(r.att) + ' = ' + fmtAtt(r.base) + ' attendance' + (r.attN ? ' (' + (useAssigned() ? 'Mixing group present' : 'present at the chosen locations') + ' in the HR report, ' + r.attN + ' of ' + p.days.length + ' days)' : ' (default or typed in)') + ' + ' + fmtAtt(r.extra) + ' additional</span>');
+    var t35 = qa('#tiles .tile')[4]; if (t35) t35.insertAdjacentHTML('beforeend', '<span class="tgt">' + (r.dl ? fmt(r.dl.min, 0) + ' min delay ÷ (' + PLATT + ' platterns × 1,440 × ' + r.dl.days + ' days)' : 'Needs the down time report (Press Downtime Dashboard tab)') + '</span>');
+  }
+  function niceStep(raw) {
+    var p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  function chartSvg(k, idx, results) {
+    var W = 400, H = 180, L = 34, R = 10, T = 14, B = 22, pw = W - L - R, ph = H - T - B;
+    var tp = periods[sel] || periods[periods.length - 1], target = getTarget(tp ? tp.last.y : tyear, idx);
+    var vals = results.map(function (r) { return r.v[idx]; });
+    var max = Math.max((target || 0) * 1.15, Math.max.apply(null, vals.map(function (v) { return v || 0; })) * 1.1, 1e-9);
+    var step = niceStep(max / 4); max = Math.ceil(max / step) * step;
+    var y = function (v) { return T + ph - v / max * ph; };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="KPI ' + k.id + ' by ' + PLABEL[view].toLowerCase() + '">';
+    for (var g = 0; g <= max + 1e-9; g += step) {
+      s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="' + (L - 4) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + fmt(g, step < 1 ? 1 : 0) + '</text>';
+    }
+    var n = periods.length, bw = pw / n, w = Math.min(bw * 0.7, 26), every = Math.ceil(n / 12);
+    periods.forEach(function (p, i) {
+      var v = vals[i]; if (v == null) return;
+      var x = L + bw * i + (bw - w) / 2;
+      s += '<rect class="bar' + (i === sel ? ' sel' : '') + '" data-i="' + i + '" x="' + x + '" y="' + y(v) + '" width="' + w + '" height="' + Math.max(0, T + ph - y(v)) + '"><title>' + p.label + ': ' + fmt(v, k.dp) + '</title></rect>';
+      if (i % every === 0 || i === sel) s += '<text x="' + (x + w / 2) + '" y="' + (H - 8) + '" text-anchor="middle">' + p.short + '</text>';
+    });
+    if (target != null) {
+      s += '<line class="tgtline" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(target) + '" y2="' + y(target) + '"/>';
+      s += '<text class="tl" x="' + (W - R) + '" y="' + (y(target) - 3) + '" text-anchor="end">target ' + fmt(target, target % 1 ? 2 : 0) + '</text>';
+    } else {
+      s += '<text class="tl" x="' + (W - R) + '" y="' + (T + 8) + '" text-anchor="end">target not set</text>';
+    }
+    s += '</svg>';
+    return s;
+  }
+  function renderCharts() {
+    var results = periods.map(calc), h = '';
+    KPIS.forEach(function (k, i) {
+      h += '<div class="chart"><h3>KPI ' + k.id + ' ' + k.name + ' (' + k.unit + ')</h3>' + chartSvg(k, i, results) + '</div>';
+    });
+    $('charts').innerHTML = h;
+    qa('#charts .bar').forEach(function (b) { b.addEventListener('click', function () { select(+b.getAttribute('data-i')); }); });
+  }
+  function renderTable() {
+    var h = '', sums = KPIS.map(function () { return 0; }), cnt = KPIS.map(function () { return 0; });
+    periods.forEach(function (p, i) {
+      var r = calc(p), custom = p.days.some(function (d) { return d.att != null; });
+      var attCell = '<input type="number" min="1" step="0.5" data-i="' + i + '" value="' + (custom ? fmtAtt(r.base) : '') + '" placeholder="' + fmtAtt(r.base) + '" aria-label="Attendance for ' + p.label + '">';
+      var hasEx = p.days.some(function (d) { return EXTRA[d.d]; });
+      var exCell = '<input type="number" min="0" step="0.5" class="xin" data-i="' + i + '" value="' + (hasEx ? fmtAtt(r.extra) : '') + '" placeholder="0" aria-label="Additional manpower for ' + p.label + '">';
+      h += '<tr data-i="' + i + '"' + (i === sel ? ' class="sel"' : '') + '><td>' + p.label + '</td><td class="num">' + p.days.length + '</td>' +
+        '<td class="num">' + fmt(p.kg, 0) + '</td><td class="num">' + fmt(p.min, 0) + '</td><td class="num">' + fmt(p.rwKg, 0) + '</td><td class="num">' + fmt(r.rt, 1) + '</td><td>' + attCell + '</td><td>' + exCell + '</td><td class="num"><b>' + fmtAtt(r.att) + '</b></td>';
+      KPIS.forEach(function (k, j) {
+        var v = r.v[j], ok = meets(k, v, getTarget(p.last.y, j));
+        if (v != null) { sums[j] += v; cnt[j]++; }
+        h += '<td class="k ' + (ok == null ? '' : ok ? 'good' : 'bad') + '">' + fmt(v, k.dp) + '</td>';
+      });
+      h += '</tr>';
+    });
+    $('rows').innerHTML = h;
+    var a = '<tr><td>Average of ' + PLABEL[view].toLowerCase() + 's</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+    KPIS.forEach(function (k, j) { a += '<td class="num">' + fmt(cnt[j] ? sums[j] / cnt[j] : null, k.dp) + '</td>'; });
+    $('avg').innerHTML = a + '</tr>';
+    qa('#rows tr').forEach(function (tr) {
+      tr.addEventListener('click', function (e) { if (e.target.tagName !== 'INPUT') select(+tr.getAttribute('data-i')); });
+    });
+    qa('#rows input:not(.xin)').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var v = parseFloat(inp.value), p = periods[+inp.getAttribute('data-i')];
+        p.days.forEach(function (d) { d.att = v > 0 ? v : null; });
+        refresh();
+      });
+    });
+    // additional manpower: people allocated to Mixing on top of the attendance (kept per day, saved in this browser)
+    qa('#rows input.xin').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var v = parseFloat(inp.value), p = periods[+inp.getAttribute('data-i')];
+        p.days.forEach(function (d) { if (v > 0) EXTRA[d.d] = v; else delete EXTRA[d.d]; });
+        saveExtra(); refresh();
+      });
+    });
+    var sr = document.querySelector('#rows tr.sel');
+    if (sr && periods.length > 15) { var w = document.querySelector('#view .tablewrap'); w.scrollTop = Math.max(0, sr.offsetTop - 80); }
+  }
+  function select(i) { sel = i; $('period').value = i; renderTiles(); renderCharts(); renderTable(); }
+  function renderKpi() { renderControls(); renderTiles(); renderCharts(); renderTable(); }
+
+  /* ---- Production tab ---- */
+  var PNAMES = { daily: 'Day', weekly: 'Week', monthly: 'Month' };
+  function buildPProd() { pperiods = periodsFor(pview, pmf); }
+  function aggProd(p) {
+    var group = $('pgroup').value, map = {}, order = [], tot = { q: 0, kg: 0, m: 0 };
+    p.days.forEach(function (d) {
+      (prodByDate[d.d] || []).forEach(function (r) {
+        var key = group === 'type' ? r.t : r.n;
+        var o = map[key];
+        if (!o) { o = map[key] = { name: key, type: group === 'type' ? '' : r.t, brand: group === 'type' ? '' : r.b, q: 0, kg: 0, m: 0 }; order.push(key); }
+        o.q += r.q; o.kg += r.kg; o.m += r.m; tot.q += r.q; tot.kg += r.kg; tot.m += r.m;
+      });
+    });
+    var rows = order.map(function (k) { return map[k]; }).sort(function (a, b) { return b.kg - a.kg; });
+    return { rows: rows, tot: tot };
+  }
+  function renderProdControls() {
+    qa('#pseg button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pv') === pview ? 'true' : 'false'); });
+    $('pmonthfilter').hidden = pview !== 'daily';
+    if (pview === 'daily') fillMonthSelect($('pmfilter'), pmf);
+    $('pplabel').textContent = PNAMES[pview];
+    fillPeriodSelect($('pperiod'), pperiods, psel);
+  }
+  function renderProd() {
+    var p = pperiods[psel], gt = $('pgroup').value === 'type';
+    $('pth-n').textContent = gt ? 'Compound type' : 'Compound';
+    if (!p) { $('ptiles').innerHTML = ''; $('prows').innerHTML = ''; $('pfoot').innerHTML = ''; $('pchart').innerHTML = ''; $('mxh').innerHTML = ''; $('mxb').innerHTML = ''; return; }
+    $('prange').textContent = rangeText(p, pview);
+    var a = aggProd(p), hours = a.tot.m / 60;
+    var tiles = [
+      ['Production', fmt(a.tot.kg, 0), 'kg'],
+      ['Batches', fmt(a.tot.q, 0), 'batches mixed'],
+      ['Mixing time', fmt(hours, 1), 'hours (' + fmt(a.tot.m, 0) + ' min)'],
+      ['Output', fmt(hours > 0 ? a.tot.kg / hours : null, 0), 'kg per hour'],
+      [gt ? 'Compound types' : 'Compounds', fmt(a.rows.length, 0), gt ? 'made in this ' + PNAMES[pview].toLowerCase() : 'made in this ' + PNAMES[pview].toLowerCase()]
+    ];
+    $('ptiles').innerHTML = tiles.map(function (t) {
+      return '<div class="tile"><span class="name">' + t[0] + '</span><span class="val">' + t[1] + '</span><span class="unit">' + t[2] + '</span></div>';
+    }).join('');
+    $('pchart-h').textContent = 'Top ' + (gt ? 'compound types' : 'compounds') + ' by kg, ' + p.label;
+    $('ptbl-h').textContent = (gt ? 'Compound types' : 'Compounds') + ', ' + p.label;
+    // horizontal bar chart of up to 10 rows
+    var top = a.rows.slice(0, 10), W = 640, rowH = 22, T = 6, LBL = 150, VAL = 90, H = T * 2 + Math.max(1, top.length) * rowH;
+    var mx = top.length ? top[0].kg : 1, s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Top ' + (gt ? 'compound types' : 'compounds') + ' by kg">';
+    top.forEach(function (r, i) {
+      var y = T + i * rowH, bw = (W - LBL - VAL) * (r.kg / mx);
+      s += '<text class="hl" x="' + (LBL - 8) + '" y="' + (y + 14) + '" text-anchor="end">' + esc(r.name.length > 22 ? r.name.slice(0, 21) + '...' : r.name) + '</text>' +
+        '<rect class="hb" x="' + LBL + '" y="' + (y + 3) + '" width="' + Math.max(1, bw) + '" height="14"><title>' + esc(r.name) + ': ' + fmt(r.kg, 0) + ' kg</title></rect>' +
+        '<text class="hv" x="' + (LBL + bw + 6) + '" y="' + (y + 14) + '">' + fmt(r.kg, 0) + ' kg</text>';
+    });
+    $('pchart').innerHTML = s + '</svg>';
+    // table
+    var h = '';
+    a.rows.forEach(function (r) {
+      var share = a.tot.kg > 0 ? r.kg / a.tot.kg * 100 : 0, hr = r.m / 60;
+      h += '<tr><td>' + esc(r.name) + '</td><td class="txt">' + esc(r.type || '-') + '</td><td class="txt">' + esc(r.brand || '-') + '</td>' +
+        '<td class="num">' + fmt(r.q, 0) + '</td><td class="num">' + fmt(r.kg, 0) + '</td><td class="num">' + fmt(r.m, 0) + '</td><td class="num">' + fmt(hr > 0 ? r.kg / hr : null, 0) + '</td>' +
+        '<td><div class="share"><span class="num">' + fmt(share, 1) + '%</span><span class="bg"><span class="fg" style="display:block;width:' + Math.min(100, share) + '%"></span></span></div></td></tr>';
+    });
+    $('prows').innerHTML = h || '<tr><td colspan="8" class="txt">No production in this period.</td></tr>';
+    $('pfoot').innerHTML = '<tr><td>Total</td><td></td><td></td><td class="num">' + fmt(a.tot.q, 0) + '</td><td class="num">' + fmt(a.tot.kg, 0) + '</td><td class="num">' + fmt(a.tot.m, 0) + '</td><td class="num">' + fmt(hours > 0 ? a.tot.kg / hours : null, 0) + '</td><td class="num">100.0%</td></tr>';
+    renderMatrix();
+  }
+  function renderMatrix() {
+    var group = $('pgroup').value, gt = group === 'type';
+    var cols = pperiods.map(function (p) { return aggProd(p); });
+    var names = {}, order = [];
+    cols.forEach(function (c) { c.rows.forEach(function (r) { if (!names[r.name]) { names[r.name] = 0; order.push(r.name); } names[r.name] += r.kg; }); });
+    order.sort(function (a, b) { return names[b] - names[a]; });
+    var look = cols.map(function (c) { var m = {}; c.rows.forEach(function (r) { m[r.name] = r.kg; }); return m; });
+    var max = 0; look.forEach(function (m) { Object.keys(m).forEach(function (k) { if (m[k] > max) max = m[k]; }); });
+    $('pmx-h').textContent = (gt ? 'Compound type' : 'Compound') + ' kg by ' + PNAMES[pview].toLowerCase();
+    $('pmx-s').textContent = pview === 'daily' ? 'Every day of the selected month. Darker cells are higher kg.' : pview === 'weekly' ? 'Every week in the data. Darker cells are higher kg.' : 'Every month in the data. Darker cells are higher kg.';
+    var head = '<tr><th>' + (gt ? 'Compound type' : 'Compound') + '</th>' + pperiods.map(function (p) { return '<th title="' + esc(p.label) + '">' + esc(p.short) + '</th>'; }).join('') + '<th>Total</th></tr>';
+    $('mxh').innerHTML = head;
+    var body = '';
+    order.forEach(function (n) {
+      body += '<tr><td>' + esc(n) + '</td>';
+      look.forEach(function (m) {
+        var v = m[n];
+        if (!v) body += '<td class="num z">-</td>';
+        else body += '<td class="num" style="background:color-mix(in srgb, var(--accent) ' + Math.round(8 + 50 * Math.sqrt(v / max)) + '%, transparent)">' + fmt(v, 0) + '</td>';
+      });
+      body += '<td class="num"><strong>' + fmt(names[n], 0) + '</strong></td></tr>';
+    });
+    var tot = '<tr><td><strong>Total</strong></td>' + cols.map(function (c) { return '<td class="num"><strong>' + fmt(c.tot.kg, 0) + '</strong></td>'; }).join('');
+    var all = 0; cols.forEach(function (c) { all += c.tot.kg; });
+    $('mxb').innerHTML = body + tot + '<td class="num"><strong>' + fmt(all, 0) + '</strong></td></tr>';
+  }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function renderProdAll() { renderProdControls(); renderProd(); }
+
+  function refresh() { if (tab === 'production') renderProdAll(); else renderKpi(); }
+  function setTab(v) {
+    tab = v; updateTabs();
+    if (v === 'production') { buildPProd(); if (psel >= pperiods.length || psel < 0) psel = pperiods.length - 1; renderProdAll(); }
+    else { buildPeriods(); if (sel >= periods.length || sel < 0) sel = periods.length - 1; renderKpi(); }
+  }
+  function setBasis(v) { view = v; buildPeriods(); sel = periods.length - 1; renderKpi(); }
+  function resetAfterData() {
+    mfilter = Math.max(0, monthKeys().length - 1); pmf = mfilter;
+    buildPeriods(); sel = Math.max(0, periods.length - 1);
+    buildPProd(); psel = Math.max(0, pperiods.length - 1);
+    updateTabs(); renderTargets(); refresh();
+  }
+
+  /* ---- Import ---- */
+  function setStatus(msg, err) { var s = $('status'); s.textContent = msg; s.className = 'panel' + (err ? ' err' : ''); }
+  function findSheet(wb, name) {
+    for (var i = 0; i < wb.SheetNames.length; i++) if (wb.SheetNames[i].trim().toLowerCase() === name) return wb.Sheets[wb.SheetNames[i]];
+    return null;
+  }
+  function rowsOf(ws) { return XLSX.utils.sheet_to_json(ws, { defval: null, raw: true }); }
+  function pick(row, names) {
+    for (var k in row) { var kk = String(k).trim().toLowerCase(); if (names.indexOf(kk) >= 0) return row[k]; }
+    return undefined;
+  }
+  function weekOf(y, m, dd) {
+    var j1 = new Date(y, 0, 1), t = new Date(y, m - 1, dd);
+    var doy = Math.round((t - j1) / 864e5);
+    return Math.floor((doy + j1.getDay()) / 7) + 1;
+  }
+  function dateOf(row) {
+    var dt = pick(row, ['date']);
+    if (!(dt instanceof Date) || isNaN(dt)) return null;
+    var t = new Date(dt.getTime() + 12 * 3600e3);
+    return { y: t.getFullYear(), m: t.getMonth() + 1, dd: t.getDate() };
+  }
+  function importFile(file) {
+    if (!file) return;
+    setStatus('Reading ' + file.name + ' ...');
+    var fr = new FileReader();
+    fr.onerror = function () { setStatus('The file could not be read. Try importing it again.', true); };
+    fr.onload = function () {
+      setTimeout(function () {
+        try {
+          var wb = XLSX.read(fr.result, { type: 'array', cellDates: true, sheets: ['daily mixing', 'A daily down time'], sheetRows: 40000 });
+          var mx = findSheet(wb, 'daily mixing'), dtw = findSheet(wb, 'a daily down time');
+          if (!mx || !dtw) { setStatus('This workbook needs the sheets "daily mixing" and "A daily down time". Choose the Mixing Summery file.', true); return; }
+          var map = {}, pmap = {}, descIdx = {}, newDescs = [];
+          function slot(dt, wk) {
+            var k = dt.y + '-' + pad(dt.m) + '-' + pad(dt.dd);
+            if (!map[k]) map[k] = { d: k, y: dt.y, m: dt.m, dd: dt.dd, w: null, kg: 0, min: 0, rwKg: 0, att: null, codes: { '2.03': 0, '2.04': 0, '2.05': 0, '3.52': 0 } };
+            if (map[k].w == null && wk > 0) map[k].w = wk;
+            return map[k];
+          }
+          var nm = 0, nd = 0;
+          rowsOf(mx).forEach(function (r) {
+            var dt = dateOf(r); if (!dt) return;
+            var kg = Number(pick(r, ['net weight / kg'])), mn = Number(pick(r, ['time /min'])), q = Number(pick(r, ['qty']));
+            if (!isFinite(kg)) kg = 0; if (!isFinite(mn)) mn = 0; if (!isFinite(q)) q = 0;
+            var s = slot(dt, parseInt(pick(r, ['week']), 10)); s.kg += kg; s.min += mn;
+            var type = String(pick(r, ['compound type']) || '').trim();
+            if (type.toLowerCase() === 're work') s.rwKg += kg;
+            var name = String(pick(r, ['description']) || '').trim() || '(no description)';
+            var brand = String(pick(r, ['brand']) || '').trim();
+            if (descIdx[name] == null) { descIdx[name] = newDescs.length; newDescs.push([name, type, brand]); }
+            var pk = s.d + '|' + name;
+            if (!pmap[pk]) pmap[pk] = [s.d, descIdx[name], 0, 0, 0];
+            pmap[pk][2] += q; pmap[pk][3] += kg; pmap[pk][4] += mn;
+            nm++;
+          });
+          rowsOf(dtw).forEach(function (r) {
+            var dt = dateOf(r); if (!dt) return;
+            var code = Number(pick(r, ['code down time'])), t = Number(pick(r, ['time']));
+            if (!isFinite(code) || !isFinite(t)) return;
+            var s = slot(dt, parseInt(pick(r, ['week']), 10));
+            CODES.forEach(function (c) { if (Math.abs(code - Number(c)) < 1e-6) s.codes[c] += t; });
+            nd++;
+          });
+          var list = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) { return s.min > 0; })
+            .sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+          if (!list.length) { setStatus('No dated production rows were found in "daily mixing". Check that the date and time columns are filled.', true); return; }
+          var old = {}; days.forEach(function (d) { old[d.d] = d.att; });
+          list.forEach(function (s) {
+            if (s.w == null) s.w = weekOf(s.y, s.m, s.dd);
+            if (old[s.d] != null) s.att = old[s.d];
+          });
+          days = list; DESCS = newDescs;
+          indexProd(Object.keys(pmap).map(function (k) { return pmap[k]; }));
+          resetAfterData();
+          var f = list[0], l = list[list.length - 1];
+          setStatus('Loaded ' + file.name + ': ' + nm.toLocaleString('en-US') + ' mixing rows and ' + nd.toLocaleString('en-US') + ' down time rows, ' + list.length + ' production days from ' + f.dd + ' ' + MN[f.m - 1] + ' ' + f.y + ' to ' + l.dd + ' ' + MN[l.m - 1] + ' ' + l.y + '.');
+        } catch (e) {
+          setStatus('This file could not be opened as a workbook (' + (e && e.message ? e.message : 'unknown error') + ').', true);
+        }
+      }, 30);
+    };
+    fr.readAsArrayBuffer(file);
+  }
+
+  /* ---- Wiring ---- */
+  $('pick').addEventListener('click', function () { $('file').click(); });
+  $('file').addEventListener('change', function () { importFile(this.files[0]); this.value = ''; });
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  document.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files.length) importFile(e.dataTransfer.files[0]); });
+  $('period').addEventListener('change', function () { select(+this.value); });
+  $('mfilter').addEventListener('change', function () { mfilter = +this.value; buildPeriods(); sel = periods.length - 1; renderKpi(); });
+  qa('.code').forEach(function (c) { c.addEventListener('change', refresh); });
+  $('defatt').addEventListener('change', refresh);
+  $('tyear').addEventListener('change', function () { tyear = +this.value; renderTargets(); });
+  $('treset').addEventListener('click', function () { delete targets[tyear]; saveTargets(); renderTargets(); refresh(); });
+  var tabs = qa('.tab');
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { setTab(t.getAttribute('data-view')); });
+    t.addEventListener('keydown', function (e) {
+      var n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : -1;
+      if (n >= 0) { e.preventDefault(); tabs[n].focus(); setTab(tabs[n].getAttribute('data-view')); }
+    });
+  });
+  qa('#kseg button').forEach(function (b) {
+    b.addEventListener('click', function () { setBasis(b.getAttribute('data-kv')); });
+  });
+  qa('#pseg button').forEach(function (b) {
+    b.addEventListener('click', function () { pview = b.getAttribute('data-pv'); buildPProd(); psel = pperiods.length - 1; renderProdAll(); });
+  });
+  $('pmfilter').addEventListener('change', function () { pmf = +this.value; buildPProd(); psel = pperiods.length - 1; renderProdAll(); });
+  $('pperiod').addEventListener('change', function () { psel = +this.value; renderProd(); });
+  $('pgroup').addEventListener('change', renderProd);
+
+  function copyText(text, msgEl) {
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta); msgEl.textContent = ok ? 'Copied. Paste into Excel or a text file.' : 'Copy was blocked by the browser.';
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { msgEl.textContent = 'Copied. Paste into Excel or a text file.'; }, fallback);
+    } else fallback();
+  }
+  function csv(v) { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  $('copy').addEventListener('click', function () {
+    var lines = [PLABEL[view] + ',Production days,Production kg,Production time min,Rework kg,Rework time min,Attendance (default),Additional manpower,Manpower used,KPI 3.1,KPI 3.2,KPI 3.3,KPI 3.4,KPI 3.5'];
+    periods.forEach(function (p) {
+      var r = calc(p);
+      lines.push([csv(p.label), p.days.length, p.kg.toFixed(2), p.min, p.rwKg.toFixed(2), r.rt, fmtAtt(r.base), fmtAtt(r.extra), fmtAtt(r.att)]
+        .concat(r.v.map(function (v, j) { return v == null ? '' : v.toFixed(KPIS[j].dp + 1); })).join(','));
+    });
+    copyText(lines.join('\n'), $('copymsg'));
+  });
+  $('pcopy').addEventListener('click', function () {
+    var p = pperiods[psel]; if (!p) return;
+    var a = aggProd(p), gt = $('pgroup').value === 'type';
+    var lines = [(gt ? 'Compound type' : 'Compound') + ',Type,Brand,Batches,Production kg,Mixing time min,Output kg/h,Share %'];
+    a.rows.forEach(function (r) {
+      lines.push([csv(r.name), csv(r.type), csv(r.brand), r.q, r.kg.toFixed(2), r.m, r.m > 0 ? (r.kg / (r.m / 60)).toFixed(0) : '', a.tot.kg > 0 ? (r.kg / a.tot.kg * 100).toFixed(1) : ''].join(','));
+    });
+    copyText(lines.join('\n'), $('pcopymsg'));
+  });
+
+  renderCauses();
+  renderAtt();
+  resetAfterData();
+  try { window.parent.postMessage({ type: 'fitl-mixing-ready' }, '*'); } catch (e) {}
+})();
+</script>
+
+</body></html>

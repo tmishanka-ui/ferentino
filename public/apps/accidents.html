@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accident Registry — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--amber:#B97708;--amber-bg:#FBF0D8;--green:#2C7A4B;--green-bg:#E1F0E7;--blue:#2B5A8C;--head:'Barlow Condensed','Arial Narrow',sans-serif}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}
+  h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}
+  h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#B9B2A6}
+  .btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn.sm{padding:3px 9px;font-size:12px}.btn.ghost{border-color:transparent;color:var(--soft)}.btn.ghost:hover{color:var(--red);background:var(--red-bg)}
+  main{padding:16px 22px 50px;max-width:1450px;margin:0 auto}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .t{padding:12px 14px}.t small{display:block;color:var(--soft);font-size:12px}.t b{font:600 32px/1.1 var(--head)}.t b.red{color:var(--red)}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .bar select,.bar input,.f input,.f select,.f textarea{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px;width:auto}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px;margin-bottom:14px}
+  .cb{padding:12px 14px;height:320px;position:relative}.cb h3{font-size:17px;text-transform:uppercase;margin-bottom:6px}
+  .tw{max-height:560px;overflow:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:top}
+  th{position:sticky;top:0;background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);z-index:1}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:11.5px;font-weight:500;white-space:nowrap}
+  .chip.fa{background:#E3ECF6;color:var(--blue)}.chip.mt{background:var(--amber-bg);color:#7A4F05}.chip.lt{background:var(--red-bg);color:var(--red-d)}.chip.fat{background:#2B1B1B;color:#fff}
+  .chip.op{background:var(--amber-bg);color:#7A4F05}.chip.cl{background:var(--green-bg);color:var(--green)}
+  .empty{padding:40px 20px;text-align:center;color:var(--soft);line-height:1.7}
+  .veil{position:fixed;inset:0;background:rgba(29,33,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:50;overflow:auto}
+  .modal{background:#fff;border-radius:12px;width:min(760px,100%);padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto}
+  .modal h2{font-size:24px;text-transform:uppercase;margin-bottom:12px}
+  .f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.f label{display:block;font-size:12px;font-weight:600;color:var(--soft);margin-bottom:3px}
+  .f input,.f select,.f textarea{width:100%}.f textarea{min-height:64px;resize:vertical}.f .w2{grid-column:1/-1}
+  .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:60;pointer-events:none}#toast.show{opacity:1}
+  .note{color:var(--soft);font-size:12.5px}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Accident Registry</h1><div class="sub">Every workplace accident — recorded once, counted automatically in KPI 4.4 (Production KPI Dashboard)</div></div>
+<button class="btn red" id="add">+ Record an accident</button><button class="btn" id="xl">Download Excel</button><button class="btn" id="bk">Backup</button><label class="btn" style="margin:0">Restore<input id="rs" type="file" accept=".json" hidden></label></header>
+<main>
+<div class="tiles" id="tiles"></div>
+<div class="bar"><select id="fy"></select><select id="fm"></select><select id="fd"></select><select id="fs"></select><input id="fq" placeholder="Search name, EPF, description" style="min-width:240px"><span class="note" id="cnt"></span></div>
+<div class="grid2"><div class="card cb"><h3>Accidents per month <span class="note" style="text-transform:none;font-family:Inter">· KPI 4.4 (production) with its target</span></h3><canvas id="c1"></canvas></div><div class="card cb"><h3>Causes</h3><canvas id="c2"></canvas></div></div>
+<div class="card tw" id="tbl"></div>
+</main>
+<div id="host"></div><div id="toast"></div>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAoAPEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5w8czPpPjTV7W1Zra2tr2aKKKI7EiRZGAVQOAAAAAKyv7Wuv+fmf/AL7NaXxJ/wCSh67/ANhC4/8ARrVi1+Gyk222f68UYRhTjGKsklp8ix/a11/z8z/99mj+1rr/AJ+Z/wDvs103wV+AvjL9o3xk3h7wL4dv/E2tR2zXj2tpsDRwqQGdmcqoGWA5PJIAr1j/AIdN/tIf9Ei8R/8AgRaf/Hq2p4WvUXNTg2vJNnlY7iLKMFV9hjcVSpzte06kIuz2dpNOx4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne/f8Omv2kf8AokXiP/wItP8A49XA/DT9kD4m/GX4h+IfCfhTwdqWveIfCjMmr2drJCTYMrmMq7lwhO8FcBjyp9DTlg8RFqMoSTe2j19DOjxPktanOrSxlKUYK8mqkGopuycmpWSb0u7a6Hn/APa11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIE/wDJI/EQ+txaf/Hqv6hi/wDn1L/wF/5HN/rnw7/0H0P/AAbT/wDkjwH+1rr/AJ+Z/wDvs0f2tdf8/M//AH2a9B+Cf7HvxP8A2kbjWo/AfgzVPFB8Ozi21J7N4hHayksAhd3VWJ2t90ngZ6EGu9/4dN/tIf8ARIvEf/gRaf8Ax6ohg8ROPNCEmvJNnTi+KMlwtV0MVjKUJreMqkItXV1dOSaundeWp4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne0+Nv+CaHx++HXhe81rWPhT4pttM0+MzXM0aw3JhQDLOUikZ9oAJJA4FcN8CP2avHv7T+tX+nfD7wtqPiq80uBbq7jtDGot42barMzsq8nOBnJweODSlhq8ZKEoNN7Kzu/ka0eIMqq4eeLpYqnKlD4pKcHGP+KSdl82cf/a11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIk/wDJIvEf/gRaf/Hq0+oYv/n1L/wF/wCRw/658O/9B9D/AMG0/wD5I8B/ta6/5+Z/++zR/a11/wA/M/8A32a9A+CX7IHxN/aSutbh8B+DdT8Ut4cmW31JrOSHy7WRiwCl2dVYnY33SeBnpiuw8R/8Evf2hvCmjz3978I/FgtbZS8hgWG5dVAyTsikZz+ANRDCYiUeeMJNd7Ox14jiXJ8PX+rYjF0oVFb3ZVIKWuq0bvqmmtNUzw/+1rr/AJ+Z/wDvs0f2tdf8/M//AH2as+FPCGqeOvF2naBo+n3Wo63q12lhZ2MSfvrid22rGFOMNu45xjBzjBr0b42fsMfF39nDwjHr3jrwLqnhrSJrqOyiuLme3YSzvnZGqpIzMxweAOxrONKpKLnGLaW7s7L1OzEZpgqFeGGr1oRqT+GLlFSl/hi3d/JM8w/ta6/5+Z/++zR/a11/z8z/APfZr3yD/glD+0fcQJIvwi8S7ZFDDdLaq2CM8gygg+xGRTv+HTf7SH/RIvEf/gRaf/Hq3+oYv/n1L/wF/wCR5P8Arnw7/wBB9D/wbT/+SPAf7Wuv+fmf/vs0f2tdf8/M/wD32a9L+Iv7EfxZ+Enjbwx4a8R+BtW0vxB40uDa6Hp7ywST6lICoIRUkbABZclsDnrwaPjn+xH8WP2ZfB8ev+P/AATqPhbR5bhbSO5u7i3ZZJWDMEVUkZicKx4HABzWUsNXSbcHpvo9PXsdtLiDKqkqUKeJpt1fgSnFuetvd197VNaX1TR5p/a11/z8z/8AfZo/ta6/5+Z/++zXuegf8EuP2hfFGhWWp2Hwo8R3FjqMCXNvL5tsnmRuoZW2tKGGQQcEA+1cR8cP2Sfid+zVDbTePfA3iDwvbXj+VBc3cANtK+M7BKhZN2P4c59qc8LiIR55wkl3adiMNxJk+JrLDYfF0p1H9mNSDlpvom3p6HB/2tdf8/M//fZo/ta6/wCfmf8A77Nd98Bv2Q/ib+1Ba6nP8PvBmq+KYNGkSK9ktWiRLd3BZVJkdQSQCcDOB1xkU6y/Y/8AibqXx1n+GNt4O1K58fWkJuJ9FhkheaCMIrlnYP5a4VlPLfxDuRUrD1nFSUXZ6LR6vsu5vPO8thVqUJ4imp01zTi5xTjHR80le8VZrV2Wq7nn/wDa11/z8z/99mj+1rr/AJ+Z/wDvs179/wAOm/2kP+iReI//AAItP/j1MuP+CUX7R9rbvK3wh8TFY1LEJLauxA9FEpJPsOa2+oYv/n1L/wABf+R5y4z4ef8AzH0P/BtP/wCSPBP7Wuv+fmf/AL7NH9rXX/PzP/32aXWtEvfDWs3enalZ3Wn6hYStb3NrcxNFNbyKcMjo2CrA9QarVyO60Z9HFxklKOqZY/ta6/5+Z/8Avs0VXopXKsbXxJ/5KHrv/YQuP/RrViMwRSzEBVGST2FbfxJ/5KHrv/YQuP8A0a1YyNsdWwpKsGAYAgkHPIPBHsetOW5MPhR+1f8AwRQ/Zh0/9j39jXVfix4xWPTNV8ZWZ1q7muBtbTdIhRnhQ56bl3TEf7ajtXyFfft9+GPjj8c9e8bePP2gPjh4Y0TVr0yWHhTwVZXFtDY2i/LFG07yBQ+0AsUi5ZmOa+ePiT/wUU+N3xf+HN94R8SfETV9S8M6lCtvdaf5FvDFNEpBEZMcasFyo4BwQMdK8Xr38TnMFSpYfCxtGC1v1ffR/wBXPxbIfCvEzzHH5zxBWUsRiZWi6dmoU1tFOrTdnoldJNKKs9Wfa37Wv7cPw/svhjGPgz8Vf2mbrxTLdoJpfEXia5S0tbUAmQhc/O7HaoGeMk9hn9CP+CWf7Nsf7Bv7Bdx4p1nTrzUPF3ie0bxVrcVnC1zeTkxl4LRAoLO6xkDABzJI571+EBAYEEAg9RXuXw8/4KWfHv4U+D7LQNB+KPiOz0fTYxDaW8ghufs8YGFRWlRm2gcAZwBwKrLs6hSxDxGIjraytsvOzf6mXG/hTisfklPJcmrqMHUU6rqt81RL4Y88I7J6pctr2e61+vvCGp+NfiB8RNW8WfFHxn+2LbHW72W8/wCEc8F+EtUsLHTkY/JAkrknai4X5I1zjOTmvOP+CgXxmn+Hvh7w3pHw38QftZadrPiS5kguE8danfWiXkO0IILeF9pld3kUEjhRgfxceRf8Pb/2kv8AorOu/wDgJZ//ABmuA8d/tj/E/wCKHxa0Dx34i8YahrPizwrt/sjULmGFjp5Vi6lI9nl5DHdkqTnB7DEV8zouk4U3K76ta+evM/67G+TeH+a0sxhisbGj7OCdoQm+W6i1BOKoQVk7Xbbdl9rY/V79l7/gnl4G/wCCcn7O1p4t+JvxM8T6G3lwXWq2ra9Np3h+zvpQqiMwW7IZyG2pl2bdt6AVwXwl/ZKvf2vvEevy+A/28vGniK+tpDdXtrpJkRbISsSu2L7SNsYPyjAwMAV+c/x2/bg+LX7Tnhe10Tx7451XxLpFndC9htJ44Y41mCsquRGi7iAzAZzjJrkPhB8ZvFXwB8eW3ifwXrt94c1+0jeKO8tCN3luMMjBgVZT6MCMgHqAa3nnOEUoUoUX7NebUvPZ2+/8Lnk4fwr4knQxOPxeZRePqttfu6c6KS1irVKTklvdxt0upcuv7Nft6/t++E/+Cdf7LF38MtN8Wan4k+K9poKWVl/aPnXN4xkQq2o3MrjaR99x8xywCgYBxt/8ErP2Yo/2AP2B5fEWr6Ze3/izxFZnxNrVvZwNcXkn7otBaRqgLOyxkDAH35H9a/Gj4+/tZfET9qU6a3xC8TT+KJNH3izlubW3jkgV8b1DRopKnAO0kjIzjNdZ8O/+Clfx6+FHg+y0DQPij4ks9H02MRWtvIIbn7PGOAitKjNtA4AzgDgV00+I6X1t16kXyxVoWtpfdtN6vpe+x4mL8Dcy/wBW45Tg68FWrVVUxLlKVqnLfljGUaacYpty5XB2k/idlf7A8Ian40+IHxF1bxb8UPGX7Ytt/bd7LeDw34L8JapYWOnI5ykCSuSdqLhfkjXOM5Oa83/4KB/Gab4f+HvDmj/DjX/2sdP1nxJcyQXEfjrU760S8h2hBBbwvtMrO8igkcKMDndx5F/w9v8A2kv+is67/wCAln/8Zrz/AMeftj/E/wCKHxb8P+O/EXjHUNY8W+Fdv9kahcxQsdPKsXUpHs8vIY7slScgHsMefiMzoypOFNyu+rWvnrzP+ux9lk3h/mtHMYYvGxo+zgnaEJvluotQTiqEFZO1223p9rY/Zr4AeB9B/wCCOn/BMi41PXkgbV9LsW1jWQmA2o6rOFCWynuAxjhX2XNeA/8ABCv/AIKLeLPjX8X/ABr4B+I3iK91vVNfMniTRJLuYyfZ23/6VaRZ6RqGR0TooV8V+d3x1/bk+Ln7TXhO30Lx7461bxJo1rdLex2c8cMcQmUMquRGi7iAzYzkDNcL8NPiZr/wb8eab4o8LardaJ4g0eQy2d9b48yBipQ4BBBBVmBBBBBNdM+IVCvReGTVOmrW797/AC28zwcL4JVMTk2ZQzypCrj8ZJz9oruMGneCi2lJLmvzWXwtRV7H7m/C3/glxpPgL/gpz4u+N7x2jaNfWa3ejWK4za6rOpS8nK4wPlXK/wC1O57V+en/AAW+/bZm+Pn7XMPhrw9qLjw78KJjb2s0EmBLquQZ51I7xlVjU9ijkda8ql/4K1/tIzRMjfFrXwrgqdttaKRn0IiyD7ivniaV7iZ5JHeSSV2kd2OWdmJLMSepJJJPvWeZ5zQqUHh8HFxUpOUr21e/Tz/JHfwF4W5tgc4jnXE2IhXqUaUaNFR5moxS5W3zRjry3XW7lJvWx+nf/BCmy+LP7THxu1bxx4u+Inj/AFbwV4JT7PHaXut3MttqeoyrwjKzYdYoyXI6bnjrJ/4Lgf8ABSDxOP2jbb4c/Dnxbrfh2x8DITrV1o989q95fyqD5LOhBKxR4yP77n+7Xxx8GP2/vjH+zt4Fh8M+CPHeoeG9BglknS0trW2ZfMkbc7lnjLMSe5J6AdAK8p13XLzxRrt9qeo3U17qOpXEl3d3MzbpLiaRi7ux7ksST9axnnHLgFhaLlzN3k3+S1v2+7zPTwnhe6vGFXiLM40nRhHko0ox0j05ppxUebWT05tZb+6j9Sf+CEnwH8T/ALQXxJ1L4+fEfWdd8USeHIpPD3ha41i7ku5BIcm5lRpCSFQMYxjjc8ncVo/Fp2/4K1/8FadO8F27fbfhF8CGNxqrKc2+oXauPMXPQ+ZKiwj/AGIZSOua+Bfhz/wUZ+N/wh+Hdh4S8L/ETVtD8OaVA1taWNrbWyrboxJIVjGWySzHdnOTnNYXwF/bL+KH7L2manZ/D/xhfeGYNauBdX/2eCCR7uUDAZ2kRmOATxnHJPUmt6eb4eNCnhnGTjfmnteT7b7X79Ejycb4Y55WzjHZ7Tq0o1pU/ZYVJyUaMHdOTtDSfK5Ncqa55yd9j9Mf+C83/BQXXPgePDHwx+HfiG98PeJ5mTXNWv8ATpjFPZW6Ei3gyvTzHBZh3SPHRq+gfDGo6R/wVr/4JebbgW4vvGOhtbXAOP8AiXaxBwW6fLsuEDDH8JHrX4PfE/4oeIfjT491HxR4r1a613xBq7K93fXJHmTFVCLwAAAFUAAAAAV2/wACP24fi1+zH4XutE8BeOdV8NaTeXRvZrSCOGSNpiqqzgSI2CQqg4xnaK2p8R3xVWddN05q3L2XTy739TzMd4FOlw9gMJlFSFPHYaaqe1d0pSestUnKyajyXW0dldn7KfCrwzof/BGv/gmLNeaz9luNa0WybUNTMbf8hfWbjAWJT1I8wpGvoiZ7VwP/AAQz/Z5v9J+Fvij4/eNnN741+LtzLf8A2lgXkisRIzcAZP72Tc23+6kQ7V+VHx3/AG3viz+074atdG8feOdW8S6VZXIvIbWdIoolmClQ5EaLuIDNjOcZOKtfBn9vv4z/ALPXg5PD3gz4i6/omhQsXhsV8qeG3JOT5YlRtgJJOFwMnOKuHEGGjiaclB+zpxtFaXv3evbTfzOTEeC2fVcjxtGWLpvG42qp1p+9yumm5KnF8vMvftJ+7ZpKOy1+gf2wfjn+1d8c/wBovxV4l8NaH8fPDHhea6MGjabpthqNrFFaRfLG5jRQPMkA3seuXx2Ffo1+x7Frn7C3/BO+48afGXxL4j1nxDHYS+I9bOsX8t3PZllBhsY95OGA2JtHWR29a/JH/h7h+0l/0VnXf/ASz/8AjNYHxG/4KO/HL4t6Pa6f4j+JGtapZWd5DqEULw28aieFt0bnZGN21sHByMgccVlhc6oUKk66c5Tadr2sm+trnocQeFWdZvgMLk8qeFw+GpSjzezc3UlGKty8zpL1bd7ys3tr518avi5q3x9+L/ibxvroVNW8U6jLqFxGowsBY/LGB6IgVf8AgNcxWl4x8Yan8QfFN/res3b3+q6nKZ7q4dVVpnPUkKAB+ArNr5icnKTk3e5/QGEoRo0IUYRUVFJKK2SStZaLRbLRadEFFFFSdBtfEn/koeu/9hC4/wDRrVi0UU3uTD4V6BRRRSKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//2Q==';document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+const KEY='fitl_accidents_v1',TKEY='fitl_accidents_target_v1';
+const DEPTS=['Production – Curing','Production – Mixing','Production – Tyre Building','Production – Planning','Production – Other','Maintenance','Quality','Stores','HR','Finance','Other'];
+const SEV=[['fa','First aid','chip fa'],['mt','Medical treatment','chip mt'],['lt','Lost-time injury','chip lt'],['fat','Fatality','chip fat']];
+const BODY=['Head','Eye','Face','Neck','Shoulder','Arm','Elbow','Wrist / hand','Finger','Chest','Back','Hip','Leg','Knee','Ankle / foot','Toe','Multiple','Other'];
+const NATURE=['Cut / laceration','Burn / scald','Bruise','Fracture','Sprain / strain','Crush','Foreign body','Electric shock','Other'];
+const CAUSE=['Hot surface / steam','Machine / moving part','Material handling','Slip, trip or fall','Struck by object','Falling object','Electrical','Chemical','Fire','Vehicle / forklift','Unsafe act','Other'];
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const dot=s=>s?String(s).replace(/-/g,'.'):'';
+const isProd=d=>/^production/i.test(d||'');
+let A=[],TARGET=0,CH=[];const F={y:'',m:'',d:'',s:'',q:''};
+try{A=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){A=[]}
+try{const t=parseFloat(localStorage.getItem(TKEY));TARGET=isFinite(t)&&t>=0?t:0}catch(_){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(A))}catch(_){toast('Could not save — browser storage is full or blocked. Download a backup.')}publish()};
+function publish(){try{if(parent!==window)parent.postMessage({type:'fitl-accidents',items:A.map(a=>({id:a.id,date:a.date,dept:a.dept,sev:a.sev,lost:+a.lost||0,status:a.status}))},'*')}catch(_){}}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3000)}
+const sevOf=k=>SEV.find(s=>s[0]===k)||SEV[0];
+
+/* ---------- screen ---------- */
+function years(){const s=new Set(A.map(a=>a.date.slice(0,4)));s.add(String(new Date().getFullYear()));return[...s].sort().reverse()}
+function filtered(){const q=F.q.trim().toLowerCase();return A.filter(a=>(!F.y||a.date.startsWith(F.y))&&(!F.m||a.date.slice(5,7)===F.m)&&(!F.d||a.dept===F.d)&&(!F.s||a.sev===F.s)&&(!q||[a.name,a.epf,a.desc,a.area,a.job].join(' ').toLowerCase().includes(q))).sort((x,y)=>(y.date+(y.time||''))<(x.date+(x.time||''))?-1:1)}
+function fillFilters(){
+  const opt=(v,t,sel)=>`<option value="${v}"${sel?' selected':''}>${t}</option>`;
+  $('fy').innerHTML=opt('','All years',!F.y)+years().map(y=>opt(y,y,F.y===y)).join('');
+  $('fm').innerHTML=opt('','All months',!F.m)+MONS.map((m,i)=>opt(pad(i+1),m,F.m===pad(i+1))).join('');
+  $('fd').innerHTML=opt('','All departments',!F.d)+DEPTS.map(d=>opt(d,d,F.d===d)).join('');
+  $('fs').innerHTML=opt('','All severities',!F.s)+SEV.map(s=>opt(s[0],s[1],F.s===s[0])).join('');
+}
+function render(){
+  const yr=F.y||String(new Date().getFullYear()),mo=today().slice(0,7);
+  const ytd=A.filter(a=>a.date.startsWith(yr)),prodY=ytd.filter(a=>isProd(a.dept));
+  $('tiles').innerHTML=[['Production, this month',A.filter(a=>isProd(a.dept)&&a.date.startsWith(mo)).length,1],['Production, '+yr+' (KPI 4.4)',prodY.length,1],['All departments, '+yr,ytd.length,0],['Lost-time injuries, '+yr,ytd.filter(a=>a.sev==='lt'||a.sev==='fat').length,0],['Lost days, '+yr,ytd.reduce((s,a)=>s+(+a.lost||0),0),0],['Open cases',A.filter(a=>a.status!=='Closed').length,0]]
+    .map(t=>`<div class="card t"><small>${t[0]}</small><b class="${t[2]&&t[1]>0?'red':''}">${t[1]}</b></div>`).join('');
+  const rows=filtered();$('cnt').textContent=rows.length+' of '+A.length+' accident'+(A.length===1?'':'s');
+  $('tbl').innerHTML=rows.length?`<table><thead><tr><th>Date</th><th>Shift</th><th>Department / area</th><th>Injured person</th><th>Injury</th><th>Cause</th><th>Severity</th><th>Lost days</th><th>Status</th><th></th></tr></thead><tbody>`+
+   rows.map(a=>{const s=sevOf(a.sev);return`<tr><td style="white-space:nowrap"><b>${dot(a.date)}</b><div class="note">${esc(a.time||'')}</div></td><td>${esc(a.shift||'')}</td><td>${esc(a.dept)}<div class="note">${esc(a.area||'')}</div></td><td><b>${esc(a.name)}</b><div class="note">${a.epf?'EPF '+esc(a.epf):''}${a.job?' · '+esc(a.job):''}</div></td><td>${esc([a.body,a.nature].filter(Boolean).join(' · '))}<div class="note">${esc((a.desc||'').slice(0,110))}${(a.desc||'').length>110?'…':''}</div></td><td>${esc(a.cause||'')}</td><td><span class="${s[2]}">${s[1]}</span></td><td>${+a.lost||0}</td><td><span class="chip ${a.status==='Closed'?'cl':'op'}">${esc(a.status||'Open')}</span></td><td style="white-space:nowrap"><button class="btn sm" data-edit="${a.id}">Edit</button> <button class="btn sm ghost" data-del="${a.id}">Delete</button></td></tr>`}).join('')+'</tbody></table>'
+   :'<div class="empty"><b>No accidents recorded'+(A.length?' for these filters':' yet')+'.</b><br>Use “Record an accident” to add one — production accidents are counted in KPI 4.4 automatically.</div>';
+  charts(rows,yr);
+}
+function charts(rows,yr){
+  CH.forEach(c=>c.destroy());CH=[];if(typeof Chart==='undefined')return;
+  Chart.defaults.font.family="Inter,system-ui,sans-serif";
+  const per=MONS.map((_,i)=>{const k=yr+'-'+pad(i+1),m=A.filter(a=>a.date.startsWith(k));return{p:m.filter(a=>isProd(a.dept)).length,o:m.filter(a=>!isProd(a.dept)).length}});
+  CH.push(new Chart($('c1'),{data:{labels:MONS,datasets:[{type:'bar',label:'Production',data:per.map(x=>x.p),backgroundColor:'#DA1B22',stack:'a'},{type:'bar',label:'Other departments',data:per.map(x=>x.o),backgroundColor:'#B9B2A6',stack:'a'},{type:'line',label:'KPI 4.4 target ('+TARGET+')',data:MONS.map(()=>TARGET),borderColor:'#1F3A5F',borderDash:[6,4],pointRadius:0,backgroundColor:'#1F3A5F'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0},title:{display:true,text:'accidents · '+yr}}}}}));
+  const cs={};rows.forEach(a=>{const k=a.cause||'Not stated';cs[k]=(cs[k]||0)+1});const top=Object.entries(cs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  CH.push(new Chart($('c2'),{type:'bar',data:{labels:top.map(x=>x[0]),datasets:[{data:top.map(x=>x[1]),backgroundColor:'#9CB4D6'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}}));
+}
+
+/* ---------- form ---------- */
+const sel=(id,list,v,blank)=>`<select id="${id}">${blank?'<option value=""></option>':''}${list.map(x=>{const val=Array.isArray(x)?x[0]:x,t=Array.isArray(x)?x[1]:x;return`<option value="${esc(val)}"${val===v?' selected':''}>${esc(t)}</option>`}).join('')}</select>`;
+function openForm(id){
+  const a=id?A.find(x=>x.id===id):{date:today(),time:'',shift:'Day',dept:DEPTS[0],area:'',name:'',epf:'',job:'',sev:'fa',lost:0,body:'',nature:'',cause:'',desc:'',action:'',ref:'',by:'',status:'Open'};
+  $('host').innerHTML=`<div class="veil"><div class="modal"><h2>${id?'Edit accident':'Record an accident'}</h2><div class="f">
+  <div><label>Date *</label><input type="date" id="g_date" value="${esc(a.date)}"></div><div><label>Time</label><input type="time" id="g_time" value="${esc(a.time)}"></div>
+  <div><label>Shift</label>${sel('g_shift',['Day','Night'],a.shift)}</div><div><label>Department *</label>${sel('g_dept',DEPTS,a.dept)}</div>
+  <div><label>Area / press / location</label><input id="g_area" value="${esc(a.area)}" placeholder="e.g. 3M press bank"></div>
+  <div><label>Injured person *</label><input id="g_name" value="${esc(a.name)}"></div><div><label>EPF no</label><input id="g_epf" value="${esc(a.epf)}"></div><div><label>Job title</label><input id="g_job" value="${esc(a.job)}"></div>
+  <div><label>Severity *</label>${sel('g_sev',SEV.map(s=>[s[0],s[1]]),a.sev)}</div><div><label>Days lost</label><input type="number" min="0" id="g_lost" value="${+a.lost||0}"></div>
+  <div><label>Body part</label>${sel('g_body',BODY,a.body,1)}</div><div><label>Nature of injury</label>${sel('g_nature',NATURE,a.nature,1)}</div><div><label>Cause</label>${sel('g_cause',CAUSE,a.cause,1)}</div>
+  <div class="w2"><label>What happened *</label><textarea id="g_desc">${esc(a.desc)}</textarea></div>
+  <div class="w2"><label>Immediate action taken</label><textarea id="g_action">${esc(a.action)}</textarea></div>
+  <div><label>Corrective action / CAPA reference</label><input id="g_ref" value="${esc(a.ref)}" placeholder="e.g. I/0526"></div><div><label>Reported by</label><input id="g_by" value="${esc(a.by)}"></div><div><label>Status</label>${sel('g_status',['Open','Closed'],a.status)}</div></div>
+  <div class="foot"><button class="btn" id="g_no">Cancel</button><button class="btn red" id="g_ok">${id?'Save changes':'Add to registry'}</button></div></div></div>`;
+  $('g_no').onclick=()=>$('host').innerHTML='';
+  $('g_ok').onclick=()=>{
+    const g=k=>$('g_'+k).value.trim();if(!g('date')||!g('name')||!g('desc')){toast('Date, injured person and “What happened” are needed');return}
+    const rec={id:id||('a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),date:g('date'),time:g('time'),shift:g('shift'),dept:g('dept'),area:g('area'),name:g('name'),epf:g('epf'),job:g('job'),sev:g('sev'),lost:Math.max(0,parseInt(g('lost'),10)||0),body:g('body'),nature:g('nature'),cause:g('cause'),desc:g('desc'),action:g('action'),ref:g('ref'),by:g('by'),status:g('status')};
+    if(id)A[A.findIndex(x=>x.id===id)]=rec;else A.push(rec);save();$('host').innerHTML='';fillFilters();render();toast(id?'Saved':'Accident recorded')};
+}
+document.addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]');if(ed){openForm(ed.dataset.edit);return}
+  const dl=e.target.closest('[data-del]');if(dl){const a=A.find(x=>x.id===dl.dataset.del);if(a&&confirm('Delete the accident of '+a.name+' on '+dot(a.date)+'?\nThis cannot be undone.')){A=A.filter(x=>x!==a);save();fillFilters();render()}}
+});
+$('add').onclick=()=>openForm();
+['fy','fm','fd','fs'].forEach(id=>$(id).onchange=e=>{F[id.slice(1)]=e.target.value;render()});
+$('fq').oninput=e=>{F.q=e.target.value;render()};
+$('xl').onclick=()=>{const rows=filtered().slice().reverse().map(a=>({Date:a.date,Time:a.time,Shift:a.shift,Department:a.dept,'Area / location':a.area,'Injured person':a.name,'EPF no':a.epf,'Job title':a.job,Severity:sevOf(a.sev)[1],'Days lost':+a.lost||0,'Body part':a.body,'Nature of injury':a.nature,Cause:a.cause,'What happened':a.desc,'Immediate action':a.action,'CAPA reference':a.ref,'Reported by':a.by,Status:a.status,'Counts in KPI 4.4':isProd(a.dept)?'Yes':'No'}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Accident registry');XLSX.writeFile(wb,'Accident_Registry_'+today()+'.xlsx')};
+$('bk').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(A,null,1)],{type:'application/json'}));a.download='Accident_Registry_backup_'+today()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)};
+$('rs').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j)||j.some(x=>!x.date))throw 0;if(!confirm('Restoring replaces the '+A.length+' accidents currently in the registry with '+j.length+' from the backup. Continue?'))return;A=j;save();fillFilters();render();toast('Backup restored')}catch(_){toast('That is not an accident registry backup')}};r.readAsText(f);e.target.value=''};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('host').innerHTML=''});
+// the KPI 4.4 target for the chart
+const tl=document.createElement('label');tl.className='note';tl.innerHTML='KPI 4.4 target <input type="number" id="tg" min="0" step="1" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:5px 8px"> per month';$('cnt').after(tl);
+$('tg').value=TARGET;$('tg').onchange=e=>{const v=parseFloat(e.target.value);TARGET=isFinite(v)&&v>=0?v:0;try{localStorage.setItem(TKEY,String(TARGET))}catch(_){}render()};
+fillFilters();render();publish();
+try{parent.postMessage({type:'fitl-accidents-ready'},'*')}catch(_){}
+})();
+</script>
+</body>
+</html>

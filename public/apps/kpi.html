@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Production KPI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b2430;--mu:#677489;--bd:#dde2ea;--ac:#0b5cad;--ok:#1a7f4b;--bad:#b3261e;--warn:#9a6700}
+@media(prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1b222b;--tx:#e6ebf2;--mu:#93a1b5;--bd:#2d3744;--ac:#5aa9f5;--ok:#4cc38a;--bad:#ff8a80;--warn:#e3b341}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:1200px;margin:auto}
+h1{font-size:20px;margin:0 0 2px}.sub{color:var(--mu);margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+input,select,button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:6px 8px}
+input[type=file]{width:100%}button{cursor:pointer;background:var(--ac);color:#fff;border:0;padding:8px 14px}
+.st{font-size:12px;margin-top:4px;color:var(--mu)}.st.ok{color:var(--ok)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.k{border:1px solid var(--bd);border-radius:10px;padding:14px}.k b{font-size:30px;display:block}.k small{color:var(--mu)}
+.good{color:var(--ok)}.badc{color:var(--bad)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:5px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card);color:var(--mu);font-weight:600}td:first-child,th:first-child,td.l,th.l{text-align:left}
+.sc{overflow:auto;max-height:420px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.w{color:var(--warn)}.chip{display:inline-block;border:1px solid var(--bd);border-radius:20px;padding:1px 9px;margin:2px;font-size:12px}
+h2{font-size:15px;margin:0 0 8px}
+.cg{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}.cb{position:relative;height:290px;border:1px solid var(--bd);border-radius:10px;padding:8px}
+</style></head><body>
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:4px"><img src="data:image/jpeg;base64,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" alt="Ferentino" style="height:36px;width:auto;border-radius:4px;flex-shrink:0"><h1 style="margin:0">Production KPI Dashboard</h1></div>
+<div class="sub">4.1 Overall press utilization (%) = 100 − total downtime %  ·  4.2 Production output per man hour (kg) = output ÷ (manpower × 12). 4.2 up to August is the stored KPI history; from September it is calculated from the manpower files.</div>
+
+<div class="card"><div class="grid">
+ <div><label>1. Production — from the Production Summary report</label><div class="st" id="sp">Waiting: upload the production summary report on the Production Summary tab (Production Department)</div></div>
+ <div><label>2. Down time — from the Press Downtime Dashboard</label><div class="st" id="sd">Waiting: import the production_down_time_report on the Press Downtime Dashboard tab</div></div>
+ <div><label>3. Manpower file(s) – e.g. Sep.xlsx, Oct.xlsx (one or many) — upload here</label><input type="file" id="fr" accept=".xlsx,.xlsm" multiple><div class="st" id="sr">not loaded</div></div>
+</div>
+<div class="row" style="margin-top:12px">
+ <div><label>Total plates</label><input id="plates" type="number" value="70" style="width:80px"></div>
+ <div><label>Shift minutes</label><input id="smin" type="number" value="720" style="width:80px"></div>
+ <div><label>Shift hours</label><input id="hrs" type="number" value="12" style="width:70px"></div>
+ <div><label>Manpower basis</label><select id="basis"><option value="tot">Manpower + off shift (Tot)</option><option value="mp">Manpower only</option></select></div>
+ <button id="go">Update KPIs</button><button id="dl" style="background:var(--ok)">Download Excel</button>
+</div><div class="st" id="log"></div></div>
+
+
+
+<div class="card" id="a43">
+ <div class="row"><h2 style="margin:0">KPI 4.3 · Attendance of the allocated employees</h2>
+  <div><label>Period</label><select id="p43"><option value="day">Daily (selected month)</option><option value="week">Weekly (selected month)</option><option value="month" selected>Monthly</option></select></div>
+  <div><label>Month</label><select id="m43"></select></div>
+  <div><label>Target (% attended, at least)</label><input id="t43" type="number" min="0" step="0.5" placeholder="not set" style="width:110px"></div></div>
+ <div class="st" id="s43">Waiting: upload the daily attendance report on the HR Department · Attendance tab, and assign employees on the Production Department · Shift Groups tab.</div>
+ <div class="kpi" style="margin-top:10px" id="k43"></div>
+ <div class="cg" style="margin-top:10px"><div class="cb"><canvas id="c7"></canvas></div></div>
+ <div class="sc" id="t43tbl" style="max-height:380px;margin-top:10px"></div>
+</div>
+
+<div class="card" id="a44">
+ <div class="row"><h2 style="margin:0">KPI 4.4 · Accidents in the production department</h2><div><label>Month</label><select id="a44m"></select></div><div><label>Target (accidents per month, at most)</label><input id="t44" type="number" min="0" step="1" value="0" style="width:90px"></div></div>
+ <div class="st" id="sa">Waiting: record accidents on the Accident Registry tab (HR Department) — production accidents are counted here automatically.</div>
+ <div class="kpi" style="margin-top:10px" id="a44c"></div>
+ <div class="cg" style="margin-top:10px"><div class="cb"><canvas id="c6"></canvas></div><div class="sc" id="a44t" style="max-height:300px"></div></div>
+</div>
+
+<div class="card" id="a45">
+ <div class="row"><h2 style="margin:0">KPI 4.5 · Total wastage (scrap + spew + tyre-building scrap compound)</h2><div><label>Month</label><select id="a45m"></select></div><div><label>Target (% of production kg, at most)</label><input id="t45" type="number" min="0" step="0.05" value="1.8" style="width:90px"></div></div>
+ <div class="st" id="s45">Waiting: upload the production summary report on the Production Summary tab (Production Department).</div>
+ <div class="kpi" style="margin-top:10px" id="k45"></div>
+ <div class="cg" style="margin-top:10px"><div class="cb"><canvas id="c8"></canvas></div><div class="sc" id="t45tbl" style="max-height:300px"></div></div>
+</div>
+
+<div id="out" style="display:none">
+ <div class="card"><div class="row"><div><label>Month</label><select id="mon"></select></div></div>
+  <div class="kpi" style="margin-top:10px" id="kc"></div></div>
+ <div class="card"><div class="row"><h2 style="margin:0">Charts</h2><div><label>Period</label><select id="per"><option value="day">Daily (selected month)</option><option value="week">Weekly (Sun–Sat)</option><option value="month" selected>Monthly</option></select></div></div>
+  <div class="cg" style="margin-top:10px"><div class="cb"><canvas id="c1"></canvas></div><div class="cb"><canvas id="c2"></canvas></div><div class="cb"><canvas id="c3"></canvas></div><div class="cb"><canvas id="c4"></canvas></div><div class="cb"><canvas id="c5"></canvas></div></div></div>
+ <div class="card"><h2>Monthly KPI values (paste into QMS KPI sheet, row 4.1 / 4.2)</h2><div class="sc"><table id="tm"></table></div></div>
+ <div class="card"><h2>Shift detail – Date / Shift / Executive / Group</h2><div class="sc"><table id="ts"></table></div></div>
+ <div class="card"><h2>Executive names recognised</h2><div id="nm"></div>
+  <h2 style="margin-top:12px">Checks &amp; differences between the reports</h2><div class="st" id="isum"></div><div class="sc"><table id="ti"></table></div></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const P={},D={},R={},NAMES={};let ROWS=[],MON=[],ISS=[];
+const NX={A:'B',B:'C',C:'A'};
+const HIST={'2026-01':31.260670831251065,'2026-02':51.3,'2026-03':36.5,'2026-04':39.6,'2026-05':42.9,'2026-06':42.7,'2026-07':43.1,'2026-08':37.6};
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const iso=k=>new Date(Math.round((k-25569)*864e5)).toISOString().slice(0,10);
+const dnum=v=>typeof v==='number'&&v>40000?Math.floor(v):(typeof v==='string'&&/^\d{4}-\d\d-\d\d/.test(v)?Math.floor(Date.parse(v)/864e5)+25569:null);
+const shiftOf=s=>{s=String(s||'').toUpperCase();if(s.includes('/'))return null;return s.includes('NIGHT')?'NIGHT':s.includes('DAY')?'DAY':null};
+const grpOf=e=>{e=String(e||'').trim().toUpperCase();if(/^(SUD|SUG)/.test(e))return 'A';if(/^(CHA|CAT)/.test(e))return 'B';if(/^PRA/.test(e))return 'C';return null};
+const f2=v=>v==null||isNaN(v)?'–':(+v).toFixed(2);
+const rd=(f,o)=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=e=>{try{res(XLSX.read(e.target.result,Object.assign({type:'array',dense:true},o||{})))}catch(x){rej(x)}};fr.onerror=rej;fr.readAsArrayBuffer(f)});
+const setS=(id,t,ok)=>{$(id).textContent=t;$(id).className='st'+(ok?' ok':'')};
+
+
+/* Production comes from the report uploaded on the Production Summary tab, down time from the report uploaded on the
+   Press Downtime Dashboard tab; the host page hands both over. Only manpower is uploaded here. */
+const sheetList=buf=>XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames;
+function loadProduction(f){
+ const names=sheetList(f.buffer),sn=names.includes('Daily Tyres Production')?'Daily Tyres Production':names.includes('Production')?'Production':null;
+ if(!sn)return false;
+ const ws=XLSX.read(f.buffer,{type:'array',dense:true,sheets:sn}).Sheets[sn];
+ for(const k in P)delete P[k];let n=0;
+ for(const r of XLSX.utils.sheet_to_json(ws,{raw:true})){if(typeof r.DATE!=='number')continue;const s=shiftOf(r.Shift);if(!s)continue;
+  const k=Math.floor(r.DATE)+'|'+s;const o=P[k]||(P[k]={kg:0,qty:0});o.kg+=+r['NET WEIGHT / kg']||0;o.qty+=+r.QTY||0;n++}
+ SRC.p=f.name+' · '+n+' rows · '+Object.keys(P).length+' shifts';setS('sp',SRC.p,1);return true}
+function loadDowntime(f){
+ if(!sheetList(f.buffer).includes('Daily down time'))return false;
+ const ws=XLSX.read(f.buffer,{type:'array',dense:true,sheets:'Daily down time'}).Sheets['Daily down time'];
+ for(const k in D)delete D[k];for(const k in NAMES)delete NAMES[k];let n=0;
+ for(const r of XLSX.utils.sheet_to_json(ws,{raw:true})){if(typeof r.DATE!=='number')continue;const s=shiftOf(r.SHIFT);if(!s)continue;
+  const k=Math.floor(r.DATE)+'|'+s;const o=D[k]||(D[k]={t:0,has:false,c:{A:0,B:0,C:0},nm:{}});
+  if(typeof r.TIME==='number'){o.t+=r.TIME;o.has=true}
+  const rn=String(r.EXECUTIVE||'').trim().toUpperCase();const g=grpOf(rn);
+  if(g){o.c[g]++;o.nm[rn]=1;NAMES[rn]=(NAMES[rn]||0)+1}n++}
+ SRC.d=f.name+' · '+n+' rows · '+Object.keys(D).length+' shifts';setS('sd',SRC.d,1);return true}
+function refresh(why){ if(Object.keys(D).length){compute();if(MON.length){render();$('log').textContent=why+' · updated '+new Date().toLocaleTimeString()}} save(); if(typeof render44==='function')render44() }
+addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;if(m&&m.type==='fitl-accidents'&&Array.isArray(m.items)){ACC=m.items;saveAcc();render44();return}
+if(m&&m.type==='fitl-attendance'&&m.g43){G43=m.g43;ASG=m.assigned||{};saveAtt43();render43();return}if(!m||!Array.isArray(m.files))return;
+ try{
+  if(m.type==='fitl-workbook'){let ok=false,o45=false;m.files.forEach(f=>{if(loadProduction(f))ok=true;if(load45(f))o45=true});if(ok)refresh('Production received from the Production Summary report');if(o45){$('a45m').value='';render45()}}
+  else if(m.type==='fitl-downtime-workbook'){let ok=false;m.files.forEach(f=>{if(loadDowntime(f))ok=true});if(ok)refresh('Down time received from the Press Downtime Dashboard')}
+ }catch(x){$('log').textContent='Could not read the received workbook: '+x.message}});
+
+$('fr').onchange=async e=>{try{for(const k in R)delete R[k];let n=0;
+ for(const f of e.target.files){setS('sr','Reading '+f.name+'…');const wb=await rd(f);
+  for(const sn of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true});const hdr=a[0]||[];let g=null;
+   for(let i=1;i<a.length;i++){const row=a[i]||[];const lab=String(row[0]||'').trim().toLowerCase();const m=lab.match(/^shift\s*([abc])/);
+    if(m){g=m[1].toUpperCase();continue}
+    if(lab==='manpower'&&g){const off=(a[i+1]&&String(a[i+1][0]||'').trim().toLowerCase().startsWith('off'))?a[i+1]:[];
+     for(let c=1;c<hdr.length;c++){const dt=dnum(hdr[c]);if(dt==null||!(row[c]>0))continue;R[dt+'|'+g]={m:row[c],o:typeof off[c]==='number'?off[c]:0};n++}}}}}
+ SRC.r=n+' group-days of manpower';setS('sr',SRC.r,1);refresh('Manpower loaded')}catch(x){setS('sr','Error: '+x.message)}};
+
+/* keep what was received, so the dashboard is still filled the next time the page opens */
+const SRC={p:'',d:'',r:''},KEY='fitl_kpi_v1';
+function save(){try{localStorage.setItem(KEY,JSON.stringify({P,D,R,NAMES,SRC}))}catch(_){}}
+function restore(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return;
+ Object.assign(P,s.P||{});Object.assign(D,s.D||{});Object.assign(R,s.R||{});Object.assign(NAMES,s.NAMES||{});Object.assign(SRC,s.SRC||{});
+ if(SRC.p)setS('sp',SRC.p+' (saved)',1);if(SRC.d)setS('sd',SRC.d+' (saved)',1);if(SRC.r)setS('sr',SRC.r+' (saved)',1);
+ if(Object.keys(D).length){compute();if(MON.length){render();$('log').textContent='Showing the last data received'}}}catch(_){}}
+
+function compute(){
+ const CAP=(+$('plates').value)*(+$('smin').value),HRS=+$('hrs').value,tot=$('basis').value==='tot';
+ const keys=[...new Set([...Object.keys(P),...Object.keys(D)])].sort((a,b)=>{const[x,s]=a.split('|'),[y,t]=b.split('|');return x-y||(s==='DAY'?-1:1)});
+ ROWS=[];ISS=[];
+ for(const k of keys){const[ds,s]=k.split('|');const d=+ds,p=P[k],dn=D[k];
+  const eg=dn?Object.entries(dn.c).sort((a,b)=>b[1]-a[1]).filter(x=>x[1]>0).map(x=>x[0])[0]||null:null;
+  const rg=['A','B','C'].filter(g=>R[d+'|'+g]);let g=eg,src=eg?'Executive':'',date=iso(d);
+  if(rg.length===2){const pr=NX[rg[0]]===rg[1]?[rg[0],rg[1]]:[rg[1],rg[0]];const rgp=s==='DAY'?pr[0]:pr[1];
+   if(eg&&eg!==rgp)ISS.push([date,s,'Executive differs from manpower roster','Executive group '+eg+' · roster pairing gives '+rgp+' (roster used)']);
+   g=rgp;src=eg===rgp?'Executive = roster':'Roster pairing'}
+  if(!g)ISS.push([date,s,'Group not identified',dn?'No valid executive name':'Shift missing in downtime report']);
+  const kg=p?p.kg:0,qty=p?p.qty:0,has=dn&&dn.has;
+  const dt=has?dn.t:null,dtp=has?dt/CAP*100:null;
+  const rm=g&&R[d+'|'+g];const mp=rm?(tot?rm.m+rm.o:rm.m):null;
+  if(p&&kg>0&&!dn)ISS.push([date,s,'In production, missing in downtime report','Output '+f2(kg)+' kg']);
+  if(dn&&!p)ISS.push([date,s,'In downtime report, missing in production sheet','Downtime '+(has?dt+' min':'no time')]);
+  if(dn&&!has)ISS.push([date,s,'Downtime shift has no TIME entered','Not counted in 4.1']);
+  if(Object.keys(R).length&&p&&kg>0&&!mp)ISS.push([date,s,'No manpower found','Group '+(g||'?')+' not in roster for this date – not counted in 4.2']);
+  ROWS.push({d,date,s,exec:dn?Object.keys(dn.nm).join('/'):'',g:g||'?',src,kg,qty,dt,dtp,mp,mh:mp?mp*HRS:null,kmh:mp&&kg>0?kg/(mp*HRS):null,has:!!has,use:!!(p&&kg>0&&mp)})}
+ const M={};
+ for(const r of ROWS){const m=r.date.slice(0,7);const o=M[m]||(M[m]={m,n:0,t:0,kg:0,mh:0,ns:0,rs:0});
+  if(r.has){o.n++;o.t+=r.dt}if(r.use){o.ns++;o.kg+=r.kg;o.mh+=r.mh;o.rs+=r.kmh}}
+ MON=Object.values(M).map(o=>({m:o.m,shifts:o.n,dtp:o.n?o.t/(CAP*o.n)*100:null,u:o.n?100-o.t/(CAP*o.n)*100:null,ns:o.ns,kg:o.kg,mh:o.mh,
+  mph:HIST[o.m]!=null?HIST[o.m]:(o.mh?o.kg/o.mh:null),h:HIST[o.m]!=null,avg:o.ns?o.rs/o.ns:null}));
+ MON.sort((a,b)=>a.m<b.m?-1:1)}
+
+function render(){
+ $('out').style.display='block';
+ const sel=$('mon'),cur=sel.value;sel.innerHTML=MON.map(m=>'<option value="'+m.m+'">'+MN[+m.m.slice(5)-1]+' '+m.m.slice(0,4)+'</option>').join('');
+ sel.value=MON.some(m=>m.m===cur)?cur:MON[MON.length-1].m;card();
+ $('tm').innerHTML='<tr><th>Month</th><th>Shifts (downtime)</th><th>Total downtime %</th><th>4.1 Utilization %</th><th>Shifts (4.2)</th><th>Output kg</th><th>Man hours</th><th>4.2 kg / man hour</th><th>Avg of shift ratios</th></tr>'+
+  MON.map(m=>'<tr><td>'+MN[+m.m.slice(5)-1]+' '+m.m.slice(0,4)+'</td><td>'+m.shifts+'</td><td>'+f2(m.dtp)+'</td><td><b>'+f2(m.u)+'</b></td><td>'+m.ns+'</td><td>'+(m.kg?Math.round(m.kg):'–')+'</td><td>'+(m.mh||'–')+'</td><td><b>'+f2(m.mph)+'</b>'+(m.h?' <small>(KPI sheet)</small>':'')+'</td><td>'+f2(m.avg)+'</td></tr>').join('');
+ $('ts').innerHTML='<tr><th>Date</th><th>Shift</th><th class="l">Executive</th><th>Group</th><th class="l">Group source</th><th>Output kg</th><th>Tyres</th><th>Downtime min</th><th>Downtime %</th><th>Utilization %</th><th>Manpower</th><th>kg / man hour</th></tr>'+
+  ROWS.filter(r=>r.date.slice(0,7)===sel.value).map(r=>'<tr><td>'+r.date+'</td><td>'+r.s+'</td><td class="l">'+r.exec+'</td><td>'+r.g+'</td><td class="l">'+r.src+'</td><td>'+f2(r.kg)+'</td><td>'+r.qty+'</td><td>'+(r.has?r.dt:'–')+'</td><td>'+f2(r.dtp)+'</td><td>'+(r.has?f2(100-r.dtp):'–')+'</td><td>'+(r.mp||'–')+'</td><td>'+f2(r.kmh)+'</td></tr>').join('');
+ $('nm').innerHTML=Object.entries(NAMES).map(([n,c])=>'<span class="chip">'+n+' → '+grpOf(n)+' ('+c+')</span>').join('')||'–';
+ charts();
+ $('isum').textContent=ISS.length+' item(s) – listed below (first 400 shown)';
+ $('ti').innerHTML='<tr><th>Date</th><th>Shift</th><th class="l">Issue</th><th class="l">Detail</th></tr>'+ISS.slice(0,400).map(i=>'<tr><td>'+i[0]+'</td><td>'+i[1]+'</td><td class="l w">'+i[2]+'</td><td class="l">'+i[3]+'</td></tr>').join('')}
+
+let CH=[];const GC={A:'#0b5cad',B:'#1a7f4b',C:'#c2410c'};
+function charts(){
+ if(typeof Chart==='undefined')return;CH.forEach(c=>c.destroy());CH=[];
+ Chart.defaults.color=getComputedStyle(document.body).color;Chart.defaults.borderColor='rgba(128,128,128,.25)';
+ const per=$('per').value,mo=$('mon').value,wk=d=>d-((d-25569+4)%7);
+ const keyOf=r=>per==='day'?r.date:per==='week'?'W '+iso(wk(r.d)):r.date.slice(0,7);
+ const src=ROWS.filter(r=>per!=='day'||r.date.slice(0,7)===mo);
+ const labels=[...new Set(src.map(keyOf))].sort();
+ const calc=a=>{const h=a.filter(r=>r.has),u=a.filter(r=>r.use),mh=u.reduce((s,r)=>s+r.mh,0);
+  return{u:h.length?100-h.reduce((s,r)=>s+r.dtp,0)/h.length:null,m:mh?u.reduce((s,r)=>s+r.kg,0)/mh:null,kg:a.reduce((s,r)=>s+r.kg,0)}};
+ const ser=(g,k)=>labels.map(l=>{if(k==='m'&&!g&&per==='month'&&HIST[l]!=null)return Math.round(HIST[l]*100)/100;
+  const a=src.filter(r=>keyOf(r)===l&&(!g||r.g===g));if(!a.length)return null;const v=calc(a)[k];return v==null?null:Math.round(v*100)/100});
+ const tg=v=>({label:'Target',data:labels.map(()=>v),borderDash:[6,4],borderColor:'#888',backgroundColor:'#888',pointRadius:0});
+ const ov=k=>({label:'Overall',data:ser(null,k),borderColor:'#7c3aed',backgroundColor:'#7c3aed',tension:.2});
+ const gs=k=>['A','B','C'].map(g=>({label:'Group '+g,data:ser(g,k),borderColor:GC[g],backgroundColor:GC[g],tension:.2}));
+ const mk=(id,type,ds,title)=>CH.push(new Chart($(id),{type,data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,spanGaps:true,
+  plugins:{title:{display:true,text:title},legend:{position:'bottom'}},scales:{x:{ticks:{maxTicksLimit:14}}}}}));
+ mk('c1','line',[ov('u'),tg(90)],'KPI 4.1 Overall press utilization % ('+per+')');
+ mk('c2','line',[ov('m'),tg(60)],'KPI 4.2 Output per man hour, kg ('+per+')');
+ mk('c3','line',gs('u').concat([tg(90)]),'KPI 4.1 utilization % – production group wise');
+ mk('c4','line',gs('m').concat([tg(60)]),'KPI 4.2 kg per man hour – production group wise');
+ mk('c5','bar',gs('kg'),'Output kg – production group wise (clustered columns)')}
+$('per').onchange=charts;
+function card(){const m=MON.find(x=>x.m===$('mon').value);if(!m)return;
+ $('kc').innerHTML='<div class="k"><small>KPI 4.1 Overall press utilization (target 90 %)</small><b class="'+(m.u>=90?'good':'badc')+'">'+f2(m.u)+' %</b><small>Total downtime '+f2(m.dtp)+' % over '+m.shifts+' shifts</small></div>'+
+  '<div class="k"><small>KPI 4.2 Output per man hour (target 60 kg)</small><b class="'+(m.mph>=60?'good':'badc')+'">'+(m.mph==null?'n/a':f2(m.mph)+' kg')+'</b><small>'+(m.h?'From QMS KPI sheet history (up to August)':m.mph==null?'Upload the manpower file for this month':Math.round(m.kg)+' kg ÷ '+m.mh+' man hours ('+m.ns+' shifts)')+'</small></div>'}
+$('mon').onchange=()=>{card();render()};
+$('go').onclick=()=>{if(!Object.keys(D).length){$('log').textContent='Waiting for the down time report from the Press Downtime Dashboard tab.';return}
+ compute();if(!MON.length){$('log').textContent='No data found.';return}render();$('log').textContent='Updated '+new Date().toLocaleTimeString()};
+$('dl').onclick=()=>{if(!MON.length){$('log').textContent='Press "Update KPIs" first.';return}
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(MON.map(m=>({Month:m.m,'Shifts (downtime)':m.shifts,'Total downtime %':m.dtp,'KPI 4.1 Utilization %':m.u,'Shifts (4.2)':m.ns,'Output kg':m.kg,'Man hours':m.mh,'KPI 4.2 kg per man hour':m.mph,'4.2 source':m.h?'KPI sheet history':'Calculated','Avg of shift ratios':m.avg}))),'KPI 4.1 & 4.2');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ROWS.map(r=>({Date:r.date,Shift:r.s,Executive:r.exec,Group:r.g,'Group source':r.src,'Output kg':r.kg,Tyres:r.qty,'Downtime min':r.dt,'Downtime %':r.dtp,Manpower:r.mp,'kg per man hour':r.kmh}))),'Shift detail');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ISS.map(i=>({Date:i[0],Shift:i[1],Issue:i[2],Detail:i[3]}))),'Checks');
+ XLSX.writeFile(wb,'Production_KPI_Dashboard.xlsx')};
+
+
+/* ---------- KPI 4.4: accidents in the production department (from the Accident Registry, HR Department) ---------- */
+let ACC=[],CH44=null,T44=0;
+const isProdDept=d=>/^production/i.test(d||'');
+try{ACC=JSON.parse(localStorage.getItem('fitl_kpi_acc_v1')||'[]')}catch(_){ACC=[]}
+try{const t=parseFloat(localStorage.getItem('fitl_kpi_t44'));if(isFinite(t)&&t>=0)T44=t}catch(_){}
+const saveAcc=()=>{try{localStorage.setItem('fitl_kpi_acc_v1',JSON.stringify(ACC))}catch(_){}};
+function monthsOf(){
+ const ms=new Set(MON.map(m=>m.m));ACC.forEach(a=>ms.add(a.date.slice(0,7)));const all=[...ms].sort();if(!all.length)return[];
+ const out=[];let [y,m]=all[0].split('-').map(Number);const [ey,em]=all[all.length-1].split('-').map(Number);
+ while(y<ey||(y===ey&&m<=em)){out.push(y+'-'+String(m).padStart(2,'0'));m++;if(m>12){m=1;y++}}return out}
+function stat44(m){
+ const a=ACC.filter(x=>isProdDept(x.dept)&&x.date.slice(0,7)===m),mo=MON.find(x=>x.m===m);
+ const lt=a.filter(x=>x.sev==='lt'||x.sev==='fat').length,lost=a.reduce((s,x)=>s+(+x.lost||0),0),mh=mo&&mo.mh?mo.mh:null;
+ return{n:a.length,lt,lost,mh,fr:mh?a.length/mh*1e6:null}}
+function render44(){
+ const box=$('a44');
+ if(!ACC.length&&!MON.length){box.style.display='';$('a44c').innerHTML='';$('a44t').innerHTML='';if(CH44){CH44.destroy();CH44=null}return}
+ const ms=monthsOf(),sel=$('a44m'),cur=sel.value;sel.innerHTML=ms.slice().reverse().map(m=>'<option value="'+m+'">'+MN[+m.slice(5)-1]+' '+m.slice(0,4)+'</option>').join('');
+ sel.value=ms.includes(cur)?cur:ms[ms.length-1];T44=T44;$('t44').value=T44;
+ $('sa').textContent=ACC.length?ACC.length+' accidents in the registry ('+ACC.filter(a=>isProdDept(a.dept)).length+' in production) · KPI 4.4 counts departments starting with “Production”':'Waiting: record accidents on the Accident Registry tab (HR Department).';$('sa').className='st'+(ACC.length?' ok':'');
+ const s=stat44(sel.value);
+ $('a44c').innerHTML='<div class="k"><small>KPI 4.4 Accidents in production (target at most '+T44+')</small><b class="'+(s.n<=T44?'good':'badc')+'">'+s.n+'</b><small>'+MN[+sel.value.slice(5)-1]+' '+sel.value.slice(0,4)+' · '+s.lt+' lost-time injur'+(s.lt===1?'y':'ies')+' · '+s.lost+' lost day'+(s.lost===1?'':'s')+'</small></div>'+
+  '<div class="k"><small>Accident frequency rate (per 1,000,000 man hours)</small><b>'+(s.fr==null?'n/a':f2(s.fr))+'</b><small>'+(s.mh?s.n+' accident'+(s.n===1?'':'s')+' ÷ '+s.mh+' man hours':'Needs the manpower file for this month')+'</small></div>';
+ $('a44t').innerHTML='<table><tr><th>Month</th><th>Accidents</th><th>Lost-time</th><th>Lost days</th><th>Frequency rate</th></tr>'+ms.slice().reverse().map(m=>{const x=stat44(m);return'<tr><td>'+MN[+m.slice(5)-1]+' '+m.slice(0,4)+'</td><td class="'+(x.n<=T44?'good':'badc')+'"><b>'+x.n+'</b></td><td>'+x.lt+'</td><td>'+x.lost+'</td><td>'+(x.fr==null?'–':f2(x.fr))+'</td></tr>'}).join('')+'</table>';
+ if(typeof Chart==='undefined')return;if(CH44)CH44.destroy();
+ CH44=new Chart($('c6'),{type:'bar',data:{labels:ms.map(m=>MN[+m.slice(5)-1].slice(0,3)+' '+m.slice(2,4)),datasets:[{label:'Accidents in production',data:ms.map(m=>stat44(m).n),backgroundColor:'#c53030'},{type:'line',label:'Target',data:ms.map(()=>T44),borderDash:[6,4],borderColor:'#888',backgroundColor:'#888',pointRadius:0}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'KPI 4.4 Accidents in production per month'},legend:{position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+$('a44m').onchange=render44;
+$('t44').onchange=e=>{const v=parseFloat(e.target.value);T44=isFinite(v)&&v>=0?v:0;try{localStorage.setItem('fitl_kpi_t44',String(T44))}catch(_){}render44()};
+
+
+/* ---------- KPI 4.3: attended employees ÷ total allocated employees (shift wise and section wise) ----------
+   Allocated = employees assigned to the group / section on the Shift Groups tab.
+   Attendance = allocated employees present on their shift + allocated employees present on an off shift (OFF codes).
+   A group counts as on duty for a shift on a day when at least one of its employees attended that shift normally. */
+let G43={},ASG={},T43=null,CH43=null;
+const GN43={A:'Shift Group A',B:'Shift Group B',C:'Shift Group C',MIX:'Mixing',BASE:'Base Building'},SH43={Day:'Day shift',Night:'Night shift',General:'General shift'};
+try{const s=JSON.parse(localStorage.getItem('fitl_kpi_att_v1')||'null');if(s){G43=s.g43||{};ASG=s.assigned||{}}}catch(_){}
+try{const t=parseFloat(localStorage.getItem('fitl_kpi_t43'));if(isFinite(t))T43=t}catch(_){}
+const saveAtt43=()=>{try{localStorage.setItem('fitl_kpi_att_v1',JSON.stringify({g43:G43,assigned:ASG}))}catch(_){}};
+const d43=Object.keys;
+function wkStart(iso){const t=new Date(iso+'T00:00:00Z');return new Date(t.getTime()-t.getUTCDay()*864e5).toISOString().slice(0,10)}
+function pkeys43(){
+ const per=$('p43').value,mo=$('m43').value,all=d43(G43).sort();
+ const ds=per==='month'?all:all.filter(d=>d.slice(0,7)===mo);
+ const key=d=>per==='day'?d:per==='week'?wkStart(d):d.slice(0,7),m=new Map();
+ ds.forEach(d=>{const k=key(d);(m.get(k)||m.set(k,[]).get(k)).push(d)});
+ return[...m.entries()].sort((a,b)=>a[0]<b[0]?-1:1).map(([k,v])=>({k,dates:v,label:per==='day'?k:per==='week'?'Wk of '+k:MN[+k.slice(5)-1]+' '+k.slice(0,4)}))}
+function stats43(dates){
+ const R={};const add=(key,att,al,reg,off)=>{const o=R[key]||(R[key]={duty:0,att:0,al:0,reg:0,off:0});o.duty++;o.att+=att;o.al+=al;o.reg+=reg;o.off+=off};
+ dates.forEach(d=>{const g=G43[d]||{},prod={};
+  d43(g).forEach(gr=>d43(g[gr]).forEach(S=>{const x=g[gr][S];if(!(x.reg>0))return;const al=ASG[gr]||0;if(!al)return;
+   add(gr+'|'+S,x.reg+x.off,al,x.reg,x.off);add(gr+'|*',x.reg+x.off,al,x.reg,x.off);
+   if(gr==='A'||gr==='B'||gr==='C'){const p=prod[S]||(prod[S]={att:0,al:0,reg:0,off:0});p.att+=x.reg+x.off;p.al+=al;p.reg+=x.reg;p.off+=x.off}}));
+  d43(prod).forEach(S=>{const p=prod[S];add('P|'+S,p.att,p.al,p.reg,p.off);add('P|*',p.att,p.al,p.reg,p.off)})});
+ return R}
+const pct43=o=>o&&o.al?o.att/o.al*100:null;
+function render43(){
+ const months=[...new Set(d43(G43).map(d=>d.slice(0,7)))].sort(),sel=$('m43'),cur=sel.value;
+ sel.innerHTML=months.slice().reverse().map(m=>'<option value="'+m+'">'+MN[+m.slice(5)-1]+' '+m.slice(0,4)+'</option>').join('');sel.value=months.includes(cur)?cur:months[months.length-1];
+ $('t43').value=T43==null?'':T43;
+ const alloc=Object.values(ASG).reduce((a,b)=>a+b,0);
+ if(!months.length||!alloc){$('s43').textContent=!alloc?'Waiting: assign employees to the groups on the Production Department · Shift Groups tab.':'Waiting: upload the daily attendance report on the HR Department · Attendance tab.';$('k43').innerHTML='';$('t43tbl').innerHTML='';if(CH43){CH43.destroy();CH43=null}return}
+ $('s43').textContent=months.length+' month(s) of attendance · '+alloc+' employees allocated to groups and sections · attendance = employees present on their shift + employees present on an off shift';$('s43').className='st ok';
+ const mo=sel.value,all=stats43(d43(G43).filter(d=>d.slice(0,7)===mo)),tg=T43,cls=v=>tg==null||v==null?'':v>=tg?'good':'badc';
+ const names={P:'Shift groups A + B + C',A:GN43.A,B:GN43.B,C:GN43.C,MIX:GN43.MIX,BASE:GN43.BASE},order=['P','A','B','C','MIX','BASE'];
+ $('k43').innerHTML=['P','MIX','BASE'].filter(g=>all[g+'|*']).map(g=>{const o=all[g+'|*'],v=pct43(o);return'<div class="k"><small>KPI 4.3 · '+names[g]+(tg==null?' (target not set)':' (target at least '+tg+' %)')+'</small><b class="'+cls(v)+'">'+(v==null?'n/a':f2(v)+' %')+'</b><small>'+MN[+mo.slice(5)-1]+' '+mo.slice(0,4)+' · '+f2(o.att/o.duty)+' attended on average of '+f2(o.al/o.duty)+' allocated · '+o.duty+' shift-day'+(o.duty===1?'':'s')+'</small></div>'}).join('')||'<div class="k"><small>No group or section was on duty in this month.</small></div>';
+ const pk=pkeys43(),rows=[];
+ pk.forEach(p=>{const st=stats43(p.dates);order.forEach(g=>['Day','Night','General'].forEach(S=>{const o=st[g+'|'+S];if(o)rows.push({p:p.label,g:names[g],S:SH43[S],o})}))});
+ $('t43tbl').innerHTML='<table><tr><th class="l">'+($('p43').value==='day'?'Day':$('p43').value==='week'?'Week':'Month')+'</th><th class="l">Group / section</th><th class="l">Shift</th><th>Allocated</th><th>Shift-days on duty</th><th>Attended on shift (avg)</th><th>Off shift (avg)</th><th>Attendance (avg)</th><th>KPI 4.3 %</th></tr>'+
+  rows.map(r=>{const o=r.o,v=pct43(o);return'<tr><td class="l">'+r.p+'</td><td class="l">'+r.g+'</td><td class="l">'+r.S+'</td><td>'+f2(o.al/o.duty)+'</td><td>'+o.duty+'</td><td>'+f2(o.reg/o.duty)+'</td><td>'+f2(o.off/o.duty)+'</td><td>'+f2(o.att/o.duty)+'</td><td class="'+cls(v)+'"><b>'+f2(v)+'</b></td></tr>'}).join('')+'</table>';
+ if(typeof Chart==='undefined')return;if(CH43)CH43.destroy();
+ const COL={P:'#7c3aed',MIX:'#c2410c',BASE:'#0b5cad'},ds=['P','MIX','BASE'].map(g=>({label:names[g],data:pk.map(p=>{const o=stats43(p.dates)[g+'|*'];const v=pct43(o);return v==null?null:Math.round(v*10)/10}),borderColor:COL[g],backgroundColor:COL[g],tension:.2,spanGaps:true}));
+ if(tg!=null)ds.push({label:'Target '+tg+' %',data:pk.map(()=>tg),borderDash:[6,4],borderColor:'#888',backgroundColor:'#888',pointRadius:0});
+ CH43=new Chart($('c7'),{type:'line',data:{labels:pk.map(p=>p.label),datasets:ds},options:{responsive:true,maintainAspectRatio:false,spanGaps:true,plugins:{title:{display:true,text:'KPI 4.3 Attendance of allocated employees, % ('+$('p43').value+')'},legend:{position:'bottom'}},scales:{y:{suggestedMin:0,title:{display:true,text:'% attended'}}}}});
+}
+$('p43').onchange=render43;$('m43').onchange=render43;
+$('t43').onchange=e=>{const v=parseFloat(e.target.value);T43=isFinite(v)&&v>=0?v:null;try{if(T43==null)localStorage.removeItem('fitl_kpi_t43');else localStorage.setItem('fitl_kpi_t43',String(T43))}catch(_){}render43()};
+
+
+/* ---------- KPI 4.5: total wastage in shift = scrap % + tyre spew % + tyre-building scrap compound %, all of production weight ----------
+   Scrap comes from the Daily Quality sheet and production from the Daily Tyres Production sheet of the production summary report;
+   spew and tyre-building scrap compound come from its Total Waste sheet, which shows one month in days. Months before that are the
+   values recorded in the QMS KPI summary sheet. Each month read from a report is kept, so the history builds up report by report. */
+/* ---------- the production summary report (the slim copy the Production Summary page hands over) ----------
+   KPI 6.0 total scrap % = scrap kg (Daily Quality, classification SCRAP) ÷ tyre production kg (Daily Tyres Production), by month.
+   KPI 7.3 tyre spew % = spew kg ÷ production kg (Total Waste sheet — the sheet shows one month, in days).
+   KPI 4.5 total wastage % = scrap % + spew % + tyre-building scrap compound % (same as the 2025 KPI sheet). */
+const KSUM={'4.5':{t:1.8,v:{'2026-01':2.21,'2026-02':2.31,'2026-03':2.73,'2026-04':2.67,'2026-05':1.86,'2026-06':2.04,'2026-07':2.12,'2026-08':2.12,'2026-09':2.05}},
+ '6':{t:0.5,v:{'2026-01':0.56,'2026-02':0.78,'2026-03':1.03,'2026-04':1.03,'2026-05':0.5,'2026-06':0.63,'2026-07':0.74,'2026-08':0.7,'2026-09':0.48}},
+ '7.3':{t:1.3,v:{'2026-01':1.36,'2026-02':1.37,'2026-03':1.37,'2026-04':1.35,'2026-05':1.36,'2026-06':1.41,'2026-07':1.38,'2026-08':1.42,'2026-09':1.39}}};
+const WKEY='fitl_waste_months_v1';
+const ymOf=(y,m)=>y+'-'+String(m).padStart(2,'0'),isoOf=n=>new Date(Math.round((n-25569)*864e5)).toISOString().slice(0,10);
+function parseWaste(a){
+  const L=(t,from)=>{for(let r=from||0;r<a.length;r++){if(String((a[r]||[])[0]==null?'':a[r][0]).trim().toLowerCase()===t)return r}return -1};
+  const ry=L('year'),rm=L('month');if(ry<0||rm<0)return null;
+  const y=+a[ry][1],mo=+a[rm][1];if(!(y>2000&&mo>=1&&mo<=12))return null;
+  let hr=-1,cols=[];
+  for(let r=0;r<Math.min(a.length,14)&&hr<0;r++){const c=[];(a[r]||[]).forEach((v,i)=>{const m=/^(\d{1,2})-[A-Za-z]{3}$/.exec(String(v==null?'':v).trim());if(m&&i>0)c.push([i,+m[1]])});if(c.length>=5){hr=r;cols=c}}
+  if(hr<0)return null;
+  const pr=L('sum of net weight / kg'),sp=L('spew weight'),tbh=L('tyre building'),tb=tbh<0?-1:L('scrap compound wgt',tbh),mxh=L('mixing',tbh<0?0:tbh),mp=mxh<0?-1:L('production (kg)',mxh),ms=mxh<0?-1:L('scrap compound wgt',mxh),cb=L('caban waste');
+  const num=(r,c)=>{if(r<0)return null;const v=(a[r]||[])[c];return typeof v==='number'?v:null};
+  return{ym:ymOf(y,mo),days:cols.map(([c,d])=>({d:d,prod:num(pr,c),spew:num(sp,c),tb:num(tb,c),mixProd:num(mp,c),mixScrap:num(ms,c),caban:num(cb,c)}))}}
+function readReport(buf){
+  const wb=XLSX.read(buf,{type:'array',dense:true}),rows=n=>wb.Sheets[n]?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null}):null;
+  const out={scrapKg:{},prodKg:{},dayScrap:{},dayProd:{},defects:{},groups:{},waste:null};
+  const Q=rows('Daily Quality');
+  if(Q&&Q.length){const H=Q[0].map(h=>String(h==null?'':h).trim().toUpperCase()),ix=n=>H.indexOf(n),kg=H.findIndex(h=>h.startsWith('SCRAP')),c={cl:ix('CLASSIFICATION'),mo:ix('MONTH'),yr:ix('YEAR'),g:ix('GROUP'),d:H.findIndex(h=>h.startsWith('INSPECTION DATE')),r:ix('DEFECT DESCRIPTION'),q:ix('QUANTITY')};
+    for(let i=1;i<Q.length;i++){const r=Q[i];if(String(r[c.cl]||'').trim().toUpperCase()!=='SCRAP')continue;const mo=+r[c.mo],yr=+r[c.yr];if(!(mo>=1&&mo<=12&&yr>2000))continue;
+      const ym=ymOf(yr,mo),w=+r[kg]||0,q=+r[c.q],reason=String(r[c.r]||'').trim().toUpperCase()||'(NO REASON)';
+      out.scrapKg[ym]=(out.scrapKg[ym]||0)+w;
+      if(typeof r[c.d]==='number'){const d=isoOf(r[c.d]);out.dayScrap[d]=(out.dayScrap[d]||0)+w}
+      const D=out.defects[ym]||(out.defects[ym]={}),e=D[reason]||(D[reason]={kg:0,n:0});e.kg+=w;e.n+=q>0?q:1;
+      const gn=String(r[c.g]||'').trim().toUpperCase()||'?',G=out.groups[ym]||(out.groups[ym]={});G[gn]=(G[gn]||0)+w}}
+  const P=rows('Daily Tyres Production')||rows('Production');
+  if(P&&P.length){const H=P[0].map(h=>String(h==null?'':h).trim().toUpperCase()),c={w:H.findIndex(h=>h.startsWith('NET WEIGHT')),mo:H.indexOf('MONTH'),yr:H.indexOf('YEAR'),d:H.indexOf('DATE')};
+    for(let i=1;i<P.length;i++){const r=P[i],w=+r[c.w]||0,mo=+r[c.mo],yr=+r[c.yr];if(!(mo>=1&&mo<=12&&yr>2000))continue;const ym=ymOf(yr,mo);out.prodKg[ym]=(out.prodKg[ym]||0)+w;
+      if(typeof r[c.d]==='number'){const d=isoOf(r[c.d]);out.dayProd[d]=(out.dayProd[d]||0)+w}}}
+  const T=rows('Total Waste');if(T)out.waste=parseWaste(T);
+  return out}
+function wasteStore(){try{return JSON.parse(localStorage.getItem(WKEY)||'{}')||{}}catch(_){return{}}}
+function keepWaste(w){if(!w)return;const t={prod:0,spew:0,tb:0,mixProd:0,mixScrap:0,caban:0};w.days.forEach(x=>{if(x.prod==null)return;t.prod+=x.prod;t.spew+=x.spew||0;t.tb+=x.tb||0;t.mixProd+=x.mixProd||0;t.mixScrap+=x.mixScrap||0;t.caban+=x.caban||0});
+  const s=wasteStore();s[w.ym]=Object.assign({days:w.days.filter(x=>x.prod!=null),at:new Date().toISOString()},t);try{localStorage.setItem(WKEY,JSON.stringify(s))}catch(_){}}
+
+let R45=null,T45=KSUM['4.5'].t,CH45=null;
+try{R45=JSON.parse(localStorage.getItem('fitl_kpi45_v1')||'null')}catch(_){}
+try{const t=parseFloat(localStorage.getItem('fitl_kpi_t45'));if(isFinite(t))T45=t}catch(_){}
+function m45(ym){
+ const prod=R45&&R45.prodKg[ym],sk=R45&&R45.scrapKg[ym],w=wasteStore()[ym],rec=KSUM['4.5'].v[ym];
+ const sc=prod>0&&sk!=null?sk/prod*100:null,sp=w&&w.prod>0?w.spew/w.prod*100:null,tb=w&&w.prod>0?w.tb/w.prod*100:null,calc=sc!=null&&sp!=null&&tb!=null?sc+sp+tb:null;
+ return{ym,sc,sp,tb,calc,rec:rec==null?null:rec,val:calc!=null?calc:(rec==null?null:rec)}}
+function months45(){const s=new Set(Object.keys(KSUM['4.5'].v));Object.keys(wasteStore()).forEach(k=>s.add(k));return[...s].sort()}
+function render45(){
+ const ms=months45(),sel=$('a45m'),cur=sel.value;sel.innerHTML=ms.slice().reverse().map(m=>'<option value="'+m+'">'+MN[+m.slice(5)-1]+' '+m.slice(0,4)+'</option>').join('');
+ sel.value=ms.includes(cur)?cur:ms[ms.length-1];$('t45').value=T45;
+ const rows=ms.map(m45),r=rows.find(x=>x.ym===sel.value)||{},ok=v=>v==null?'':v<=T45?'good':'badc';
+ $('s45').textContent=R45?'Report: '+R45.file+' · '+rows.filter(x=>x.calc!=null).length+' month(s) worked out from the report, '+rows.filter(x=>x.calc==null&&x.rec!=null).length+' recorded in the QMS KPI summary':'Waiting: upload the production summary report on the Production Summary tab (Production Department). Until then the values recorded in the QMS KPI summary (Jan–Sep) are shown.';
+ $('s45').className='st'+(R45?' ok':'');
+ $('k45').innerHTML='<div class="k"><small>KPI 4.5 Total wastage (target at most '+T45+' %)</small><b class="'+ok(r.val)+'">'+f2(r.val)+' %</b><small>'+MN[+(sel.value||'0000-00').slice(5)-1]+' '+(sel.value||'').slice(0,4)+' · '+(r.calc!=null?'worked out from the report':r.rec!=null?'recorded in the KPI summary':'no figure')+'</small></div>'+
+  (r.calc!=null?'<div class="k"><small>Scrap tyres</small><b>'+f2(r.sc)+' %</b><small>of production weight</small></div><div class="k"><small>Tyre spew</small><b>'+f2(r.sp)+' %</b><small>KPI 7.3 · of production weight</small></div><div class="k"><small>Tyre-building scrap compound</small><b>'+f2(r.tb)+' %</b><small>of production weight</small></div>':'<div class="k"><small>Parts of the figure</small><b>–</b><small>scrap, spew and tyre-building scrap compound are shown for months read from a report</small></div>');
+ $('t45tbl').innerHTML='<table><tr><th class="l">Month</th><th>Scrap %</th><th>Spew %</th><th>Tyre building %</th><th>KPI 4.5 %</th><th>KPI summary %</th></tr>'+rows.slice().reverse().map(x=>'<tr><td>'+MN[+x.ym.slice(5)-1]+' '+x.ym.slice(0,4)+'</td><td>'+f2(x.sc)+'</td><td>'+f2(x.sp)+'</td><td>'+f2(x.tb)+'</td><td class="'+ok(x.val)+'"><b>'+f2(x.val)+'</b></td><td>'+f2(x.rec)+'</td></tr>').join('')+'</table>';
+ if(typeof Chart==='undefined')return;if(CH45)CH45.destroy();
+ const lab=rows.map(x=>MN[+x.ym.slice(5)-1].slice(0,3)+' '+x.ym.slice(2,4)),part=(k)=>rows.map(x=>x.calc!=null?+x[k].toFixed(3):null);
+ CH45=new Chart($('c8'),{type:'bar',data:{labels:lab,datasets:[
+  {label:'Recorded in KPI summary (total)',data:rows.map(x=>x.calc==null&&x.rec!=null?x.rec:null),backgroundColor:rows.map(x=>x.rec!=null&&x.rec<=T45?'#2E9E6B':'#DA1B22'),stack:'s',order:2},
+  {label:'Scrap tyres',data:part('sc'),backgroundColor:'#1F3A5F',stack:'s',order:2},{label:'Tyre spew',data:part('sp'),backgroundColor:'#E0A526',stack:'s',order:2},{label:'Tyre-building scrap compound',data:part('tb'),backgroundColor:'#7B61C9',stack:'s',order:2},
+  {type:'line',label:'Target at most '+T45+' %',data:rows.map(()=>T45),borderDash:[6,4],borderColor:'#1D2127',backgroundColor:'#1D2127',pointRadius:0,borderWidth:2,order:0}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'KPI 4.5 Total wastage, % of production weight, by month'},legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,title:{display:true,text:'% by kg'}}}}});
+}
+$('a45m').onchange=render45;
+$('t45').onchange=e=>{const v=parseFloat(e.target.value);if(isFinite(v)&&v>=0){T45=v;try{localStorage.setItem('fitl_kpi_t45',String(T45))}catch(_){}}render45()};
+function load45(f){try{const r=readReport(f.buffer);if(!Object.keys(r.prodKg).length&&!r.waste)return false;keepWaste(r.waste);R45={file:f.name,at:new Date().toISOString(),scrapKg:r.scrapKg,prodKg:r.prodKg};try{localStorage.setItem('fitl_kpi45_v1',JSON.stringify(R45))}catch(_){}return true}catch(_){return false}}
+
+restore();render44();render43();render45();
+try{parent.postMessage({type:'fitl-kpi-ready'},'*')}catch(_){}
+</script></body></html>

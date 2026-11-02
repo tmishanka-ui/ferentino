@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Planner — Tyre Building</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#E7EBEE;
+    --panel:#FFFFFF;
+    --panel-2:#F1F4F6;
+    --ink:#161B20;
+    --ink-dim:#5B6570;
+    --line:#CBD3D9;
+    --line-strong:#9FAAB2;
+    --accent:#C96A20;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#F3DCC4;
+    --good:#276A4B;
+    --good-soft:#DCEEE4;
+    --bad:#A7301C;
+    --bad-soft:#F6DCD6;
+    --warn:#93630F;
+    --warn-soft:#F2E4C4;
+    --font-head:'Barlow Condensed', sans-serif;
+    --font-body:'Barlow', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+    --radius:3px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171A;
+      --panel:#1D2126;
+      --panel-2:#23282E;
+      --ink:#E7EAEC;
+      --ink-dim:#98A2A9;
+      --line:#333B42;
+      --line-strong:#4A545C;
+      --accent:#E8933C;
+      --accent-ink:#20140A;
+      --accent-soft:#3A2A16;
+      --good:#5FB98A;
+      --good-soft:#1C2E26;
+      --bad:#E2725A;
+      --bad-soft:#332019;
+      --warn:#E0B559;
+      --warn-soft:#332A16;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14171A;
+    --panel:#1D2126;
+    --panel-2:#23282E;
+    --ink:#E7EAEC;
+    --ink-dim:#98A2A9;
+    --line:#333B42;
+    --line-strong:#4A545C;
+    --accent:#E8933C;
+    --accent-ink:#20140A;
+    --accent-soft:#3A2A16;
+    --good:#5FB98A;
+    --good-soft:#1C2E26;
+    --bad:#E2725A;
+    --bad-soft:#332019;
+    --warn:#E0B559;
+    --warn-soft:#332A16;
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:14px;
+    line-height:1.45;
+    min-height:100vh;
+  }
+  ::selection{ background:var(--accent-soft); }
+
+  .wrap{ max-width:1280px; margin:0 auto; padding:22px 20px 60px; }
+
+  /* ---- Header ---- */
+  .hdr{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:18px; border-bottom:2px solid var(--ink); padding-bottom:14px;}
+  .hdr h1{
+    font-family:var(--font-head); font-weight:700; font-size:34px; line-height:1;
+    margin:0; letter-spacing:0.2px;
+  }
+  .hdr .tag{ color:var(--ink-dim); font-size:13px; margin-top:4px; }
+  .hdr .doc{ font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); text-align:right; }
+  .hdr .doc div{ margin-top:2px; }
+
+  /* ---- Stats strip ---- */
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:20px; }
+  .stat{ background:var(--panel); padding:12px 16px; }
+  .stat .num{ font-family:var(--font-mono); font-size:26px; font-weight:600; }
+  .stat .lbl{ color:var(--ink-dim); font-size:12px; margin-top:2px; }
+  .stat.bad .num{ color:var(--bad); }
+  .stat.good .num{ color:var(--good); }
+
+  /* ---- Layout: nav + content ---- */
+  .layout{ display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; }
+  @media (max-width:820px){ .layout{ grid-template-columns:1fr; } }
+
+  .steps{ display:flex; flex-direction:column; gap:2px; position:sticky; top:16px; }
+  .step-btn{
+    display:flex; align-items:baseline; gap:10px; text-align:left; width:100%;
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid transparent;
+    padding:10px 12px; cursor:pointer; color:var(--ink); font-family:var(--font-body); font-size:13.5px;
+  }
+  .step-btn .n{ font-family:var(--font-mono); color:var(--ink-dim); font-size:12px; }
+  .step-btn.active{ border-left-color:var(--accent); background:var(--panel-2); font-weight:600; }
+  .step-btn.active .n{ color:var(--accent); }
+  .step-btn:hover{ border-left-color:var(--line-strong); }
+  .step-btn .sub{ margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); padding:20px; }
+  .panel h2{ font-family:var(--font-head); font-weight:600; font-size:22px; margin:0 0 4px; }
+  .panel .desc{ color:var(--ink-dim); font-size:13px; margin:0 0 16px; max-width:70ch; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row.between{ justify-content:space-between; }
+
+  button{
+    font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer;
+    padding:8px 14px; border-radius:var(--radius); border:1px solid var(--line-strong);
+    background:var(--panel); color:var(--ink);
+  }
+  button:hover{ border-color:var(--ink); }
+  button.primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  button.primary:hover{ filter:brightness(1.05); }
+  button.ghost{ border-color:transparent; background:transparent; color:var(--ink-dim); }
+  button.ghost:hover{ color:var(--ink); border-color:var(--line); }
+  button.danger{ color:var(--bad); }
+  button.small{ padding:4px 9px; font-size:12px; }
+  button:disabled{ opacity:0.45; cursor:not-allowed; }
+
+  input[type=text], input[type=number]{
+    font-family:var(--font-mono); font-size:13px; background:var(--panel-2); color:var(--ink);
+    border:1px solid var(--line); border-radius:var(--radius); padding:6px 8px; width:100%;
+  }
+  input:focus, select:focus, button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  select{ font-family:var(--font-body); font-size:13px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius); padding:6px 8px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; font-family:var(--font-head); font-weight:600; font-size:13px; letter-spacing:0.2px; color:var(--ink-dim); border-bottom:1px solid var(--line-strong); padding:7px 8px; white-space:nowrap; }
+  td{ border-bottom:1px solid var(--line); padding:6px 8px; vertical-align:middle; }
+  tr:hover td{ background:var(--panel-2); }
+  td.mono, .mono{ font-family:var(--font-mono); }
+  td.num{ text-align:right; font-family:var(--font-mono); }
+  .tblwrap{ overflow-x:auto; border:1px solid var(--line); }
+
+  .pill{ display:inline-block; padding:2px 8px; border-radius:99px; font-size:11.5px; font-family:var(--font-mono); }
+  .pill.good{ background:var(--good-soft); color:var(--good); }
+  .pill.bad{ background:var(--bad-soft); color:var(--bad); }
+  .pill.warn{ background:var(--warn-soft); color:var(--warn); }
+  .pill.neutral{ background:var(--panel-2); color:var(--ink-dim); border:1px solid var(--line); }
+
+  .switch{ position:relative; display:inline-block; width:34px; height:18px; flex:none; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:var(--line-strong); border-radius:99px; cursor:pointer; transition:.15s; }
+  .slider:before{ content:""; position:absolute; height:14px; width:14px; left:2px; top:2px; background:var(--panel); border-radius:50%; transition:.15s; }
+  input:checked + .slider{ background:var(--good); }
+  input:checked + .slider:before{ transform:translateX(16px); }
+
+  .dropzone{
+    border:2px dashed var(--line-strong); border-radius:var(--radius); padding:26px; text-align:center;
+    color:var(--ink-dim); font-size:13px; cursor:pointer; background:var(--panel-2);
+  }
+  .dropzone:hover{ border-color:var(--accent); color:var(--ink); }
+  .dropzone.drag{ border-color:var(--accent); background:var(--accent-soft); }
+
+  .hint{ font-size:12px; color:var(--ink-dim); margin-top:6px; }
+  .section-title{ font-family:var(--font-head); font-weight:600; font-size:16px; margin:22px 0 8px; padding-top:14px; border-top:1px solid var(--line); }
+  .section-title:first-of-type{ border-top:none; padding-top:0; margin-top:0; }
+  .empty{ color:var(--ink-dim); font-style:italic; padding:14px 0; }
+  .toolbar{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--ink); color:var(--bg); padding:10px 16px;
+    border-radius:var(--radius); font-size:13px; z-index:50; opacity:0; transform:translateY(6px); transition:.2s;
+    pointer-events:none; max-width:320px;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+  footer.note{ margin-top:26px; color:var(--ink-dim); font-size:12px; text-align:center; }
+  .flag{ font-family:var(--font-mono); font-size:11px; }
+</style>
+<style id="fit-theme">
+/* Ferentino management system look: Inter + Barlow Condensed, brand red, warm paper background, white header with a red rule */
+:root{--bg:#F2F0EB;--panel:#FFFFFF;--panel-2:#F7F5F1;--ink:#1D2127;--ink-dim:#5E6772;--line:#DDD8CF;--line-strong:#B9B2A6;--accent:#DA1B22;--accent-ink:#FFFFFF;--accent-soft:#FBE9EA;
+ --font-head:'Barlow Condensed','Arial Narrow',sans-serif;--font-body:'Inter',system-ui,'Segoe UI',Arial,sans-serif;--radius:7px;color-scheme:light}
+.hdr{background:#fff;border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:10px;padding:12px 18px;align-items:center}
+.hdr>img{height:38px;width:auto;border-radius:4px;flex-shrink:0}.hdr>div:nth-of-type(1){flex:1;min-width:220px}
+.hdr h1{text-transform:uppercase;font-weight:600;font-size:30px;letter-spacing:.01em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAoAPEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5w8czPpPjTV7W1Zra2tr2aKKKI7EiRZGAVQOAAAAAKyv7Wuv+fmf/AL7NaXxJ/wCSh67/ANhC4/8ARrVi1+Gyk222f68UYRhTjGKsklp8ix/a11/z8z/99mj+1rr/AJ+Z/wDvs103wV+AvjL9o3xk3h7wL4dv/E2tR2zXj2tpsDRwqQGdmcqoGWA5PJIAr1j/AIdN/tIf9Ei8R/8AgRaf/Hq2p4WvUXNTg2vJNnlY7iLKMFV9hjcVSpzte06kIuz2dpNOx4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne/f8Omv2kf8AokXiP/wItP8A49XA/DT9kD4m/GX4h+IfCfhTwdqWveIfCjMmr2drJCTYMrmMq7lwhO8FcBjyp9DTlg8RFqMoSTe2j19DOjxPktanOrSxlKUYK8mqkGopuycmpWSb0u7a6Hn/APa11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIE/wDJI/EQ+txaf/Hqv6hi/wDn1L/wF/5HN/rnw7/0H0P/AAbT/wDkjwH+1rr/AJ+Z/wDvs0f2tdf8/M//AH2a9B+Cf7HvxP8A2kbjWo/AfgzVPFB8Ozi21J7N4hHayksAhd3VWJ2t90ngZ6EGu9/4dN/tIf8ARIvEf/gRaf8Ax6ohg8ROPNCEmvJNnTi+KMlwtV0MVjKUJreMqkItXV1dOSaundeWp4D/AGtdf8/M/wD32aP7Wuv+fmf/AL7Ne0+Nv+CaHx++HXhe81rWPhT4pttM0+MzXM0aw3JhQDLOUikZ9oAJJA4FcN8CP2avHv7T+tX+nfD7wtqPiq80uBbq7jtDGot42barMzsq8nOBnJweODSlhq8ZKEoNN7Kzu/ka0eIMqq4eeLpYqnKlD4pKcHGP+KSdl82cf/a11/z8z/8AfZo/ta6/5+Z/++zXv3/Dpv8AaQ/6JF4j/wDAi0/+PUD/AIJNftIk/wDJIvEf/gRaf/Hq0+oYv/n1L/wF/wCRw/658O/9B9D/AMG0/wD5I8B/ta6/5+Z/++zR/a11/wA/M/8A32a9A+CX7IHxN/aSutbh8B+DdT8Ut4cmW31JrOSHy7WRiwCl2dVYnY33SeBnpiuw8R/8Evf2hvCmjz3978I/FgtbZS8hgWG5dVAyTsikZz+ANRDCYiUeeMJNd7Ox14jiXJ8PX+rYjF0oVFb3ZVIKWuq0bvqmmtNUzw/+1rr/AJ+Z/wDvs0f2tdf8/M//AH2as+FPCGqeOvF2naBo+n3Wo63q12lhZ2MSfvrid22rGFOMNu45xjBzjBr0b42fsMfF39nDwjHr3jrwLqnhrSJrqOyiuLme3YSzvnZGqpIzMxweAOxrONKpKLnGLaW7s7L1OzEZpgqFeGGr1oRqT+GLlFSl/hi3d/JM8w/ta6/5+Z/++zR/a11/z8z/APfZr3yD/glD+0fcQJIvwi8S7ZFDDdLaq2CM8gygg+xGRTv+HTf7SH/RIvEf/gRaf/Hq3+oYv/n1L/wF/wCR5P8Arnw7/wBB9D/wbT/+SPAf7Wuv+fmf/vs0f2tdf8/M/wD32a9L+Iv7EfxZ+Enjbwx4a8R+BtW0vxB40uDa6Hp7ywST6lICoIRUkbABZclsDnrwaPjn+xH8WP2ZfB8ev+P/AATqPhbR5bhbSO5u7i3ZZJWDMEVUkZicKx4HABzWUsNXSbcHpvo9PXsdtLiDKqkqUKeJpt1fgSnFuetvd197VNaX1TR5p/a11/z8z/8AfZo/ta6/5+Z/++zXuegf8EuP2hfFGhWWp2Hwo8R3FjqMCXNvL5tsnmRuoZW2tKGGQQcEA+1cR8cP2Sfid+zVDbTePfA3iDwvbXj+VBc3cANtK+M7BKhZN2P4c59qc8LiIR55wkl3adiMNxJk+JrLDYfF0p1H9mNSDlpvom3p6HB/2tdf8/M//fZo/ta6/wCfmf8A77Nd98Bv2Q/ib+1Ba6nP8PvBmq+KYNGkSK9ktWiRLd3BZVJkdQSQCcDOB1xkU6y/Y/8AibqXx1n+GNt4O1K58fWkJuJ9FhkheaCMIrlnYP5a4VlPLfxDuRUrD1nFSUXZ6LR6vsu5vPO8thVqUJ4imp01zTi5xTjHR80le8VZrV2Wq7nn/wDa11/z8z/99mj+1rr/AJ+Z/wDvs179/wAOm/2kP+iReI//AAItP/j1MuP+CUX7R9rbvK3wh8TFY1LEJLauxA9FEpJPsOa2+oYv/n1L/wABf+R5y4z4ef8AzH0P/BtP/wCSPBP7Wuv+fmf/AL7NH9rXX/PzP/32aXWtEvfDWs3enalZ3Wn6hYStb3NrcxNFNbyKcMjo2CrA9QarVyO60Z9HFxklKOqZY/ta6/5+Z/8Avs0VXopXKsbXxJ/5KHrv/YQuP/RrViMwRSzEBVGST2FbfxJ/5KHrv/YQuP8A0a1YyNsdWwpKsGAYAgkHPIPBHsetOW5MPhR+1f8AwRQ/Zh0/9j39jXVfix4xWPTNV8ZWZ1q7muBtbTdIhRnhQ56bl3TEf7ajtXyFfft9+GPjj8c9e8bePP2gPjh4Y0TVr0yWHhTwVZXFtDY2i/LFG07yBQ+0AsUi5ZmOa+ePiT/wUU+N3xf+HN94R8SfETV9S8M6lCtvdaf5FvDFNEpBEZMcasFyo4BwQMdK8Xr38TnMFSpYfCxtGC1v1ffR/wBXPxbIfCvEzzHH5zxBWUsRiZWi6dmoU1tFOrTdnoldJNKKs9Wfa37Wv7cPw/svhjGPgz8Vf2mbrxTLdoJpfEXia5S0tbUAmQhc/O7HaoGeMk9hn9CP+CWf7Nsf7Bv7Bdx4p1nTrzUPF3ie0bxVrcVnC1zeTkxl4LRAoLO6xkDABzJI571+EBAYEEAg9RXuXw8/4KWfHv4U+D7LQNB+KPiOz0fTYxDaW8ghufs8YGFRWlRm2gcAZwBwKrLs6hSxDxGIjraytsvOzf6mXG/hTisfklPJcmrqMHUU6rqt81RL4Y88I7J6pctr2e61+vvCGp+NfiB8RNW8WfFHxn+2LbHW72W8/wCEc8F+EtUsLHTkY/JAkrknai4X5I1zjOTmvOP+CgXxmn+Hvh7w3pHw38QftZadrPiS5kguE8danfWiXkO0IILeF9pld3kUEjhRgfxceRf8Pb/2kv8AorOu/wDgJZ//ABmuA8d/tj/E/wCKHxa0Dx34i8YahrPizwrt/sjULmGFjp5Vi6lI9nl5DHdkqTnB7DEV8zouk4U3K76ta+evM/67G+TeH+a0sxhisbGj7OCdoQm+W6i1BOKoQVk7Xbbdl9rY/V79l7/gnl4G/wCCcn7O1p4t+JvxM8T6G3lwXWq2ra9Np3h+zvpQqiMwW7IZyG2pl2bdt6AVwXwl/ZKvf2vvEevy+A/28vGniK+tpDdXtrpJkRbISsSu2L7SNsYPyjAwMAV+c/x2/bg+LX7Tnhe10Tx7451XxLpFndC9htJ44Y41mCsquRGi7iAzAZzjJrkPhB8ZvFXwB8eW3ifwXrt94c1+0jeKO8tCN3luMMjBgVZT6MCMgHqAa3nnOEUoUoUX7NebUvPZ2+/8Lnk4fwr4knQxOPxeZRePqttfu6c6KS1irVKTklvdxt0upcuv7Nft6/t++E/+Cdf7LF38MtN8Wan4k+K9poKWVl/aPnXN4xkQq2o3MrjaR99x8xywCgYBxt/8ErP2Yo/2AP2B5fEWr6Ze3/izxFZnxNrVvZwNcXkn7otBaRqgLOyxkDAH35H9a/Gj4+/tZfET9qU6a3xC8TT+KJNH3izlubW3jkgV8b1DRopKnAO0kjIzjNdZ8O/+Clfx6+FHg+y0DQPij4ks9H02MRWtvIIbn7PGOAitKjNtA4AzgDgV00+I6X1t16kXyxVoWtpfdtN6vpe+x4mL8Dcy/wBW45Tg68FWrVVUxLlKVqnLfljGUaacYpty5XB2k/idlf7A8Ian40+IHxF1bxb8UPGX7Ytt/bd7LeDw34L8JapYWOnI5ykCSuSdqLhfkjXOM5Oa83/4KB/Gab4f+HvDmj/DjX/2sdP1nxJcyQXEfjrU760S8h2hBBbwvtMrO8igkcKMDndx5F/w9v8A2kv+is67/wCAln/8Zrz/AMeftj/E/wCKHxb8P+O/EXjHUNY8W+Fdv9kahcxQsdPKsXUpHs8vIY7slScgHsMefiMzoypOFNyu+rWvnrzP+ux9lk3h/mtHMYYvGxo+zgnaEJvluotQTiqEFZO1223p9rY/Zr4AeB9B/wCCOn/BMi41PXkgbV9LsW1jWQmA2o6rOFCWynuAxjhX2XNeA/8ABCv/AIKLeLPjX8X/ABr4B+I3iK91vVNfMniTRJLuYyfZ23/6VaRZ6RqGR0TooV8V+d3x1/bk+Ln7TXhO30Lx7461bxJo1rdLex2c8cMcQmUMquRGi7iAzYzkDNcL8NPiZr/wb8eab4o8LardaJ4g0eQy2d9b48yBipQ4BBBBVmBBBBBNdM+IVCvReGTVOmrW797/AC28zwcL4JVMTk2ZQzypCrj8ZJz9oruMGneCi2lJLmvzWXwtRV7H7m/C3/glxpPgL/gpz4u+N7x2jaNfWa3ejWK4za6rOpS8nK4wPlXK/wC1O57V+en/AAW+/bZm+Pn7XMPhrw9qLjw78KJjb2s0EmBLquQZ51I7xlVjU9ijkda8ql/4K1/tIzRMjfFrXwrgqdttaKRn0IiyD7ivniaV7iZ5JHeSSV2kd2OWdmJLMSepJJJPvWeZ5zQqUHh8HFxUpOUr21e/Tz/JHfwF4W5tgc4jnXE2IhXqUaUaNFR5moxS5W3zRjry3XW7lJvWx+nf/BCmy+LP7THxu1bxx4u+Inj/AFbwV4JT7PHaXut3MttqeoyrwjKzYdYoyXI6bnjrJ/4Lgf8ABSDxOP2jbb4c/Dnxbrfh2x8DITrV1o989q95fyqD5LOhBKxR4yP77n+7Xxx8GP2/vjH+zt4Fh8M+CPHeoeG9BglknS0trW2ZfMkbc7lnjLMSe5J6AdAK8p13XLzxRrt9qeo3U17qOpXEl3d3MzbpLiaRi7ux7ksST9axnnHLgFhaLlzN3k3+S1v2+7zPTwnhe6vGFXiLM40nRhHko0ox0j05ppxUebWT05tZb+6j9Sf+CEnwH8T/ALQXxJ1L4+fEfWdd8USeHIpPD3ha41i7ku5BIcm5lRpCSFQMYxjjc8ncVo/Fp2/4K1/8FadO8F27fbfhF8CGNxqrKc2+oXauPMXPQ+ZKiwj/AGIZSOua+Bfhz/wUZ+N/wh+Hdh4S8L/ETVtD8OaVA1taWNrbWyrboxJIVjGWySzHdnOTnNYXwF/bL+KH7L2manZ/D/xhfeGYNauBdX/2eCCR7uUDAZ2kRmOATxnHJPUmt6eb4eNCnhnGTjfmnteT7b7X79Ejycb4Y55WzjHZ7Tq0o1pU/ZYVJyUaMHdOTtDSfK5Ncqa55yd9j9Mf+C83/BQXXPgePDHwx+HfiG98PeJ5mTXNWv8ATpjFPZW6Ei3gyvTzHBZh3SPHRq+gfDGo6R/wVr/4JebbgW4vvGOhtbXAOP8AiXaxBwW6fLsuEDDH8JHrX4PfE/4oeIfjT491HxR4r1a613xBq7K93fXJHmTFVCLwAAAFUAAAAAV2/wACP24fi1+zH4XutE8BeOdV8NaTeXRvZrSCOGSNpiqqzgSI2CQqg4xnaK2p8R3xVWddN05q3L2XTy739TzMd4FOlw9gMJlFSFPHYaaqe1d0pSestUnKyajyXW0dldn7KfCrwzof/BGv/gmLNeaz9luNa0WybUNTMbf8hfWbjAWJT1I8wpGvoiZ7VwP/AAQz/Z5v9J+Fvij4/eNnN741+LtzLf8A2lgXkisRIzcAZP72Tc23+6kQ7V+VHx3/AG3viz+074atdG8feOdW8S6VZXIvIbWdIoolmClQ5EaLuIDNjOcZOKtfBn9vv4z/ALPXg5PD3gz4i6/omhQsXhsV8qeG3JOT5YlRtgJJOFwMnOKuHEGGjiaclB+zpxtFaXv3evbTfzOTEeC2fVcjxtGWLpvG42qp1p+9yumm5KnF8vMvftJ+7ZpKOy1+gf2wfjn+1d8c/wBovxV4l8NaH8fPDHhea6MGjabpthqNrFFaRfLG5jRQPMkA3seuXx2Ffo1+x7Frn7C3/BO+48afGXxL4j1nxDHYS+I9bOsX8t3PZllBhsY95OGA2JtHWR29a/JH/h7h+0l/0VnXf/ASz/8AjNYHxG/4KO/HL4t6Pa6f4j+JGtapZWd5DqEULw28aieFt0bnZGN21sHByMgccVlhc6oUKk66c5Tadr2sm+trnocQeFWdZvgMLk8qeFw+GpSjzezc3UlGKty8zpL1bd7ys3tr518avi5q3x9+L/ibxvroVNW8U6jLqFxGowsBY/LGB6IgVf8AgNcxWl4x8Yan8QfFN/res3b3+q6nKZ7q4dVVpnPUkKAB+ArNr5icnKTk3e5/QGEoRo0IUYRUVFJKK2SStZaLRbLRadEFFFFSdBtfEn/koeu/9hC4/wDRrVi0UU3uTD4V6BRRRSKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//2Q==" alt="Ferentino">
+    <div>
+      <h1>Production Planner</h1>
+      <div class="tag">Tyre Building Department — press allocation &amp; cycle time scheduling</div>
+    </div>
+    <div class="doc">
+      <div id="today-date"></div>
+      <div>Ref: PR / FO / T / 07</div>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="layout">
+    <div class="steps" id="steps"></div>
+    <div class="panel" id="content"></div>
+  </div>
+
+  <footer class="note">Data stays in this browser only. Use Export to save a plan as a spreadsheet.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================= STATE ============================= */
+
+const SAMPLE_ORDERS = [
+  {code:"220101010", description:"ELTOR 3.00-4 (2.10) E1", qty:0},
+  {code:"22010106W", description:"ELTOR 3.00-4 (2.10) E1 NM WHITE", qty:0},
+  {code:"220101020", description:"ELTOR 3.00-4 (2.10) ER - BLICKLE 164749", qty:0},
+  {code:"220101030", description:"ELTOR 3.00-4 (2.10) ES", qty:0},
+  {code:"220101040", description:"ELTOR 3.00-4 (2.10) ES - BLICKLE 164756", qty:0},
+  {code:"220101050", description:"ELTOR 3.00-4 (2.10) ES NM", qty:0},
+  {code:"220101060", description:"ELTOR 3.00-4 (2.10) E1 NM", qty:0},
+  {code:"220101070", description:"ELTOR 3.00-4 (2.10) ES NM - BLICKLE 266882", qty:0}
+];
+const SAMPLE_PRESSES = ["S3A1M1","S3A1M2","S3A1M3","S3A1M4","S3A1M5","S3A2M1","S3A2M2","S3A2M3","S3A2M4","S3A2M5","S3A2M6","S3A2M7","S3A3M1","S3A3M2","S3A3M3","S3A3M4","S3A3M5","S3A3M6","S3A3M7","S3A4M1","S3A4M2","S3A4M3","S3A4M4","S3A4M5","S3A5M1","S3A5M2","S3A5M3","S3A6M1","S3A6M2","S3A7M1","S3A7M2","S3A7M3","S3A7M4","S3A7M5","S3A7M6","S3A7M7"];
+const SAMPLE_CAPABILITY = { "S3A1M1": ["220101010","22010106W","220101020","220101030","220101040","220101050"] };
+
+function defaultState(){
+  const capability = {};
+  SAMPLE_PRESSES.forEach(p => capability[p] = SAMPLE_CAPABILITY[p] ? SAMPLE_CAPABILITY[p].slice() : []);
+  return {
+    step: 1,
+    orders: SAMPLE_ORDERS.map(o=>({...o})),
+    presses: SAMPLE_PRESSES.slice(),
+    capability,
+    stopped: [],
+    cycleData: {},        // "PRESS||CODE" -> {cavities, cureTime, handlingTime}
+    handlingDefault: 10,
+    manualAssignment: {}  // press -> code string, or null for pinned-idle
+  };
+}
+
+const STORAGE_KEY = "tyre-production-planner-v1";
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    const def = defaultState();
+    return Object.assign(def, parsed);
+  }catch(e){ return defaultState(); }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function key(press, code){ return press + "||" + code; }
+
+/* ============================= PLAN ENGINE ============================= */
+
+function cycleInfo(press, code){
+  const d = state.cycleData[key(press,code)];
+  if(!d || !d.cavities || !d.cureTime) return null;
+  const handling = (d.handlingTime === undefined || d.handlingTime === null || d.handlingTime === "") ? state.handlingDefault : Number(d.handlingTime);
+  const cureTime = Number(d.cureTime);
+  const cavities = Number(d.cavities);
+  const cycleTime = cureTime + handling;
+  if(cycleTime <= 0) return null;
+  const dailyCap = (1440/cycleTime) * cavities;
+  return { cavities, cureTime, handlingTime:handling, cycleTime, dailyCap };
+}
+
+// Small seeded PRNG (mulberry-ish) so the plan is reproducible for the same inputs.
+function makeRng(seed){
+  let s = seed >>> 0;
+  return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+// Runs one hill-climbing pass from a given random starting assignment, returns the
+// local optimum it converges to. Neighborhood = "move one unpinned press to a
+// different code it's capable of (or idle)". Accepts a move only if it strictly
+// improves the (fewer-unmet-orders, then lower-max-days) score.
+function hillClimb(active, ordersActive, orderMap, pinnedPresses, getInfo, rng){
+  const assignment = {};
+  for(const press of active){
+    if(pinnedPresses.has(press)) continue;
+    const opts = (state.capability[press]||[]).filter(c => orderMap[c] && getInfo(press,c));
+    if(opts.length === 0){ assignment[press] = null; continue; }
+    const r = rng();
+    assignment[press] = (r < 0.15) ? null : opts[Math.floor(rng()*opts.length)];
+  }
+  for(const press of active){
+    if(pinnedPresses.has(press)){
+      const pin = state.manualAssignment[press];
+      assignment[press] = (pin === null || pin === "") ? null : pin;
+    }
+  }
+
+  function computeCaps(a){
+    const caps = {}; ordersActive.forEach(o => caps[o.code] = 0);
+    for(const press of active){
+      const code = a[press];
+      if(code === null || code === undefined) continue;
+      const info = getInfo(press, code);
+      if(info) caps[code] = (caps[code]||0) + info.dailyCap;
+    }
+    return caps;
+  }
+  function scoreOf(caps){
+    let unmet = 0, maxD = 0;
+    for(const o of ordersActive){
+      const cap = caps[o.code] || 0;
+      if(cap <= 0) unmet++;
+      else { const d = o.qty/cap; if(d > maxD) maxD = d; }
+    }
+    return {unmet, maxD};
+  }
+  function better(a,b){
+    if(a.unmet !== b.unmet) return a.unmet < b.unmet;
+    return a.maxD < b.maxD - 1e-9;
+  }
+
+  let improved = true, iter = 0;
+  while(improved && iter < 300){
+    improved = false; iter++;
+    const curScore = scoreOf(computeCaps(assignment));
+    let bestMove = null, bestScore = curScore;
+    for(const press of active){
+      if(pinnedPresses.has(press)) continue;
+      const curCode = assignment[press];
+      const opts = (state.capability[press]||[]).filter(c => orderMap[c] && getInfo(press,c) && c !== curCode);
+      const candidates = curCode !== null ? opts.concat([null]) : opts;
+      for(const cand of candidates){
+        const trial = {...assignment, [press]:cand};
+        const tScore = scoreOf(computeCaps(trial));
+        if(better(tScore, bestScore)){ bestScore = tScore; bestMove = {press, code:cand}; }
+      }
+    }
+    if(bestMove){ assignment[bestMove.press] = bestMove.code; improved = true; }
+  }
+
+  const finalCaps = computeCaps(assignment);
+  return { assignment, score: scoreOf(finalCaps), caps: finalCaps };
+}
+
+function computePlan(){
+  const active = state.presses.filter(p => !state.stopped.includes(p));
+  const ordersActive = state.orders.filter(o => Number(o.qty) > 0);
+  const orderMap = {}; ordersActive.forEach(o => orderMap[o.code] = o);
+
+  const infoCache = {};
+  function getInfo(press, code){
+    const k = key(press, code);
+    if(k in infoCache) return infoCache[k];
+    const info = cycleInfo(press, code);
+    infoCache[k] = info;
+    return info;
+  }
+
+  const pinnedPresses = new Set(active.filter(p => p in state.manualAssignment));
+
+  // Several random-start hill climbs (deterministic seeds) — keep the best.
+  let best = null;
+  const restarts = 24;
+  for(let seed = 1; seed <= restarts; seed++){
+    const r = hillClimb(active, ordersActive, orderMap, pinnedPresses, getInfo, makeRng(seed));
+    if(!best || r.score.unmet < best.score.unmet ||
+      (r.score.unmet === best.score.unmet && r.score.maxD < best.score.maxD - 1e-9)){
+      best = r;
+    }
+  }
+  const rawAssignment = best ? best.assignment : {};
+  const finalCaps = best ? best.caps : {};
+
+  const assignment = {};
+  for(const press of state.presses){
+    if(!active.includes(press)){ assignment[press] = null; continue; }
+    const code = rawAssignment[press];
+    if(code === null || code === undefined){ assignment[press] = null; continue; }
+    const info = getInfo(press, code);
+    assignment[press] = info
+      ? {code, ...info, manual: pinnedPresses.has(press)}
+      : {code, manual: pinnedPresses.has(press), error:"no-data"};
+  }
+
+  const orderSummary = ordersActive.map(o=>{
+    const cap = finalCaps[o.code] || 0;
+    const days = cap > 0 ? (o.qty/cap) : null;
+    const assignedPresses = Object.entries(assignment).filter(([p,a]) => a && a.code === o.code).map(([p])=>p);
+    return { ...o, dailyCap:cap, days, assignedPresses, status: cap > 0 ? "ok" : "unmet" };
+  });
+
+  const okOrders = orderSummary.filter(o=>o.status==="ok");
+  const finishDays = okOrders.length ? Math.max(...okOrders.map(o=>o.days)) : 0;
+  const unmet = orderSummary.filter(o=>o.status==="unmet");
+
+  return { active, assignment, orderSummary, finishDays, unmet };
+}
+
+/* ============================= HELPERS ============================= */
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+function fmt1(n){ return (Math.round(n*10)/10).toLocaleString(); }
+function fmtInt(n){ return Math.round(n).toLocaleString(); }
+
+/* ============================= IMPORT ============================= */
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:"array"});
+      let orderSheet = null, capSheet = null;
+      wb.SheetNames.forEach(name=>{
+        const n = name.toLowerCase();
+        if(n.includes("order")) orderSheet = name;
+        if(n.includes("press") && n.includes("capab")) capSheet = name;
+      });
+      let imported = {orders:0, ordersNew:0, presses:0};
+
+      if(orderSheet){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[orderSheet], {header:1, defval:null});
+        for(let r=1; r<rows.length; r++){
+          const [code, description, qty] = rows[r] || [];
+          if(!code) continue;
+          const codeStr = String(code).trim();
+          const existing = state.orders.find(o=>o.code === codeStr);
+          if(existing){
+            existing.description = description || existing.description;
+            if(qty !== null && qty !== undefined && qty !== "") existing.qty = Number(qty) || 0;
+            imported.orders++;
+          }else{
+            state.orders.push({code:codeStr, description: description || "", qty: Number(qty)||0});
+            imported.ordersNew++;
+          }
+        }
+      }
+
+      if(capSheet){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[capSheet], {header:1, defval:null});
+        const header = rows[0] || [];
+        for(let c=1; c<header.length; c++){
+          const press = header[c];
+          if(!press) continue;
+          const pressStr = String(press).trim();
+          if(!state.presses.includes(pressStr)) state.presses.push(pressStr);
+          const codes = [];
+          for(let r=1; r<rows.length; r++){
+            const v = rows[r] ? rows[r][c] : null;
+            if(v !== null && v !== undefined && v !== "") codes.push(String(v).trim());
+          }
+          state.capability[pressStr] = codes;
+          imported.presses++;
+        }
+      }
+
+      if(!orderSheet && !capSheet){
+        toast("No 'Order' or 'Press Capability' sheet found in that file.");
+        return;
+      }
+      saveState();
+      render();
+      toast(`Imported: ${imported.orders} orders updated, ${imported.ordersNew} new, ${imported.presses} press columns.`);
+    }catch(err){
+      console.error(err);
+      toast("Could not read that file. Check it's the planning workbook format.");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ============================= EXPORT ============================= */
+
+async function exportPlan(){
+  const plan = computePlan();
+  const wb = XLSX.utils.book_new();
+
+  const pressRows = [["Press","Status","Assigned Tyre Code","Cavities","Cure Time (min)","Handling Time (min)","Cycle Time (min)","Tyres / Day"]];
+  state.presses.forEach(press=>{
+    const stopped = state.stopped.includes(press);
+    const a = plan.assignment[press];
+    pressRows.push([
+      press,
+      stopped ? "Stopped" : "Active",
+      a ? a.code : "",
+      a && a.cavities !== undefined ? a.cavities : "",
+      a && a.cureTime !== undefined ? a.cureTime : "",
+      a && a.handlingTime !== undefined ? a.handlingTime : "",
+      a && a.cycleTime !== undefined ? a.cycleTime : "",
+      a && a.dailyCap !== undefined ? Math.round(a.dailyCap) : ""
+    ]);
+  });
+  const wsPress = XLSX.utils.aoa_to_sheet(pressRows);
+  XLSX.utils.book_append_sheet(wb, wsPress, "Press Assignment");
+
+  const orderRows = [["Tyre Code","Description","Qty Needed","Assigned Presses","Daily Capacity","Days To Complete","Status"]];
+  plan.orderSummary.forEach(o=>{
+    orderRows.push([
+      o.code, o.description, o.qty,
+      o.assignedPresses.join(", "),
+      Math.round(o.dailyCap),
+      o.days !== null ? Math.ceil(o.days*10)/10 : "N/A",
+      o.status === "ok" ? "On track" : "Unmet — no capable active press with cycle data"
+    ]);
+  });
+  const wsOrder = XLSX.utils.aoa_to_sheet(orderRows);
+  XLSX.utils.book_append_sheet(wb, wsOrder, "Order Summary");
+
+  const out = XLSX.write(wb, {type:"array", bookType:"xlsx"});
+  const filename = `production-plan-${new Date().toISOString().slice(0,10)}.xlsx`;
+
+  try{
+    const downloads = await claude.use("downloads");
+    if(!downloads){ toast("Downloads aren't available in this view."); return; }
+    await downloads.save({ filename, data: out });
+    toast("Plan exported.");
+  }catch(err){
+    if(err && err.code === "declined"){ /* silent */ }
+    else { console.error(err); toast("Export failed: " + (err && err.message ? err.message : "unknown error")); }
+  }
+}
+
+/* ============================= RENDER ============================= */
+
+const STEPS = [
+  {n:1, label:"Order & Import", sub:()=> state.orders.filter(o=>Number(o.qty)>0).length + " active"},
+  {n:2, label:"Presses & Capability", sub:()=> state.presses.length + " presses"},
+  {n:3, label:"Cycle Time Data", sub:()=> null},
+  {n:4, label:"Production Plan", sub:()=> null},
+];
+
+function render(){
+  document.getElementById("today-date").textContent = new Date().toLocaleDateString(undefined,{weekday:"long", year:"numeric", month:"long", day:"numeric"});
+  renderStats();
+  renderSteps();
+  renderContent();
+}
+
+function renderStats(){
+  const plan = computePlan();
+  const activeCount = state.presses.length - state.stopped.length;
+  const totalQty = state.orders.reduce((s,o)=>s+(Number(o.qty)||0),0);
+  const el = document.getElementById("stats");
+  el.innerHTML = `
+    <div class="stat"><div class="num mono">${activeCount}<span style="color:var(--ink-dim);font-size:15px;"> / ${state.presses.length}</span></div><div class="lbl">Active presses</div></div>
+    <div class="stat"><div class="num mono">${fmtInt(totalQty)}</div><div class="lbl">Tyres on order</div></div>
+    <div class="stat ${plan.unmet.length ? '' : 'good'}"><div class="num mono">${plan.orderSummary.length ? fmt1(plan.finishDays) : "—"}</div><div class="lbl">Days to complete plan</div></div>
+    <div class="stat ${plan.unmet.length ? 'bad' : ''}"><div class="num mono">${plan.unmet.length}</div><div class="lbl">Unmet orders</div></div>
+  `;
+}
+
+function renderSteps(){
+  const el = document.getElementById("steps");
+  el.innerHTML = STEPS.map(s=>{
+    const sub = s.sub();
+    return `<button class="step-btn ${state.step===s.n?'active':''}" onclick="goStep(${s.n})">
+      <span class="n">0${s.n}</span> ${s.label} ${sub!==null ? `<span class="sub">${sub}</span>`:""}
+    </button>`;
+  }).join("");
+}
+
+function goStep(n){ state.step = n; saveState(); render(); }
+
+function renderContent(){
+  const el = document.getElementById("content");
+  if(state.step===1) el.innerHTML = renderOrdersStep();
+  else if(state.step===2) el.innerHTML = renderPressesStep();
+  else if(state.step===3) el.innerHTML = renderCycleStep();
+  else el.innerHTML = renderPlanStep();
+  attachStepHandlers();
+}
+
+/* ---- Step 1: Orders & Import ---- */
+function renderOrdersStep(){
+  const rows = state.orders.map((o,i)=>`
+    <tr>
+      <td class="mono">${escapeHtml(o.code)}</td>
+      <td><input type="text" value="${escapeAttr(o.description)}" data-order-desc="${i}"></td>
+      <td style="width:110px"><input type="number" min="0" value="${o.qty}" data-order-qty="${i}"></td>
+      <td style="width:36px"><button class="ghost small" data-order-del="${i}" title="Remove">✕</button></td>
+    </tr>
+  `).join("");
+  return `
+    <h2>Order &amp; Import</h2>
+    <p class="desc">Import the Order and Press Capability sheets from your planning workbook, or edit quantities directly below.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div>Drop the planning workbook here, or <strong>click to choose a file</strong></div>
+      <div class="hint">Reads sheets named "Order" and "Press Capability" — same layout as your import template (.xlsx)</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" style="display:none">
+    </div>
+
+    <div class="section-title">Order list</div>
+    <div class="toolbar">
+      <button class="small" id="btnAddOrder">+ Add tyre code</button>
+      <button class="small ghost" id="btnResetSample">Reset to sample data</button>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Tyre code</th><th>Description</th><th>Qty needed</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="empty">No orders yet — import a workbook or add a row.</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---- Step 2: Presses & Capability ---- */
+function renderPressesStep(){
+  const orderCodes = new Set(state.orders.map(o=>o.code));
+  const rows = state.presses.map((p,i)=>{
+    const stopped = state.stopped.includes(p);
+    const caps = (state.capability[p]||[]);
+    const relevant = caps.filter(c=>orderCodes.has(c));
+    return `
+    <tr>
+      <td class="mono">${escapeHtml(p)}</td>
+      <td>
+        <label class="switch">
+          <input type="checkbox" ${stopped?'':'checked'} data-press-toggle="${i}">
+          <span class="slider"></span>
+        </label>
+        <span class="pill ${stopped?'bad':'good'}" style="margin-left:6px;">${stopped?'Stopped':'Active'}</span>
+      </td>
+      <td><input type="text" value="${escapeAttr(caps.join(', '))}" data-press-caps="${i}" placeholder="e.g. 220101010, 220101020"></td>
+      <td class="num mono">${relevant.length}/${caps.length}</td>
+      <td style="width:36px"><button class="ghost small" data-press-del="${i}" title="Remove press">✕</button></td>
+    </tr>`;
+  }).join("");
+  return `
+    <h2>Presses &amp; Capability</h2>
+    <p class="desc">Mark a press <strong>Stopped</strong> to pause or remove it from the plan (maintenance, breakdown). List which tyre codes each press is capable of running, comma-separated.</p>
+    <div class="toolbar">
+      <button class="small" id="btnAddPress">+ Add press</button>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Press</th><th>Status</th><th>Capable tyre codes</th><th>On order</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="empty">No presses yet.</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---- Step 3: Cycle time data ---- */
+function renderCycleStep(){
+  const orderCodes = state.orders.filter(o=>Number(o.qty)>0).map(o=>o.code);
+  const active = state.presses.filter(p=>!state.stopped.includes(p));
+  const groups = [];
+  orderCodes.forEach(code=>{
+    const order = state.orders.find(o=>o.code===code);
+    const eligiblePresses = active.filter(p => (state.capability[p]||[]).includes(code));
+    if(eligiblePresses.length===0) return;
+    groups.push({code, order, presses: eligiblePresses});
+  });
+
+  const body = groups.map(g=>{
+    const rows = g.presses.map(p=>{
+      const d = state.cycleData[key(p,g.code)] || {};
+      const info = cycleInfo(p, g.code);
+      return `
+      <tr>
+        <td class="mono">${escapeHtml(p)}</td>
+        <td style="width:90px"><input type="number" min="0" step="1" value="${d.cavities ?? ''}" data-cyc-cav="${escapeAttr(p)}|${escapeAttr(g.code)}" placeholder="0"></td>
+        <td style="width:110px"><input type="number" min="0" step="1" value="${d.cureTime ?? ''}" data-cyc-cure="${escapeAttr(p)}|${escapeAttr(g.code)}" placeholder="min"></td>
+        <td style="width:110px"><input type="number" min="0" step="1" value="${d.handlingTime ?? ''}" data-cyc-hand="${escapeAttr(p)}|${escapeAttr(g.code)}" placeholder="${state.handlingDefault}"></td>
+        <td class="num mono">${info ? info.cycleTime : "—"}</td>
+        <td class="num mono">${info ? fmtInt(info.dailyCap) : "—"}</td>
+      </tr>`;
+    }).join("");
+    return `
+      <div class="section-title">${escapeHtml(g.code)} <span style="color:var(--ink-dim); font-weight:500;">— ${escapeHtml(g.order.description||"")} · needs ${fmtInt(g.order.qty)}</span></div>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Press</th><th>Cavities</th><th>Cure time (min)</th><th>Handling time (min)</th><th>Cycle time (min)</th><th>Tyres / day</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <h2>Cycle Time Data</h2>
+    <p class="desc">Cycle time = cure time + handling time. Enter this once per press-and-pattern combination — it drives each press's daily output.</p>
+    <div class="row" style="margin-bottom:16px;">
+      <label style="font-size:13px;">Default handling time (min) applied when left blank:</label>
+      <input type="number" min="0" style="width:80px" id="handlingDefault" value="${state.handlingDefault}">
+    </div>
+    ${body || `<p class="empty">No orders with an eligible active press yet — check Order &amp; Import and Presses &amp; Capability.</p>`}
+  `;
+}
+
+/* ---- Step 4: Plan ---- */
+function renderPlanStep(){
+  const plan = computePlan();
+
+  const orderRows = plan.orderSummary.map(o=>`
+    <tr>
+      <td class="mono">${escapeHtml(o.code)}</td>
+      <td>${escapeHtml(o.description||"")}</td>
+      <td class="num mono">${fmtInt(o.qty)}</td>
+      <td class="mono">${o.assignedPresses.length ? o.assignedPresses.join(", ") : "—"}</td>
+      <td class="num mono">${fmtInt(o.dailyCap)}</td>
+      <td class="num mono">${o.days!==null ? fmt1(Math.ceil(o.days*10)/10) : "—"}</td>
+      <td>${o.status==="ok" ? `<span class="pill good">On track</span>` : `<span class="pill bad">Unmet</span>`}</td>
+    </tr>
+  `).join("");
+
+  const orderCodes = new Set(state.orders.filter(o=>Number(o.qty)>0).map(o=>o.code));
+
+  const pressRows = state.presses.map(p=>{
+    const stopped = state.stopped.includes(p);
+    const a = plan.assignment[p];
+    const caps = (state.capability[p]||[]).filter(c=>orderCodes.has(c));
+    const pinned = p in state.manualAssignment;
+    const options = [`<option value="">— Auto —</option>`, `<option value="__idle__" ${a===null && pinned ? 'selected':''}>— Idle —</option>`]
+      .concat(caps.map(c=>`<option value="${escapeAttr(c)}" ${a && a.code===c && pinned ? 'selected':''}>${escapeHtml(c)}</option>`));
+    return `
+    <tr>
+      <td class="mono">${escapeHtml(p)}</td>
+      <td>${stopped ? `<span class="pill bad">Stopped</span>` : `<span class="pill good">Active</span>`}</td>
+      <td>
+        <select ${stopped?'disabled':''} data-plan-assign="${escapeAttr(p)}" style="min-width:150px;">${options.join("")}</select>
+        ${a && a.error ? `<span class="flag" style="color:var(--bad)"> no cycle data</span>` : ""}
+      </td>
+      <td class="num mono">${a && a.cavities!==undefined ? a.cavities : "—"}</td>
+      <td class="num mono">${a && a.cureTime!==undefined ? a.cureTime : "—"}</td>
+      <td class="num mono">${a && a.handlingTime!==undefined ? a.handlingTime : "—"}</td>
+      <td class="num mono">${a && a.cycleTime!==undefined ? a.cycleTime : "—"}</td>
+      <td class="num mono">${a && a.dailyCap!==undefined ? fmtInt(a.dailyCap) : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+    <h2>Production Plan</h2>
+    <p class="desc">Presses are assigned to the pattern that keeps the whole order on the fastest overall schedule. Override any press manually below — the rest re-balance around your choice.</p>
+    <div class="toolbar">
+      <button class="primary" id="btnExport">Export plan (.xlsx)</button>
+      <button class="ghost small" id="btnClearManual">Clear manual overrides</button>
+    </div>
+
+    <div class="section-title">Order fulfillment</div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Tyre code</th><th>Description</th><th>Qty needed</th><th>Assigned presses</th><th>Tyres / day</th><th>Days to complete</th><th>Status</th></tr></thead>
+        <tbody>${orderRows || `<tr><td colspan="7" class="empty">No orders with quantity set.</td></tr>`}</tbody>
+      </table>
+    </div>
+
+    ${plan.unmet.length ? `<p class="hint" style="color:var(--bad)">Unmet: ${plan.unmet.map(o=>escapeHtml(o.code)).join(", ")} — no active press has both the capability and cycle time data for these.</p>` : ""}
+
+    <div class="section-title">Press assignment</div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Press</th><th>Status</th><th>Assigned pattern</th><th>Cavities</th><th>Cure (min)</th><th>Handling (min)</th><th>Cycle (min)</th><th>Tyres / day</th></tr></thead>
+        <tbody>${pressRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ============================= HANDLERS ============================= */
+
+function attachStepHandlers(){
+  // Step 1
+  const dz = document.getElementById("dropzone");
+  if(dz){
+    const fi = document.getElementById("fileInput");
+    dz.onclick = ()=>fi.click();
+    fi.onchange = (e)=>{ if(e.target.files[0]) handleFile(e.target.files[0]); };
+    ["dragover","dragleave","drop"].forEach(evt=>{
+      dz.addEventListener(evt, (e)=>{
+        e.preventDefault();
+        if(evt==="dragover") dz.classList.add("drag");
+        if(evt==="dragleave") dz.classList.remove("drag");
+        if(evt==="drop"){ dz.classList.remove("drag"); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }
+      });
+    });
+  }
+  const addOrder = document.getElementById("btnAddOrder");
+  if(addOrder) addOrder.onclick = ()=>{
+    state.orders.push({code:"NEW-CODE-"+(state.orders.length+1), description:"", qty:0});
+    saveState(); render();
+  };
+  const resetSample = document.getElementById("btnResetSample");
+  if(resetSample) resetSample.onclick = ()=>{
+    if(confirm("Reset orders, presses, capability and cycle data back to the sample template? This cannot be undone.")){
+      state = defaultState(); saveState(); render();
+    }
+  };
+  document.querySelectorAll("[data-order-desc]").forEach(inp=>{
+    inp.oninput = ()=>{ state.orders[+inp.dataset.orderDesc].description = inp.value; saveState(); };
+  });
+  document.querySelectorAll("[data-order-qty]").forEach(inp=>{
+    inp.oninput = ()=>{ state.orders[+inp.dataset.orderQty].qty = Number(inp.value)||0; saveState(); renderStats(); };
+  });
+  document.querySelectorAll("[data-order-del]").forEach(btn=>{
+    btn.onclick = ()=>{ state.orders.splice(+btn.dataset.orderDel,1); saveState(); render(); };
+  });
+
+  // Step 2
+  const addPress = document.getElementById("btnAddPress");
+  if(addPress) addPress.onclick = ()=>{
+    const name = "PRESS-"+(state.presses.length+1);
+    state.presses.push(name); state.capability[name]=[];
+    saveState(); render();
+  };
+  document.querySelectorAll("[data-press-toggle]").forEach(inp=>{
+    inp.onchange = ()=>{
+      const p = state.presses[+inp.dataset.pressToggle];
+      if(inp.checked) state.stopped = state.stopped.filter(x=>x!==p);
+      else if(!state.stopped.includes(p)) state.stopped.push(p);
+      saveState(); render();
+    };
+  });
+  document.querySelectorAll("[data-press-caps]").forEach(inp=>{
+    inp.oninput = ()=>{
+      const p = state.presses[+inp.dataset.pressCaps];
+      state.capability[p] = inp.value.split(",").map(s=>s.trim()).filter(Boolean);
+      saveState();
+    };
+    inp.onblur = ()=>render();
+  });
+  document.querySelectorAll("[data-press-del]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const p = state.presses[+btn.dataset.pressDel];
+      state.presses.splice(+btn.dataset.pressDel,1);
+      delete state.capability[p];
+      state.stopped = state.stopped.filter(x=>x!==p);
+      delete state.manualAssignment[p];
+      saveState(); render();
+    };
+  });
+
+  // Step 3
+  const hd = document.getElementById("handlingDefault");
+  if(hd) hd.oninput = ()=>{ state.handlingDefault = Number(hd.value)||0; saveState(); renderStats(); };
+  document.querySelectorAll("[data-cyc-cav]").forEach(inp=>{
+    inp.oninput = ()=>{
+      const [p,c] = inp.dataset.cycCav.split("|");
+      const k = key(p,c);
+      state.cycleData[k] = state.cycleData[k] || {};
+      state.cycleData[k].cavities = Number(inp.value)||0;
+      saveState(); renderStats();
+    };
+    inp.onblur = ()=>render();
+  });
+  document.querySelectorAll("[data-cyc-cure]").forEach(inp=>{
+    inp.oninput = ()=>{
+      const [p,c] = inp.dataset.cycCure.split("|");
+      const k = key(p,c);
+      state.cycleData[k] = state.cycleData[k] || {};
+      state.cycleData[k].cureTime = Number(inp.value)||0;
+      saveState(); renderStats();
+    };
+    inp.onblur = ()=>render();
+  });
+  document.querySelectorAll("[data-cyc-hand]").forEach(inp=>{
+    inp.oninput = ()=>{
+      const [p,c] = inp.dataset.cycHand.split("|");
+      const k = key(p,c);
+      state.cycleData[k] = state.cycleData[k] || {};
+      state.cycleData[k].handlingTime = inp.value === "" ? null : Number(inp.value);
+      saveState(); renderStats();
+    };
+    inp.onblur = ()=>render();
+  });
+
+  // Step 4
+  const btnExport = document.getElementById("btnExport");
+  if(btnExport) btnExport.onclick = exportPlan;
+  const btnClearManual = document.getElementById("btnClearManual");
+  if(btnClearManual) btnClearManual.onclick = ()=>{ state.manualAssignment = {}; saveState(); render(); };
+  document.querySelectorAll("[data-plan-assign]").forEach(sel=>{
+    sel.onchange = ()=>{
+      const p = sel.dataset.planAssign;
+      const v = sel.value;
+      if(v === ""){ delete state.manualAssignment[p]; }
+      else if(v === "__idle__"){ state.manualAssignment[p] = null; }
+      else { state.manualAssignment[p] = v; }
+      saveState(); render();
+    };
+  });
+}
+
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+render();
+</script>
+</body>
+</html>

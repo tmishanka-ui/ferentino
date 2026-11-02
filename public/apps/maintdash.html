@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maintenance Dashboard — FITL</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--red:#c8102e;--ink:#1f2328;--mut:#6b7280;--bg:#f3f4f6;--line:#e5e7eb;--S:#16a34a;--N:#2563eb;--B:#dc2626}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--red);color:#fff;padding:12px 18px}
+header h1{margin:0;font-size:19px}header small{opacity:.85}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button,select,input{font:inherit;font-size:14px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 11px;background:#fff;color:var(--ink)}
+button{cursor:pointer}button:hover{border-color:var(--red)}
+header button{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.14);color:#fff}
+header button:hover{background:rgba(255,255,255,.28)}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:10px 16px 0;max-width:1250px;margin:0 auto}
+nav button{border-radius:8px 8px 0 0;border-bottom:none;background:#e5e7eb}
+nav button.on{background:#fff;color:var(--red);font-weight:700}
+main{max-width:1250px;margin:0 auto;padding:0 16px 24px}
+.pane{background:#fff;border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:14px}
+.flt{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.flt label{display:block;font-size:12px;color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.k{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.k b{display:block;font-size:24px}.k span{font-size:12px;color:var(--mut)}
+.k.r b{color:var(--B)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-bottom:14px}
+.cb{border:1px solid var(--line);border-radius:9px;padding:10px;min-width:0}
+.cb h3{margin:0 0 6px;font-size:14px}.cb canvas{max-height:300px}
+.tw{overflow-x:auto;max-height:460px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
+th{background:#f9fafb;position:sticky;top:0;font-size:11px;text-transform:uppercase;color:var(--mut)}
+td.n,th.n{text-align:right}
+.tag{font-weight:700;border-radius:5px;padding:1px 7px;color:#fff;font-size:12px}
+.tag.S{background:var(--S)}.tag.N{background:var(--N)}.tag.B{background:var(--B)}
+.empty{text-align:center;padding:50px 10px;color:var(--mut)}
+.note{font-size:12px;color:var(--mut);margin:6px 0}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;z-index:9}
+#toast.on{opacity:1}#toast.bad{background:var(--B)}
+@media print{header .bar,nav,.flt button,.no-print{display:none!important}body{background:#fff}.pane{border:none}.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+<div style="display:flex;align-items:center;gap:12px"><img src="data:image/jpeg;base64,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" alt="Ferentino" style="height:38px;width:auto;background:#fff;padding:3px 7px;border-radius:5px;flex-shrink:0"><div><h1>Maintenance Dashboard</h1><small>Ferentino Industrial Tyres (Pvt) Ltd · Daily Maintenance Record &amp; Annual PM Plan</small></div></div>
+<div class="bar">
+<button data-a="upd">⬆ Upload Daily Maintenance Record</button>
+<button data-a="upp">⬆ Upload Annual Works PM</button>
+<button data-a="rep">⬇ Report (Excel)</button>
+<button data-a="print">🖨 Print / PDF</button>
+<button data-a="bak">⬇ Backup (.json)</button>
+<button data-a="res">⬆ Restore backup</button>
+<input type="file" id="f_d" accept=".xlsx,.xlsm,.xls" hidden><input type="file" id="f_p" accept=".xlsx,.xlsm,.xls" hidden><input type="file" id="f_b" accept=".json" hidden>
+<span id="info" style="font-size:12px;opacity:.9"></span>
+</div>
+</header>
+<nav id="nav"></nav>
+<main><div class="pane" id="pane"></div></main>
+<div id="toast"></div>
+<script>
+const LS="fitl_maint_dash_v1",MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SL={S:"Service (planned)",N:"Normal work",B:"Breakdown"},SC={S:"#16a34a",N:"#2563eb",B:"#dc2626"};
+const $=s=>document.querySelector(s),esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0"),r1=n=>Math.round(n*10)/10;
+/*PARSE_START*/
+const clean=v=>v==null?"":String(v).replace(/\s+/g," ").trim();
+function parseHours(v){
+ if(v==null||v==="")return{h:null,t:"missing"};
+ if(typeof v==="number")return{h:v};
+ const s=clean(v).toLowerCase().replace(/\s/g,"");
+ if(/^\d+(\.\d+)?$/.test(s))return{h:+s};
+ let m=s.match(/(\d+(?:\.\d+)?)h/);
+ if(m){const mm=s.match(/(\d+)m/);return{h:+m[1]+(mm?+mm[1]/60:0)}}
+ m=s.match(/(\d+(?:\.\d+)?)m/);if(m)return{h:+m[1]/60};
+ return{h:null,t:/^\*+$/.test(s)?"stars":"bad"};
+}
+function parseDate(v,today){
+ let y,m,d,note="";
+ if(Object.prototype.toString.call(v)==="[object Date]"){const x=new Date(v.getTime()+43200000);y=x.getFullYear();m=x.getMonth()+1;d=x.getDate()}
+ else{
+  const s=clean(v);if(!s)return null;
+  const n=s.match(/\d+/g)||[];
+  if(n.length===3){let a=+n[0],b=+n[1];y=+n[2];if(y<100)y+=2000;if(a>12&&b<=12){d=a;m=b}else if(b>12&&a<=12){m=a;d=b}else{d=a;m=b}}
+  else if(n.length===2&&n[1].length===6){y=+n[1].slice(2);d=+n[1].slice(0,2);m=+n[0]}
+  else return{bad:s};
+  note="text date";
+ }
+ const ok=(Y,M,D)=>Y>=2020&&Y<=2035&&M>=1&&M<=12&&D>=1&&D<=31;
+ if(!ok(y,m,d))return{bad:clean(v)};
+ let iso=y+"-"+pad(m)+"-"+pad(d),fix="";
+ if(iso>today&&d<=12&&ok(y,d,m)){const alt=y+"-"+pad(d)+"-"+pad(m);if(alt<=today){fix="Future date "+iso+" auto-corrected (day/month swapped)";iso=alt}}
+ if(iso>today&&!fix)fix="Date is in the future";
+ return{iso,fix,note};
+}
+const GROUPS=[[/press|taxi|^\d\s*m\d*$/,"Presses & Taxi"],[/mill|calan|crack|kneader|batch|banbury|bambury|extrud|mixing|mix/,"Mixing & Mills"],[/boiler|steam|compress|air|cooling|chill|pump|water|generator|tank|scrub|\bdb\b/,"Utilities"],[/light|panel|electr|wire|fan|mold|mould|lift|drill|weld/,"Electrical & General"]];
+const grp=k=>{for(const[g,n]of GROUPS)if(g.test(k))return n;return"Other"};
+function splitTech(s){
+ return clean(s).replace(/\(.*?\)/g,"").split(/\s*(?:\+|,|&|=|\/|\band\b)\s*/i).map(x=>x.replace(/[^a-zA-Z\- ]/g,"").trim().toLowerCase()).filter(x=>x.length>2&&!/^helpers?$/.test(x)&&!/^\*+$/.test(x)).map(x=>x==="out-source"||x==="outsource"?"Outsource":x[0].toUpperCase()+x.slice(1));
+}
+function parseDaily(wb,fname,today){
+ const ws=wb.Sheets[wb.SheetNames[0]],A=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+ const r0=XLSX.utils.decode_range(ws["!ref"]).s.r;
+ const hi=A.findIndex(r=>r&&r.some(c=>typeof c==="string"&&/^\s*date\s*$/i.test(c)));
+ if(hi<0)throw new Error('Could not find the "date" header row — is this the Daily Maintenance Record?');
+ const H=A[hi].map(c=>clean(c).toLowerCase()),ix=k=>H.findIndex(h=>h.startsWith(k));
+ const c={d:ix("date"),m:ix("machine"),x:ix("desc"),h:ix("time"),s:ix("status"),t:ix("tech"),r:ix("remark")};
+ const recs=[],issues=[],names={};
+ for(let i=hi+1;i<A.length;i++){
+  const w=A[i];if(!w)continue;
+  const row=r0+i+1,mach=clean(w[c.m]),desc=clean(w[c.x]);
+  if(!mach&&!desc)continue;
+  const iss=(type,val,note)=>issues.push({row,type,val:clean(val),note});
+  let hv=w[c.h],sv=w[c.s];
+  const isS=x=>/^[SNB]$/i.test(clean(x));
+  if(!isS(sv)&&isS(hv)){const t=hv;hv=sv;sv=t;iss("Columns swapped",t+" / "+hv,"Status and hours were in each other's column — corrected")}
+  const st=isS(sv)?clean(sv).toUpperCase():"";
+  if(!st)iss("Status missing/invalid",sv,"Counted as 'No status'");
+  const ph=parseHours(hv);
+  if(ph.h==null)iss(ph.t==="missing"?"Hours missing":ph.t==="stars"?"Hours not recorded (***)":"Hours unreadable",hv,"Job counted, hours excluded");
+  const pd=parseDate(w[c.d],today);
+  if(!pd){iss("Date missing","","Record excluded from the dashboard");continue}
+  if(pd.bad){iss("Date unreadable",pd.bad,"Record excluded from the dashboard");continue}
+  if(pd.fix)iss(pd.fix.startsWith("Future date")&&pd.fix.includes("auto")?"Date auto-corrected":"Date in future",pd.iso,pd.fix);
+  const key=(mach.toLowerCase().replace(/[.\s]+/g," ").trim().replace(/bambury|banbary/,"banbury").replace(/batch[- ]?off/,"batch off"))||"(not stated)";
+  if(!names[key])names[key]=mach||"(not stated)";
+  recs.push({d:pd.iso,m:key,x:desc,h:ph.h,s:st,t:splitTech(w[c.t]),r:clean(w[c.r]),row});
+ }
+ recs.forEach(r=>r.g=grp(r.m));
+ const cnt={};recs.forEach(r=>r.t.forEach(t=>cnt[t]=(cnt[t]||0)+1));
+ const lev=(a,b)=>{if(Math.abs(a.length-b.length)>1)return 9;let i=0;while(i<a.length&&a[i]===b[i])i++;const x=a.slice(i),y=b.slice(i);if(x.length===y.length)return x.slice(1)===y.slice(1)?1:9;return(x.length>y.length?x.slice(1)===y:y.slice(1)===x)?1:9};
+ const ns=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]),map={},merged=[];
+ ns.forEach((n,i)=>{if(n.length<5||n==="Outsource")return;for(let j=0;j<i;j++){const m=ns[j];if(!map[m]&&m.length>=5&&lev(n.toLowerCase(),m.toLowerCase())===1){map[n]=m;merged.push(n+" → "+m);break}}});
+ recs.forEach(r=>{r.t=[...new Set(r.t.map(t=>map[t]||t))]});
+ return{file:fname,at:new Date().toISOString(),recs,issues,names,merged};
+}
+function parsePM(wb,fname){
+ const plans={},XU=XLSX.utils;
+ wb.SheetNames.forEach(n=>{
+  const ws=wb.Sheets[n];if(!ws["!ref"]||/machine/i.test(n))return;
+  const R=XU.decode_range(ws["!ref"]),v=(r,c)=>{const x=ws[XU.encode_cell({r,c})];return x?x.v:null};
+  const tasks=[];let blk="",sec="";
+  for(let r=0;r<=R.e.r;r++){
+   const b=v(r,1);if(typeof b==="string"&&/^[A-D]$/.test(b.trim()))blk=b.trim();
+   const F=clean(v(r,5));if(!F)continue;
+   const E=clean(v(r,4)),D=v(r,3),w={};let hdr=true,any=false;
+   for(let k=1;k<=52;k++){const x=v(r,5+k);if(typeof x==="number"){any=true;if(x>0)w[k]=x;if(x!==k)hdr=false}}
+   if(any&&hdr){if(!E)sec=F;continue}
+   if(!E&&(D==null||D==="")&&!any){sec=F;continue}
+   tasks.push({sec:(blk?blk+" · ":"")+(sec||"General"),fr:E,task:F,w});
+  }
+  if(tasks.length<10)return;
+  const cap={};
+  for(let r=0;r<=Math.min(R.e.r,12);r++)if(/target/i.test(clean(v(r,61))))for(let k=1;k<=52;k++){const x=v(r,61+k);if(typeof x==="number")cap[k]=x}
+  let ytd=0;
+  for(let r=0;r<=12;r++)for(let c=61;c<=113;c++){const x=ws[XU.encode_cell({r,c})];if(x&&typeof x.f==="string"){const m=x.f.match(/SUM\(\$?([A-Z]+)\$?\d+:\$?([A-Z]+)\$?\d+\)\s*\/\s*SUM/);if(m)ytd=Math.max(ytd,XU.decode_col(m[2])-61)}}
+  plans[n]={tasks,cap,ytd};
+ });
+ const names=Object.keys(plans);if(!names.length)throw new Error("No annual plan sheet found — is this the Annual Works PM file?");
+ const hasT=n=>Object.keys(plans[n].cap).length>0;
+ const act=names.find(hasT)||"",pl=names.find(n=>n!==act)||names[0];
+ const ym=(fname+names.join(" ")).match(/20\d\d/);
+ const o={file:fname,at:new Date().toISOString(),plans,planSel:pl,actSel:act,year:ym?+ym[0]:new Date().getFullYear(),through:0};
+ o.through=(act&&plans[act].ytd)||guessThrough(o);return o;
+}
+const sumW=t=>{const a=Array(53).fill(0);t.forEach(x=>{for(const k in x.w)a[k]+=x.w[k]});return a};
+function guessThrough(P){
+ const ac=P.actSel&&P.plans[P.actSel];if(!ac||!Object.keys(ac.cap).length)return 0;
+ const A=sumW(ac.tasks);let last=0;for(let k=1;k<=52;k++)if(ac.cap[k]!=null&&A[k]!==ac.cap[k])last=k;return last;
+}
+/*PARSE_END*/
+
+let D=(()=>{try{const j=JSON.parse(localStorage.getItem(LS));if(j&&(j.daily||j.pm))return j}catch(e){}return{daily:null,pm:null}})();
+let F={y:"all",m:"all",s:"all"},tab="ov",mt="n",q="",pq="",charts={};
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(D))}catch(e){toast("Browser storage is full — please download a Backup now",1)}};
+let tt;function toast(m,b){const t=$("#toast");t.textContent=m;t.className="on"+(b?" bad":"");clearTimeout(tt);tt=setTimeout(()=>t.className="",b?6000:2800)}
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const weekOf=iso=>{const d=new Date(iso+"T12:00:00"),s=new Date(d.getFullYear(),0,1,12);return Math.min(52,Math.floor((d-s)/864e5/7)+1)};
+
+function rows(){return D.daily?D.daily.recs.filter(r=>(F.y==="all"||r.d.slice(0,4)===F.y)&&(F.m==="all"||+r.d.slice(5,7)===+F.m)&&(F.s==="all"||r.s===F.s)):[]}
+function agg(list,kf){const M={};list.forEach(r=>{(Array.isArray(kf(r))?kf(r):[kf(r)]).forEach(k=>{const o=M[k]||(M[k]={k,n:0,h:0,B:0,Bh:0,S:0,N:0});o.n++;o.h+=r.h||0;if(r.s==="B"){o.B++;o.Bh+=r.h||0}if(r.s)o[r.s]++})});return Object.values(M)}
+const mName=k=>D.daily.names[k]||k;
+function pmModel(){
+ const P=D.pm,pl=P.plans[P.planSel]||Object.values(P.plans)[0],ac=P.actSel&&P.actSel!==P.planSel&&P.plans[P.actSel]?P.plans[P.actSel]:null;
+ const PW=sumW(pl.tasks),AW=ac?sumW(ac.tasks):null;
+ const T=Array(53).fill(0).map((_,k)=>!k?0:(ac&&ac.cap[k]!=null?ac.cap[k]:pl.cap[k]!=null?pl.cap[k]:PW[k]));
+ const N=ac?Math.min(52,P.through||0):0,MS=k=>new Date(P.year,0,1+7*(k-1)).getMonth();
+ const mo=MON.map((m,i)=>{let ts=0,as=0;const rs=[];for(let k=1;k<=N;k++)if(MS(k)===i){ts+=T[k];as+=AW[k];if(T[k])rs.push(AW[k]/T[k])}return{m,ts,as,adh:rs.length?rs.reduce((x,y)=>x+y,0)/rs.length:null}});
+ const tt=T.slice(1,N+1).reduce((x,y)=>x+y,0),aa=AW?AW.slice(1,N+1).reduce((x,y)=>x+y,0):0;
+ const pairs=pl.tasks.map((t,i)=>{const a=ac&&ac.tasks.length===pl.tasks.length&&ac.tasks[i].task===t.task?ac.tasks[i]:null;let pn=0,an=0;const miss=[];
+  for(let k=1;k<=N;k++){const p=t.w[k]||0,x=a?a.w[k]||0:0;pn+=p;an+=x;if(p>0&&!(x>0))miss.push(k)}
+  return{t,a,pn,an,miss,tot:Object.values(t.w).reduce((x,y)=>x+y,0)}});
+ return{P,pl,ac,PW,AW,T,N,mo,tt,aa,adh:tt?aa/tt:null,pairs};
+}
+const pc=x=>x==null?"–":Math.round(x*100)+"%";
+const serviceByWeek=yr=>{const d=Array(53).fill(0);D.daily&&D.daily.recs.forEach(r=>{if(r.s==="S"&&r.d.startsWith(String(yr)))d[weekOf(r.d)]+=r.h||0});return d};
+
+function drawChart(id,cfg){if(charts[id])charts[id].destroy();const c=document.getElementById(id);if(c)charts[id]=new Chart(c,Object.assign({options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:cfg.legend!==false}}}},cfg,{options:Object.assign({responsive:true,plugins:{legend:{display:cfg.legend!==false}}},cfg.options||{})}))}
+const tbl=(h,b,nn=[])=>`<div class="tw"><table><tr>${h.map((x,i)=>`<th class="${nn.includes(i)?"n":""}">${x}</th>`).join("")}</tr>${b.length?b.map(r=>`<tr>${r.map((x,i)=>`<td class="${nn.includes(i)?"n":""}">${x}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="${h.length}" class="empty">No data</td></tr>`}</table></div>`;
+const tag=s=>s?`<span class="tag ${s}">${s}</span>`:"–";
+
+function render(){
+ const tabs=[["ov","Overview"],["mc","Machines"],["tc","Technicians"],["pm","Annual PM plan"],["rc","Job records"],["dq","Data quality"]];
+ $("#nav").innerHTML=tabs.map(([k,n])=>`<button data-a="tab" data-k="${k}" class="${k===tab?"on":""}">${n}</button>`).join("");
+ $("#info").textContent=[D.daily&&`Daily: ${D.daily.file} (${D.daily.recs.length} jobs)`,D.pm&&`PM: ${D.pm.file}`].filter(Boolean).join("  ·  ");
+ const need=tab==="pm"?D.pm:D.daily;
+ if(!need){$("#pane").innerHTML=`<div class="empty"><h2>No data loaded yet</h2>Use <b>${tab==="pm"?"Upload Annual Works PM":"Upload Daily Maintenance Record"}</b> above, or <b>Restore backup</b>.</div>`;return}
+ ({ov:vOv,mc:vMc,tc:vTc,pm:vPm,rc:vRc,dq:vDq})[tab]();
+}
+function filters(extra=""){
+ const ys=[...new Set(D.daily.recs.map(r=>r.d.slice(0,4)))].sort();
+ return`<div class="flt"><div><label>Year</label><select data-f="y"><option value="all">All</option>${ys.map(y=>`<option ${F.y===y?"selected":""}>${y}</option>`).join("")}</select></div>
+ <div><label>Month</label><select data-f="m"><option value="all">All</option>${MON.map((m,i)=>`<option value="${i+1}" ${+F.m===i+1?"selected":""}>${m}</option>`).join("")}</select></div>
+ <div><label>Status</label><select data-f="s"><option value="all">All</option>${Object.keys(SL).map(s=>`<option value="${s}" ${F.s===s?"selected":""}>${s} – ${SL[s]}</option>`).join("")}</select></div>${extra}</div>`;
+}
+const kpi=(v,l,c="")=>`<div class="k ${c}"><b>${v}</b><span>${l}</span></div>`;
+function totals(L){const h=L.reduce((s,r)=>s+(r.h||0),0),B=L.filter(r=>r.s==="B"),Bh=B.reduce((s,r)=>s+(r.h||0),0);return{n:L.length,h,B:B.length,Bh}}
+
+function vOv(){
+ const L=rows(),T=totals(L),miss=L.filter(r=>r.h==null).length;
+ $("#pane").innerHTML=filters()+`<div class="kpis">${kpi(T.n,"Jobs logged")}${kpi(r1(T.h),"Hours recorded")}${kpi(T.B,"Breakdown jobs","r")}${kpi(r1(T.Bh),"Breakdown hours ("+(T.h?Math.round(T.Bh/T.h*100):0)+"% of hours)","r")}${kpi(L.filter(r=>r.s==="S").length,"Planned service jobs")}${kpi(T.n?r1(T.h/(T.n-miss||1)):0,"Avg hours per job")}${kpi(new Set(L.map(r=>r.m)).size,"Machines / areas")}</div>
+ <div class="grid"><div class="cb"><h3>Jobs per month by status</h3><canvas id="c1"></canvas></div><div class="cb"><h3>Hours per month by status</h3><canvas id="c2"></canvas></div>
+ <div class="cb"><h3>Hours by machine group</h3><canvas id="c3"></canvas></div><div class="cb"><h3>Status mix (jobs)</h3><canvas id="c4"></canvas></div></div>
+ <div class="note">S = planned service, N = normal / minor work, B = breakdown (my reading of the status codes — see the summary note). ${miss} job(s) have no usable hours and are counted in jobs only.</div>`;
+ const ms=[...new Set(L.map(r=>r.d.slice(0,7)))].sort(),by=(s,f)=>ms.map(m=>L.filter(r=>r.d.startsWith(m)&&r.s===s).reduce((a,r)=>a+f(r),0));
+ const ds=f=>["S","N","B"].map(s=>({label:SL[s],data:by(s,f),backgroundColor:SC[s]}));
+ const st={scales:{x:{stacked:true},y:{stacked:true}}};
+ drawChart("c1",{type:"bar",data:{labels:ms,datasets:ds(()=>1)},options:st});
+ drawChart("c2",{type:"bar",data:{labels:ms,datasets:ds(r=>r.h||0).map(d=>({...d,data:d.data.map(r1)}))},options:st});
+ const g=agg(L,r=>r.g).sort((a,b)=>b.h-a.h);
+ drawChart("c3",{type:"bar",data:{labels:g.map(x=>x.k),datasets:[{label:"Hours",data:g.map(x=>r1(x.h)),backgroundColor:"#c8102e"},{label:"Breakdown hours",data:g.map(x=>r1(x.Bh)),backgroundColor:"#7f1d1d"}]},options:{indexAxis:"y"}});
+ drawChart("c4",{type:"doughnut",data:{labels:["S","N","B","No status"].map(s=>SL[s]||s),datasets:[{data:["S","N","B",""].map(s=>L.filter(r=>r.s===s).length),backgroundColor:[SC.S,SC.N,SC.B,"#9ca3af"]}]}});
+}
+const sel=()=>`<div><label>Rank by</label><select data-f="mt"><option value="n" ${mt==="n"?"selected":""}>Jobs</option><option value="h" ${mt==="h"?"selected":""}>Hours</option><option value="B" ${mt==="B"?"selected":""}>Breakdown jobs</option><option value="Bh" ${mt==="Bh"?"selected":""}>Breakdown hours</option></select></div>`;
+function vMc(){
+ const A=agg(rows(),r=>r.m).sort((a,b)=>b[mt]-a[mt]);
+ $("#pane").innerHTML=filters(sel())+`<div class="cb" style="margin-bottom:14px"><h3>Top 15 machines</h3><canvas id="c1" style="max-height:420px"></canvas></div>`+
+ tbl(["Machine / area","Group","Jobs","Hours","Service","Normal","Breakdown","Breakdown hrs"],A.slice(0,200).map(x=>[esc(mName(x.k)),esc(grp(x.k)),x.n,r1(x.h),x.S,x.N,x.B,r1(x.Bh)]),[2,3,4,5,6,7]);
+ const t=A.slice(0,15);
+ drawChart("c1",{type:"bar",data:{labels:t.map(x=>mName(x.k)),datasets:[{label:{n:"Jobs",h:"Hours",B:"Breakdown jobs",Bh:"Breakdown hours"}[mt],data:t.map(x=>r1(x[mt])),backgroundColor:mt[0]==="B"?"#dc2626":"#c8102e"}]},options:{indexAxis:"y"},legend:false});
+}
+function vTc(){
+ const A=agg(rows(),r=>r.t.length?r.t:["(not recorded)"]).sort((a,b)=>b[mt]-a[mt]);
+ $("#pane").innerHTML=filters(sel())+`<div class="note">Hours are the job hours each technician took part in (a job with 3 technicians counts once for each).</div><div class="cb" style="margin-bottom:14px"><h3>Top 15 technicians</h3><canvas id="c1" style="max-height:420px"></canvas></div>`+
+ tbl(["Technician","Jobs","Job hours","Service","Normal","Breakdown"],A.map(x=>[esc(x.k),x.n,r1(x.h),x.S,x.N,x.B]),[1,2,3,4,5]);
+ const t=A.slice(0,15);
+ drawChart("c1",{type:"bar",data:{labels:t.map(x=>x.k),datasets:[{label:"Selected measure",data:t.map(x=>r1(x[mt])),backgroundColor:"#2563eb"}]},options:{indexAxis:"y"},legend:false});
+}
+function vPm(){
+ const M=pmModel(),{P,pl,ac,T,N,mo,pairs}=M,cw=P.year===new Date().getFullYear()?weekOf(todayISO()):0,done=serviceByWeek(P.year);
+ const W=M.PW,tot=W.reduce((x,y)=>x+y,0),S={};
+ pairs.forEach(p=>{const o=S[p.t.sec]||(S[p.t.sec]={t:0,p:0,a:0});o.t++;o.p+=p.pn;o.a+=p.an});
+ const w0=cw||1,up=[];pl.tasks.forEach(t=>{for(let k=w0;k<=Math.min(52,w0+3);k++)if(t.w[k])up.push([k,t.sec,t.fr,t.task,t.w[k]])});up.sort((x,y)=>x[0]-y[0]);
+ const missed=pairs.filter(p=>p.miss.length).sort((x,y)=>y.miss.length-x.miss.length),nm=missed.reduce((s,p)=>s+p.miss.length,0);
+ const T2=pairs.filter(p=>!pq||(p.t.task+p.t.sec).toLowerCase().includes(pq.toLowerCase())).slice(0,300);
+ const opts=(sel,none)=>(none?`<option value="" ${!sel?"selected":""}>None</option>`:"")+Object.keys(P.plans).map(n=>`<option ${n===sel?"selected":""}>${esc(n)}</option>`).join("");
+ $("#pane").innerHTML=`<div class="flt"><div><label>Planned hours from sheet</label><select data-f="sheet">${opts(P.planSel)}</select></div><div><label>Actual hours from sheet</label><select data-f="asheet">${opts(P.actSel,1)}</select></div><div><label>Plan year</label><input type="number" data-f="year" value="${P.year}" style="width:90px"></div><div><label>Actuals recorded through week</label><input type="number" min="0" max="52" data-f="thru" value="${P.through||0}" style="width:90px"></div></div>
+ <div class="kpis">${kpi(ac&&N?pc(M.adh):"–","PM adherence, weeks 1–"+N+" (actual ÷ target)",M.adh!=null&&M.adh<.8?"r":"")}${kpi(r1(M.tt),"Target hours, weeks 1–"+N)}${kpi(r1(M.aa),"Actual hours done")}${kpi(nm,"Planned task-weeks with no actual","r")}${kpi(pl.tasks.length,"PM tasks in plan")}${kpi(r1(tot),"Planned hours (full year)")}${kpi(cw?"Wk "+cw+" · "+(W[cw]||0)+" h":"–","Current week · planned")}</div>
+ ${ac?"":'<div class="note">No “actual” sheet selected — showing the plan only.</div>'}
+ <div class="grid"><div class="cb"><h3>Weekly target vs actual hours, with service hours from the daily record</h3><canvas id="c1"></canvas></div><div class="cb"><h3>Monthly PM adherence</h3><canvas id="c2"></canvas></div></div>
+ <div class="grid"><div class="cb"><h3>By section (weeks 1–${N})</h3>${tbl(["Section","Tasks","Planned","Actual","Adherence"],Object.entries(S).map(([k,o])=>[esc(k),o.t,r1(o.p),r1(o.a),o.p?pc(o.a/o.p):"–"]),[1,2,3,4])}</div>
+ <div class="cb"><h3>Due ${cw?"now (weeks "+cw+"–"+(cw+3)+")":"in weeks 1–4"}</h3>${tbl(["Wk","Section","Freq","Task","Hrs"],up.map(u=>[u[0],esc(u[1]),esc(u[2]),esc(u[3]),u[4]]),[0,4])}</div></div>
+ <div class="cb" style="margin-bottom:14px"><h3>Planned but not done (weeks 1–${N}) — most missed first</h3>${tbl(["Section","Task","Freq","Weeks missed","Which weeks"],missed.slice(0,150).map(p=>[esc(p.t.sec),esc(p.t.task),esc(p.t.fr),p.miss.length,p.miss.join(", ")]),[3])}</div>
+ <div class="flt"><div><label>Search all tasks</label><input data-f="pq" value="${esc(pq)}" placeholder="e.g. boiler"></div></div>
+ ${tbl(["Section","Freq","Task","Planned (yr)","Planned wk 1–"+N,"Actual wk 1–"+N,"Adherence"],T2.map(p=>[esc(p.t.sec),esc(p.t.fr),esc(p.t.task),r1(p.tot),r1(p.pn),p.a?r1(p.an):"–",p.pn&&p.a?pc(p.an/p.pn):"–"]),[3,4,5,6])}
+ <div class="note">Weeks are 7-day blocks from 1 January; months follow the week's start date (same as your sheet). Monthly adherence = average of the weekly percentages, YTD = total actual ÷ total target, matching the formulas in the Excel sheet.</div>`;
+ const lab=[...Array(52)].map((_,i)=>i+1);
+ drawChart("c1",{data:{labels:lab,datasets:[{type:"bar",label:"Target hours",data:lab.map(k=>T[k]),backgroundColor:"#d1d5db"},{type:"bar",label:"Actual hours",data:lab.map(k=>ac&&k<=N?M.AW[k]:null),backgroundColor:"#c8102e"},{type:"line",label:"Service (S) hours in daily record",data:lab.map(k=>r1(done[k])),borderColor:"#16a34a",pointRadius:2}]}});
+ drawChart("c2",{type:"bar",data:{labels:mo.map(x=>x.m),datasets:[{label:"Adherence %",data:mo.map(x=>x.adh==null?null:Math.round(x.adh*100)),backgroundColor:mo.map(x=>x.adh!=null&&x.adh<.8?"#dc2626":"#16a34a")}]},options:{scales:{y:{suggestedMax:100}}},legend:false});
+ const el=document.querySelector('[data-f="pq"]');if(el&&document.activeElement===document.body&&pq){el.focus();el.setSelectionRange(pq.length,pq.length)}
+}
+function vRc(){
+ const L=rows().filter(r=>!q||(r.m+r.x+r.t.join()+r.r).toLowerCase().includes(q.toLowerCase())).sort((a,b)=>b.d.localeCompare(a.d));
+ $("#pane").innerHTML=filters(`<div><label>Search</label><input data-f="q" value="${esc(q)}" placeholder="machine, work, technician"></div>`)+`<div class="note">${L.length} matching job(s)${L.length>300?" — showing newest 300 (the Excel report contains all)":""}</div>`+
+ tbl(["Date","Machine","Description","Hrs","St","Technician","Remark"],L.slice(0,300).map(r=>[r.d,esc(mName(r.m)),esc(r.x),r.h==null?"–":r1(r.h),tag(r.s),esc(r.t.join(", ")),esc(r.r)]),[3]);
+ const el=document.querySelector('[data-f="q"]');if(el&&q){el.focus();el.setSelectionRange(q.length,q.length)}
+}
+function vDq(){
+ const I=D.daily.issues,C={};I.forEach(i=>C[i.type]=(C[i.type]||0)+1);
+ $("#pane").innerHTML=`<div class="kpis">${kpi(D.daily.recs.length,"Jobs loaded")}${Object.entries(C).map(([k,v])=>kpi(v,k,/excluded/.test(I.find(i=>i.type===k).note)?"r":"")).join("")}</div>
+ <div class="note">${D.daily.merged&&D.daily.merged.length?"Technician spellings merged: "+esc(D.daily.merged.join(", "))+". ":""}These are problems in the Excel sheet itself. Fix them in the source file and upload it again. “Auto-corrected” dates were future dates whose day and month looked swapped — please verify them.</div>`+
+ tbl(["Excel row","Issue","Value","Handled as"],I.map(i=>[i.row,esc(i.type),esc(i.val),esc(i.note)]),[0]);
+}
+
+/* ---------- reports & backup ---------- */
+function report(){
+ if(!D.daily&&!D.pm){toast("Upload a file first",1);return}
+ const wb=XLSX.utils.book_new(),add=(n,a)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),n);
+ if(D.daily){
+  const L=rows(),T=totals(L);
+  add("Summary",[["Maintenance report — Ferentino Industrial Tyres (Pvt) Ltd"],["Generated",new Date().toLocaleString()],["Source",D.daily.file],["Filter","Year: "+F.y+" | Month: "+F.m+" | Status: "+F.s],[],["Jobs",T.n],["Hours recorded",r1(T.h)],["Breakdown jobs",T.B],["Breakdown hours",r1(T.Bh)],["Breakdown % of hours",T.h?r1(T.Bh/T.h*100):0],[],["Status codes","S = planned service, N = normal work, B = breakdown"]]);
+  const ms=[...new Set(L.map(r=>r.d.slice(0,7)))].sort();
+  add("Monthly",[["Month","Jobs","Hours","Service jobs","Normal jobs","Breakdown jobs","Breakdown hours"],...ms.map(m=>{const o=agg(L.filter(r=>r.d.startsWith(m)),()=>"x")[0];return[m,o.n,r1(o.h),o.S,o.N,o.B,r1(o.Bh)]})]);
+  add("Machines",[["Machine / area","Group","Jobs","Hours","Service","Normal","Breakdown","Breakdown hours"],...agg(L,r=>r.m).sort((a,b)=>b.n-a.n).map(x=>[mName(x.k),grp(x.k),x.n,r1(x.h),x.S,x.N,x.B,r1(x.Bh)])]);
+  add("Technicians",[["Technician","Jobs","Job hours","Service","Normal","Breakdown"],...agg(L,r=>r.t.length?r.t:["(not recorded)"]).sort((a,b)=>b.n-a.n).map(x=>[x.k,x.n,r1(x.h),x.S,x.N,x.B])]);
+  add("Job records",[["Date","Machine","Group","Description","Hours","Status","Technician","Remark"],...L.slice().sort((a,b)=>a.d.localeCompare(b.d)).map(r=>[r.d,mName(r.m),r.g,r.x,r.h,r.s,r.t.join(" + "),r.r])]);
+  add("Data issues",[["Excel row","Issue","Value","Handled as"],...D.daily.issues.map(i=>[i.row,i.type,i.val,i.note])]);
+ }
+ if(D.pm){
+  const M=pmModel(),ds=serviceByWeek(M.P.year);
+  add("PM adherence",[["PM adherence through week "+M.N,M.adh==null?"":r1(M.adh*100)+"%"],[],["Month","Target hours","Actual hours","Adherence (avg of weekly %)"],...M.mo.filter(x=>x.ts).map(x=>[x.m,x.ts,x.as,x.adh==null?"":r1(x.adh*100)+"%"])]);
+  add("PM weekly",[["Week","Target hours","Actual hours","Adherence","Service hours (daily record)"],...[...Array(52)].map((_,i)=>{const k=i+1,a=M.ac&&k<=M.N;return[k,M.T[k],a?M.AW[k]:"",a&&M.T[k]?r1(M.AW[k]/M.T[k]*100)+"%":"",r1(ds[k])]})]);
+  add("PM tasks",[["Section","Frequency","Task","Planned (year)","Planned to wk "+M.N,"Actual to wk "+M.N,"Weeks missed","Missed week numbers"],...M.pairs.map(p=>[p.t.sec,p.t.fr,p.t.task,p.tot,p.pn,p.a?p.an:"",p.miss.length,p.miss.join(", ")])]);
+ }
+ XLSX.writeFile(wb,"Maintenance_Report_"+todayISO()+".xlsx");
+}
+function dlText(txt,name,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+function readBook(file,fn){const r=new FileReader();r.onload=()=>{try{fn(XLSX.read(new Uint8Array(r.result),{type:"array",cellDates:true}))}catch(e){toast(e.message||"Could not read the file",1)}};r.readAsArrayBuffer(file)}
+
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+ if(a==="tab"){tab=b.dataset.k;render()}
+ else if(a==="upd")$("#f_d").click();else if(a==="upp")$("#f_p").click();else if(a==="res")$("#f_b").click();
+ else if(a==="rep")report();else if(a==="print")window.print();
+ else if(a==="bak"){if(!D.daily&&!D.pm){toast("Nothing to back up yet",1);return}dlText(JSON.stringify({app:"fitl-maintenance-dashboard",v:1,saved:new Date().toISOString(),...D}),"Maintenance_Dashboard_Backup_"+todayISO()+".json","application/json")}
+});
+document.addEventListener("change",e=>{
+ const t=e.target,f=t.dataset.f;
+ if(t.id==="f_d"&&t.files[0]){const n=t.files[0].name;readBook(t.files[0],wb=>{D.daily=parseDaily(wb,n,todayISO());save();F={y:"all",m:"all",s:"all"};render();toast(`Loaded ${D.daily.recs.length} jobs · ${D.daily.issues.length} data issue(s) noted`)});t.value="";return}
+ if(t.id==="f_p"&&t.files[0]){const n=t.files[0].name;readBook(t.files[0],wb=>{D.pm=parsePM(wb,n);save();tab="pm";render();toast("Annual PM plan loaded")});t.value="";return}
+ if(t.id==="f_b"&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(j.app!=="fitl-maintenance-dashboard")throw 0;if(!confirm("Replace the data currently in the dashboard with this backup?"))return;D={daily:j.daily||null,pm:j.pm||null};save();render();toast("Backup restored")}catch(x){toast("Not a valid dashboard backup file",1)}};r.readAsText(t.files[0]);t.value="";return}
+ if(f==="y"||f==="m"||f==="s"){F[f]=t.value;render()}
+ else if(f==="mt"){mt=t.value;render()}
+ else if(f==="sheet"){D.pm.planSel=t.value;save();render()}
+ else if(f==="asheet"){D.pm.actSel=t.value;D.pm.through=guessThrough(D.pm);save();render()}
+ else if(f==="thru"){D.pm.through=Math.max(0,Math.min(52,+t.value||0));save();render()}
+ else if(f==="year"){D.pm.year=+t.value||D.pm.year;save();render()}
+});
+document.addEventListener("input",e=>{const f=e.target.dataset.f;if(f==="q"){q=e.target.value;render()}if(f==="pq"){pq=e.target.value;render()}});
+render();
+</script>
+</body>
+</html>

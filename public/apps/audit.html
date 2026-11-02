@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Audit — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--red:#DA1B22;--red-d:#B3151B;--red-bg:#FBE9EA;--amber:#B97708;--amber-bg:#FBF0D8;--green:#2C7A4B;--green-bg:#E1F0E7;--blue:#2B5A8C;--blue-bg:#E3ECF6;--head:'Barlow Condensed','Arial Narrow',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--red);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header img{height:38px;width:auto;border-radius:4px}h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#B9B2A6}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red-d)}.btn.sm{padding:3px 9px;font-size:12px}.btn.ghost{border-color:transparent;color:var(--soft)}.btn.ghost:hover{color:var(--red);background:var(--red-bg)}.btn:disabled{opacity:.5;cursor:default}
+  header select{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 10px;max-width:260px}
+  nav{background:var(--card);border-bottom:1px solid var(--line);padding:0 22px;display:flex;gap:2px;overflow-x:auto}
+  .tab{background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1px;padding:11px 16px 9px;cursor:pointer;white-space:nowrap;color:var(--soft);font-weight:600}.tab.on{color:var(--ink);border-bottom-color:var(--red)}
+  main{padding:18px 22px 60px;max-width:1500px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px}.pn{padding:16px 18px;margin-bottom:14px}.pn h2{font-size:21px;text-transform:uppercase;margin-bottom:10px}
+  .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.g .w2{grid-column:1/-1}
+  label.f{display:block;font-size:12px;font-weight:600;color:var(--soft);margin-bottom:3px}
+  input[type=text],input[type=date],select,textarea{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px;width:100%}textarea{resize:vertical;min-height:34px;line-height:1.4}
+  input:focus,select:focus,textarea:focus{outline:2px solid #E8A0A3;border-color:var(--red)}
+  .tw{overflow:auto;border:1px solid var(--line2);border-radius:8px}
+  table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:7px 9px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:top}
+  th{background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);position:sticky;top:0;z-index:1}
+  td input[type=text],td input[type=date],td select,td textarea{padding:4px 7px;font-size:13px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}.t{padding:12px 14px}.t small{display:block;color:var(--soft);font-size:12px}.t b{font:600 30px/1.1 var(--head)}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .chip.C{background:var(--green-bg);color:var(--green)}.chip.O{background:var(--amber-bg);color:#7A4F05}.chip.N{background:var(--red-bg);color:var(--red-d)}.chip.x{background:#ECE9E3;color:var(--soft)}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;white-space:nowrap}.seg button{border:none;background:#fff;padding:5px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--soft);border-right:1px solid var(--line)}.seg button:last-child{border-right:none}
+  .seg button.C.on{background:var(--green);color:#fff}.seg button.O.on{background:#D69E2E;color:#fff}.seg button.N.on{background:var(--red);color:#fff}
+  .lay{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}@media(max-width:900px){.lay{grid-template-columns:1fr}}
+  .rail{padding:8px}.rail button{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:8px;padding:9px 10px;cursor:pointer}.rail button:hover{background:#F7F4EE}.rail button.on{background:var(--red-bg);border-color:#F1B9BC}
+  .rail b{display:block;font-size:13.5px}.rail small{color:var(--soft);font-size:11.5px}.bar2{height:5px;background:#ECE8E0;border-radius:3px;margin-top:5px;overflow:hidden}.bar2 i{display:block;height:100%;background:var(--green)}
+  .doc{display:grid;grid-template-columns:1fr auto;gap:8px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;background:#FBFAF7}.doc b{font-family:var(--mono);font-size:12.5px}
+  td.pt{min-width:260px}td.ev{min-width:200px}td.rm{min-width:240px}.cont td{border-top:1px dashed var(--line2)}.sect td{background:#F7F4EE;font-weight:600;font-family:var(--head);font-size:16px;text-transform:uppercase}
+  .mx td.c,.mx th.c{text-align:center}.mx td.c label{cursor:pointer;display:block}.mx .n{font-size:11px;color:var(--soft)}.mx .z{color:#B97708;font-weight:700}
+  .cb{padding:12px 14px;height:300px;margin-bottom:14px}.empty{padding:34px;text-align:center;color:var(--soft)}
+  .veil{position:fixed;inset:0;background:rgba(29,33,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:50;overflow:auto}.modal{background:#fff;border-radius:12px;width:min(560px,100%);padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto}.modal h2{font-size:24px;text-transform:uppercase;margin-bottom:12px}.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:420px}#toast.show{opacity:1}
+  .note{color:var(--soft);font-size:12.5px}
+  .sigbox{border:1px solid var(--line);border-left:4px solid var(--green);border-radius:8px;padding:9px 12px;background:#F4FAF6}.sigbox.empty{border-left-color:var(--line);background:#FBFAF7}.sigbox.stale{border-left-color:var(--amber);background:var(--amber-bg)}.sigbox .warn{color:#7A4F05;font-weight:600;font-size:12.5px;margin-top:4px}
+  #printArea{display:none}
+  .nf{width:100%;border-collapse:collapse;font-family:Calibri,Arial,sans-serif;margin-bottom:8px}.nf th,.nf td{border:1px solid #444;padding:5px 8px;font-size:11.5px;vertical-align:top;text-align:left}.nf th{background:#EDEDED;width:16%;font-weight:700}
+  .nf.head td{vertical-align:middle}.nf .lg{width:24%;text-align:center}.nf .lg img{height:34px;display:block;margin:0 auto 4px}.nf .lg{font-size:10px;font-weight:600}.nf .sys{text-align:center;font-weight:700;letter-spacing:.06em}.nf .ttl{text-align:center;font-weight:700;font-size:17px}
+  .nf .big{min-height:70px;height:70px}.nf .sig{height:44px}
+  .ncr-form .g{margin-bottom:12px}.ncr-form h3{font-size:18px;text-transform:uppercase;margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--line2)}.ncr-form h3:first-child{border-top:none;margin-top:0;padding-top:0}
+  @media print{@page{size:A4 portrait;margin:12mm}body{background:#fff}body>*:not(#printArea){display:none!important}#printArea{display:block}}
+</style>
+</head>
+<body>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Internal Audit</h1><div class="sub" id="sub"></div></div><select id="round" title="Audit round"></select><button class="btn" id="newr">New audit round</button><button class="btn" id="xl">Download Excel</button></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="host"></div><div id="toast"></div><div id="printArea"></div>
+<script>
+(function(){
+'use strict';
+const LOGO='data:image/jpeg;base64,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',SEED={
+ "title": "Internal Audit 2026 August",
+ "type": "Internal",
+ "standard": "ISO 9001 : 2015",
+ "scope": "The Quality Management System (QMS) will cover the key and support processes used in the manufacture of industrial tyres, as described in this manual , as the company is not handling any moulds or moulds drawing provided by the customer the clause 8.5.3 is excluded.",
+ "plan": {
+  "meetDate": "2026.08.10",
+  "meetTime": "10.00 A.M",
+  "meetVenue": "Meeting Room",
+  "meetPart": "All Team Members, All Department Heads",
+  "closeDate": "2026.08.17",
+  "closeTime": "10.00 A.M",
+  "closeVenue": "Meeting Room",
+  "closePart": "All Team Members, All Department Heads"
+ },
+ "teams": [
+  {
+   "no": 1,
+   "dept": "HR",
+   "leader": "Dinesh",
+   "m1": "Mandanayake",
+   "m2": "",
+   "date": "2026.08.14",
+   "time": "2.00 P.M. -4.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 2,
+   "dept": "Management",
+   "leader": "Rajith",
+   "m1": "Lakshan",
+   "m2": "Hansika",
+   "date": "2026.08.10 - 2026.08.16",
+   "time": "To be decided",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 3,
+   "dept": "Mixing",
+   "leader": "Malith",
+   "m1": "Nadeesha",
+   "m2": "",
+   "date": "2026.08.13",
+   "time": "2.00 P.M. -4.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 4,
+   "dept": "Technical",
+   "leader": "Sanka",
+   "m1": "Sadeepa",
+   "m2": "Dinesh Samantha",
+   "date": "2026.08.12",
+   "time": "2.00 P.M. -4.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 5,
+   "dept": "Process",
+   "leader": "Ishanka",
+   "m1": "Eranda",
+   "m2": "Shehan",
+   "date": "2026.08.14",
+   "time": "10.00 A.M-12.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 6,
+   "dept": "Finance",
+   "leader": "Dinesh",
+   "m1": "Chathura",
+   "m2": "Sonal",
+   "date": "2026.08.15",
+   "time": "10.00 A.M-12.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 7,
+   "dept": "Maintenance",
+   "leader": "Ishanka",
+   "m1": "Prasanna",
+   "m2": "",
+   "date": "2026.08.13",
+   "time": "10.00 A.M-12.00 P.M.",
+   "venue": "Meeting Room"
+  },
+  {
+   "no": 8,
+   "dept": "Export",
+   "leader": "Prabath",
+   "m1": "Isuru",
+   "m2": "",
+   "date": "2026.08.12",
+   "time": "10.00 A.M-12.00 P.M.",
+   "venue": "Meeting Room"
+  }
+ ],
+ "matrix": {
+  "depts": [
+   {
+    "key": "mgmt",
+    "label": "Management"
+   },
+   {
+    "key": "hr",
+    "label": "HR"
+   },
+   {
+    "key": "mix",
+    "label": "Mixing"
+   },
+   {
+    "key": "tyre",
+    "label": "Tyre building"
+   },
+   {
+    "key": "tech",
+    "label": "Technical"
+   },
+   {
+    "key": "maint",
+    "label": "Maintenance"
+   },
+   {
+    "key": "export",
+    "label": "Marketing (Export)"
+   },
+   {
+    "key": "finance",
+    "label": "Finance"
+   }
+  ],
+  "clauses": [
+   {
+    "no": "4.1",
+    "name": "Understanding Organization and its context",
+    "d": [
+     "mgmt",
+     "hr"
+    ]
+   },
+   {
+    "no": "4.2",
+    "name": "Understanding needs and expectations of interested parties",
+    "d": [
+     "mgmt",
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "4.3",
+    "name": "Determining the Scope of the quality management system",
+    "d": [
+     "mgmt"
+    ]
+   },
+   {
+    "no": "4.4",
+    "name": "Quality Management system and its process",
+    "d": [
+     "mgmt"
+    ]
+   },
+   {
+    "no": "5.1",
+    "name": "Leader ship and commitment",
+    "d": [
+     "mgmt",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "5.2",
+    "name": "Policy",
+    "d": [
+     "mgmt",
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "5.3",
+    "name": "Organizational roles, responsibilities and authorities",
+    "d": [
+     "mgmt",
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "6.1",
+    "name": "Actions to address risk and opportunities",
+    "d": [
+     "mgmt",
+     "hr",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "6.2",
+    "name": "Quality Objectives and Planning to achieve them",
+    "d": [
+     "mgmt",
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "7.1",
+    "name": "Resources",
+    "d": [
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "finance"
+    ]
+   },
+   {
+    "no": "7.2",
+    "name": "Competence",
+    "d": [
+     "hr",
+     "tyre",
+     "tech",
+     "maint"
+    ]
+   },
+   {
+    "no": "7.3",
+    "name": "Awareness",
+    "d": [
+     "hr"
+    ]
+   },
+   {
+    "no": "7.4",
+    "name": "Communication",
+    "d": [
+     "hr",
+     "mix",
+     "tyre"
+    ]
+   },
+   {
+    "no": "7.5",
+    "name": "Documented Information",
+    "d": [
+     "hr",
+     "mix",
+     "tyre",
+     "tech",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "8.1",
+    "name": "Operational Planning and Control",
+    "d": [
+     "mix"
+    ]
+   },
+   {
+    "no": "8.2",
+    "name": "Requirements for products and servises",
+    "d": [
+     "export"
+    ]
+   },
+   {
+    "no": "8.3",
+    "name": "Design and Development of products and services",
+    "d": [
+     "tech"
+    ]
+   },
+   {
+    "no": "8.4",
+    "name": "Control externally provided processes, products and services",
+    "d": [
+     "mix",
+     "finance"
+    ]
+   },
+   {
+    "no": "8.5",
+    "name": "Production and Sevice provision",
+    "d": [
+     "mix",
+     "tyre",
+     "maint",
+     "export"
+    ]
+   },
+   {
+    "no": "8.6",
+    "name": "Release of products and services",
+    "d": [
+     "tyre",
+     "tech"
+    ]
+   },
+   {
+    "no": "8.7",
+    "name": "control of non confirming products",
+    "d": [
+     "mix",
+     "tyre",
+     "tech"
+    ]
+   },
+   {
+    "no": "9.1",
+    "name": "Performance Evaluation",
+    "d": [
+     "mgmt",
+     "hr",
+     "maint",
+     "export",
+     "finance"
+    ]
+   },
+   {
+    "no": "9.2",
+    "name": "Internal Audit",
+    "d": [
+     "mgmt"
+    ]
+   },
+   {
+    "no": "9.3",
+    "name": "management review",
+    "d": [
+     "mgmt"
+    ]
+   },
+   {
+    "no": "10.1",
+    "name": "Improvement - General",
+    "d": [
+     "mgmt",
+     "tech"
+    ]
+   },
+   {
+    "no": "10.2",
+    "name": "Non Confirmity and Corrective action",
+    "d": [
+     "mgmt",
+     "tyre"
+    ]
+   },
+   {
+    "no": "10.3",
+    "name": "Continual Improvement",
+    "d": [
+     "hr"
+    ]
+   }
+  ]
+ },
+ "sheets": [
+  {
+   "key": "mgmt",
+   "name": "Management",
+   "docNo": "QM/CL/01",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Management System)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "4.2",
+     "point": "Understanding the need and expectations of interested parties.",
+     "resp": "Director/ Sectional Heads",
+     "evidence": "Check context of the organization doc., Ask Questions",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "4.3",
+     "point": "Determining the scope of the quality management system",
+     "resp": "Director/ Sectional Heads",
+     "evidence": "Check Quality Manual",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "4.4",
+     "point": "Quality management System and its process",
+     "resp": "Sectional Heads",
+     "evidence": "Quality Plans, Quality Procedures, Process map",
+     "status": "O",
+     "remark": ""
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "5.2",
+     "point": "Quality Policy displayed and communicated",
+     "resp": "Sectional Heads",
+     "evidence": "Check availability of QP",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "5.2",
+     "point": "Quality Policy displayed and communicated",
+     "resp": "Sectional Heads",
+     "evidence": "Random interviews",
+     "status": "O",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "6.2",
+     "point": "Quality objectives established for all departments.",
+     "resp": "Director / FM",
+     "evidence": "Check KPI records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "6.2",
+     "point": "Achieving of quality objectives.",
+     "resp": "Sectional Heads",
+     "evidence": "Check KPI records",
+     "status": "N",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "6.2",
+     "point": "Achieving of quality objectives.",
+     "resp": "Sectional Heads",
+     "evidence": "Check action plan",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "9.1.3",
+     "point": "Customer satisfaction survey conducted.",
+     "resp": "Senior Executive Commercial",
+     "evidence": "Check records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "",
+     "clause": "9.1.2",
+     "point": "Customer complaints reviewed and analyzed.",
+     "resp": "Senior Technical Executive",
+     "evidence": "Check records\n& action plan",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 9,
+     "section": "",
+     "clause": "9.3",
+     "point": "Management review conducted as per schedule.",
+     "resp": "MR",
+     "evidence": "Check MRM records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "",
+     "clause": "4.1",
+     "point": "Understanding the organization & its context.",
+     "resp": "Management Team",
+     "evidence": "Check context of the organization doc.",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 11,
+     "section": "",
+     "clause": "4.2",
+     "point": "Understanding the need and expectations of interested parties.",
+     "resp": "Management Team",
+     "evidence": "Check context of the organization doc.",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 12,
+     "section": "",
+     "clause": "10.2",
+     "point": "Corrective and preventive actions recorded and verified.",
+     "resp": "Sectional Heads",
+     "evidence": "Check Corrective preventive action records & its progress",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 13,
+     "section": "",
+     "clause": "6.1",
+     "point": "Risks and opportunities identified all processes.",
+     "resp": "Sectional Heads",
+     "evidence": "Check review records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 14,
+     "section": "",
+     "clause": "9.2.1\n9.2.2",
+     "point": "Internal audit plan, establish, implement & maintain an audit programe.",
+     "resp": "Internal audit team leader",
+     "evidence": "Check internal udit plan, check list , NC and observations.",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 15,
+     "section": "",
+     "clause": "5.3",
+     "point": "Organizational roles & responsibilities.",
+     "resp": "Management Team",
+     "evidence": "Review JD & organization chart",
+     "status": "O",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "hr",
+   "name": "HR",
+   "docNo": "QM/CL/02",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(HRM)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "4.1",
+     "point": "Undertandin the organization and its context",
+     "resp": "Sectional Heads / HR Executive",
+     "evidence": "Check context of the organization doc., Ask Questions",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "5.2",
+     "point": "The quality policy shall be communicated , understood and applied with in the organaization",
+     "resp": "Sectional Heads / HR Executive",
+     "evidence": "Chack availability of quality policy, ask question",
+     "status": "O",
+     "remark": ""
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "5.3",
+     "point": "Organaizational roles, responsibilities and authorities",
+     "resp": "HR Executive",
+     "evidence": "Job descriptions",
+     "status": "N",
+     "remark": "JD s are not available for Production employees"
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "6.2",
+     "point": "Quality objecctives and planning to achieve them",
+     "resp": "HR Executive",
+     "evidence": "Check the update, ask questions",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "7.1.2",
+     "point": "Recruitment process defined and followed.",
+     "resp": "HR Executive",
+     "evidence": "Check HR records",
+     "status": "O",
+     "remark": "Man Power request note is not functioning as mentioned as in the QMS"
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "7.1.3",
+     "point": "The organization shall determine, provide and maintain theb infrastructure necessary for the operation of its process and to achieve conformity of products and services.",
+     "resp": "HR Executive",
+     "evidence": "check for relevant document",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "7.1.6",
+     "point": "Organizational Knowledge",
+     "resp": "HR Executive",
+     "evidence": "Ask questions check for relevant document",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "",
+     "clause": "7.2",
+     "point": "Employee competence requirements defined for each role.",
+     "resp": "HR Executive",
+     "evidence": "Check records",
+     "status": "C",
+     "remark": "continuing"
+    },
+    {
+     "g": 9,
+     "section": "",
+     "clause": "7.2",
+     "point": "Training needs identified and training conducted .",
+     "resp": "Sectional Heads / HR Executive",
+     "evidence": "Annual Training Plan/ Attendance Records/ Certificates",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "",
+     "clause": "7.2",
+     "point": "Training effectiveness evaluated.",
+     "resp": "Sectional Heads / HR Executive",
+     "evidence": "Check evaluation records",
+     "status": "O",
+     "remark": "Training Evaluations need to be done"
+    },
+    {
+     "g": 11,
+     "section": "",
+     "clause": "7.3",
+     "point": "Employee awareness on Quality Policy and objectives.",
+     "resp": "HR Executive",
+     "evidence": "Interview",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 12,
+     "section": "",
+     "clause": "9.1.1",
+     "point": "Performance evaluation system implemented.",
+     "resp": "HR Executive",
+     "evidence": "Check department KPI",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 13,
+     "section": "",
+     "clause": "7.5",
+     "point": "Records of qualification, induction, and skill matrix maintained",
+     "resp": "HR Executive",
+     "evidence": "Check records",
+     "status": "C",
+     "remark": "Skill Matrix will be implemented"
+    },
+    {
+     "g": 14,
+     "section": "",
+     "clause": "7.1.4",
+     "point": "Health, safety, and welfare provisions ensured.",
+     "resp": "HR Executive",
+     "evidence": "Check PPE availability",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 15,
+     "section": "",
+     "clause": "7.4",
+     "point": "Communication between departments and management effective.",
+     "resp": "HR Executive",
+     "evidence": "Checked shared notice, emails",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 16,
+     "section": "",
+     "clause": "10.3",
+     "point": "Employee retention and motivation activities conducted",
+     "resp": "HR Executive",
+     "evidence": "Labour turnover records,",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 17,
+     "section": "",
+     "clause": "10.3",
+     "point": "Plans for continual improvements",
+     "resp": "HR Executive",
+     "evidence": "Check for plans",
+     "status": "C",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "mix",
+   "name": "Mixing & RM",
+   "docNo": "QM/CL/03",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Raw material handling & mixing process)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "5.2.2",
+     "point": "Quality policy communicated and understood within the Mixing & Raw Material department.",
+     "resp": "Head of Mixing",
+     "evidence": "Check policy display, random interview of mixing operators",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "7.1.1",
+     "point": "Resources (Banbury mixers, manpower, utilities) determined and provided to meet mixing output requirements, including compound demand for non-marking and black compound.",
+     "resp": "Head of Mixing",
+     "evidence": "Check resource/manpower plan, machine capacity records",
+     "status": "C",
+     "remark": "In maintenance Department"
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "8.1",
+     "point": "Operational planning and control established for receipt of chemicals & black compound from mother company and for in-house Banbury production of non-marking and black compound, including the process for topping up shortfalls in in-house compound production with supply from the mother company.",
+     "resp": "Head of Mixing / Production Planning",
+     "evidence": "Check production plan, RM/compound requirement plan, mixing schedule",
+     "status": "N",
+     "remark": "No Production Plan for Mixing Forecast"
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "8.4.2",
+     "point": "Raw materials verified before issuing to mixing process.",
+     "resp": "Mixing supervisor",
+     "evidence": "Check RM approval records, COA",
+     "status": "C",
+     "remark": "test report copy"
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "8.4.2",
+     "point": "Raw materials & compound evaluation for on time delivery, quality & quantity.",
+     "resp": "Head of Mixing",
+     "evidence": "Check evaluation records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "8.5.2",
+     "point": "Raw material & compound identification and traceability.",
+     "resp": "Mixing supervisor",
+     "evidence": "Check ID tags",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "8.5.1",
+     "point": "Mixing parameters controlled and recorded.",
+     "resp": "Mixing supervisor",
+     "evidence": "Check record sheet",
+     "status": "C",
+     "remark": "Job sheet there"
+    },
+    {
+     "g": 8,
+     "section": "",
+     "clause": "8.5.4",
+     "point": "Raw material , compound handling process..",
+     "resp": "Mixing supervisor",
+     "evidence": "Check shelf life records",
+     "status": "C",
+     "remark": "Checked with lab."
+    },
+    {
+     "g": 9,
+     "section": "",
+     "clause": "8.5.4",
+     "point": "Handling of contamination",
+     "resp": "Mixing supervisor",
+     "evidence": "Check waste records",
+     "status": "O",
+     "remark": "Should be improved. No procedure/Records for waste"
+    },
+    {
+     "g": 10,
+     "section": "",
+     "clause": "8.5.4",
+     "point": "Method of RM, compound storage.",
+     "resp": "Mixing supervisor",
+     "evidence": "Check ID tags\nFIFO system",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 11,
+     "section": "",
+     "clause": "7.1.5",
+     "point": "Calibration of equipment.",
+     "resp": "Engineering Team",
+     "evidence": "Calibration certificates with traceability data",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 12,
+     "section": "",
+     "clause": "8.7.1",
+     "point": "Non confirming compound handling.",
+     "resp": "Mixing supervisor",
+     "evidence": "Check hold compound records",
+     "status": "O",
+     "remark": "There was no document for expired compounds and hold compounds"
+    },
+    {
+     "g": 13,
+     "section": "",
+     "clause": "8.7.2",
+     "point": "Corrective preventive actions for abnormalities",
+     "resp": "Head of Mixing",
+     "evidence": "Check CA records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 14,
+     "section": "",
+     "clause": "7.4.1",
+     "point": "Work Environment of mixing process",
+     "resp": "Head of Mixing",
+     "evidence": "Check house keeping , lux level, lay out , safety signage",
+     "status": "O",
+     "remark": "Ventillation Air, Fire bottles"
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "tyre",
+   "name": "Tyre Building & Curing",
+   "docNo": "QM/CL/04",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Tyre building & curing process)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "Tyre building",
+     "clause": "7.5",
+     "point": "SOPs & Specifications available at each machine.",
+     "resp": "Process Engineering Executive",
+     "evidence": "Check SOP , WI, Specifications",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "Tyre building",
+     "clause": "8.5.2",
+     "point": "Components identified correctly before use",
+     "resp": "Production supervisor",
+     "evidence": "Check laboratory approvals",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 3,
+     "section": "Tyre building",
+     "clause": "7.2",
+     "point": "Operator skill & competency.",
+     "resp": "Production Executive",
+     "evidence": "Check skill matrix , ask questions",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 4,
+     "section": "Tyre building",
+     "clause": "8.6",
+     "point": "Built tyre dimensions checked as per standard",
+     "resp": "Process control Supervisor",
+     "evidence": "Check spec , check sheet",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "Tyre building",
+     "clause": "8.7",
+     "point": "Nonconforming green tyres identified and segregated.",
+     "resp": "Process control Supervisor",
+     "evidence": "Visual check \nreview documents",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "Tyre building",
+     "clause": "8.5.6",
+     "point": "Design or process changes approved.",
+     "resp": "Process Engineering Executive",
+     "evidence": "Check approval sheet",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "Tyre curing",
+     "clause": "8.5.1",
+     "point": "Curing press parameters maintained (temp, pressure, time)",
+     "resp": "Process Engineering Executive",
+     "evidence": "review curing press sheet",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "Tyre curing",
+     "clause": "7.1.5",
+     "point": "Pressure gauges and thermocouples calibrated",
+     "resp": "Maintenance Executive",
+     "evidence": "Check calibration records internal / external",
+     "status": "N",
+     "remark": "Masterguage done. But there is no evidence of using calibration reports."
+    },
+    {
+     "g": 9,
+     "section": "Tyre curing",
+     "clause": "8.6",
+     "point": "Cured tyres inspected before release.",
+     "resp": "Quality supervisor",
+     "evidence": "Check records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "Tyre curing",
+     "clause": "8.7.1",
+     "point": "Non confirming tyre handling.",
+     "resp": "Quality supervisor",
+     "evidence": "Check record sheet, scrap data",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 11,
+     "section": "Tyre curing",
+     "clause": "8.7.1",
+     "point": "Non confirming compound handling.",
+     "resp": "Production supervisor",
+     "evidence": "Check records , CA",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 12,
+     "section": "Tyre curing",
+     "clause": "7.1.4",
+     "point": "Safety devices functional (guards, emergency stops).",
+     "resp": "Maintenance /Production Executive",
+     "evidence": "Check machine safety",
+     "status": "O",
+     "remark": "Safety devices are available. But it has not checked whether they are functioning or not"
+    },
+    {
+     "g": 13,
+     "section": "Tyre curing",
+     "clause": "10.2",
+     "point": "Corrective and preventive actions recorded and verified.",
+     "resp": "Production Executive / PEE",
+     "evidence": "Check CA records",
+     "status": "O",
+     "remark": "Informations available. Need to implement a common format"
+    },
+    {
+     "g": 14,
+     "section": "Tyre curing",
+     "clause": "7.4.1",
+     "point": "Work Environment of production process",
+     "resp": "Head of production",
+     "evidence": "Check house keeping , lux level, lay out , safety signage",
+     "status": "C",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "tech",
+   "name": "Technical",
+   "docNo": "QM/CL/05",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Technical Department processes)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "QC",
+     "clause": "7.5",
+     "point": "Inspection standards available and followed",
+     "resp": "Asst Manager QA",
+     "evidence": "Check SOP, WI",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "QC",
+     "clause": "7.2",
+     "point": "Trained inspectors conducting inspection.",
+     "resp": "Asst Manager QA",
+     "evidence": "Training documents",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 3,
+     "section": "QC",
+     "clause": "8.3",
+     "point": "Design/technical specifications received from mother company reviewed and verified before release to production (product design is controlled by mother company; this site validates and adapts technical data/specifications).",
+     "resp": "Snr. Technical Executive",
+     "evidence": "Check technical data sheets from mother company, specification verification/approval records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 4,
+     "section": "QC",
+     "clause": "8.6",
+     "point": "Inspection results traceability.",
+     "resp": "Quality Supervisor",
+     "evidence": "Random checks",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "QC",
+     "clause": "8.7",
+     "point": "Rejected tyres identified and separated & repair tyre records availability.",
+     "resp": "Quality Supervisor",
+     "evidence": "Visual check, NC & defect tyre record sheet",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "QC",
+     "clause": "7.1.5",
+     "point": "Inspection equipment calibrated.",
+     "resp": "Asst Manager QA",
+     "evidence": "Calibration certificates with traceability data",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "Lab",
+     "clause": "7.5",
+     "point": "Test methods defined and followed.",
+     "resp": "Snr. Technical Executive",
+     "evidence": "Check SOP, WI",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "Lab",
+     "clause": "7.1.5",
+     "point": "Testing equipment's are calibrated as per the define frequency.",
+     "resp": "Snr. Technical Executive",
+     "evidence": "Calibration certificates with traceability data",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 9,
+     "section": "Lab",
+     "clause": "8.6",
+     "point": "Test results recorded, reviewed, retained",
+     "resp": "Snr. Technical Executive",
+     "evidence": "Check records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "Lab",
+     "clause": "8.7",
+     "point": "Nonconforming results communicated to production",
+     "resp": "Lab Technician",
+     "evidence": "Check records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 11,
+     "section": "Lab",
+     "clause": "8.7.1",
+     "point": "Non confirming compound handling. CA",
+     "resp": "Lab Technician",
+     "evidence": "Check record sheet , CA",
+     "status": "",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "maint",
+   "name": "Maintenance",
+   "docNo": "QM/CL/06",
+   "issue": "01",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Engineering Department)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "4.1 / 4.2",
+     "point": "Identified internal and external issues affecting machine and equipment reliability.",
+     "resp": "Engineering Head",
+     "evidence": "Check risk assessment records",
+     "status": "O",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "5.1.1 / 5.3",
+     "point": "Engineering roles and responsibilities defined and communicated.",
+     "resp": "Engineering Head / HR",
+     "evidence": "Check JD , organization chart",
+     "status": "O",
+     "remark": "JD for Engineering staff need to issue."
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "4.1 / 4.2",
+     "point": "Equipment failures and downtime risks identified and actions take.",
+     "resp": "Engineering Head",
+     "evidence": "Check Preventive maintenance plan, FMEA, risk register",
+     "status": "N",
+     "remark": "PM is not Functioning."
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "6.2",
+     "point": "Objectives set and monitored.\n(like downtime, preventive maintenance completion)",
+     "resp": "Engineering Head",
+     "evidence": "check KPI records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "7.1.5.1",
+     "point": "Measuring instruments calibrated and records maintained.\n (pressure gauges, thermocouples, timers, etc.)",
+     "resp": "Engineering Head",
+     "evidence": "Check Calibration certificates, identification tags",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "7.2",
+     "point": "Engineering staff trained and competent to perform maintenance and calibration.",
+     "resp": "Engineering Head",
+     "evidence": "Check Training records, skill matrix",
+     "status": "O",
+     "remark": "Need to develop Skill Matrix"
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "7.5",
+     "point": "Maintenance procedures, machine manuals, and calibration records properly controlled and updated",
+     "resp": "Maintenance Executive",
+     "evidence": "check records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "",
+     "clause": "8.5.1",
+     "point": "Maintenance activities carried out under controlled conditions as per plan and work instructions.",
+     "resp": "Maintenance Team",
+     "evidence": "Check Maintenance plan, checklists, work orders",
+     "status": "C",
+     "remark": "Break down preocedure"
+    },
+    {
+     "g": 9,
+     "section": "",
+     "clause": "8.5.6",
+     "point": "Engineering changes reviewed and approved before implementation.\nmachine modification",
+     "resp": "Engineering Head",
+     "evidence": "Check change note, approval records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "",
+     "clause": "9.1.1",
+     "point": "Machine performance monitored and analyzed.\n(uptime, breakdown frequency)",
+     "resp": "Engineering Head",
+     "evidence": "Check performance reports, graphs",
+     "status": "C",
+     "remark": "check MTBF"
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "export",
+   "name": "Export",
+   "docNo": "QM/CL/07",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Export Department )",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "4.2",
+     "point": "Needs and expectations of interested parties (mother company as principal customer, export/customs authorities) identified and reviewed.",
+     "resp": "Export Manager",
+     "evidence": "Check customer requirement records, correspondence with mother company",
+     "status": "C",
+     "remark": "Export Order Summary"
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "5.1.2",
+     "point": "Customer focus demonstrated - export requirements and applicable statutory/regulatory export requirements determined and met for each order.",
+     "resp": "Export Manager",
+     "evidence": "Check order confirmation records, export compliance checklist",
+     "status": "O",
+     "remark": "Risk Assessment was not done. Better to do a risk assessment"
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "5.2",
+     "point": "Quality policy communicated to and understood by export department staff; policy considered when setting export objectives.",
+     "resp": "Export Manager",
+     "evidence": "Check policy display, random interview of export staff",
+     "status": "O",
+     "remark": "Customer satisfaction KPIS Available. ISO doc no FC/FO/04. Need to update document format"
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "5.3",
+     "point": "Export department roles, responsibilities and authorities (order processing, documentation, shipment coordination) defined and communicated.",
+     "resp": "Export Manager",
+     "evidence": "Check job descriptions, organization chart",
+     "status": "C",
+     "remark": "JDs available for export trainees."
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "6.1",
+     "point": "Risks and opportunities related to export operations (shipment delay, documentation errors, order changes from mother company) identified and addressed.",
+     "resp": "Export Manager",
+     "evidence": "Check risk register, corrective action records",
+     "status": "N",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "6.2",
+     "point": "Quality objectives established for export department (e.g. on-time shipment %, documentation accuracy) and progress against them monitored.",
+     "resp": "Export Manager",
+     "evidence": "Check KPI records, objective action plans",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "7.5",
+     "point": "Documented information (SOPs, shipping/export documentation, customer correspondence) controlled, kept current, and retained per document control procedure.",
+     "resp": "Export Manager",
+     "evidence": "Check document control records, document list / version control",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 8,
+     "section": "",
+     "clause": "8.2.1",
+     "point": "Process for receiving, reviewing and confirming orders from mother company (incl. amendments) defined and followed; order requirements communicated to Production Planning.",
+     "resp": "Export Executive",
+     "evidence": "Check order/PO records, order review & production planning communication",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 9,
+     "section": "",
+     "clause": "8.5.2",
+     "point": "Export orders identified and traceable to production batches and shipment/container records.",
+     "resp": "Export Executive",
+     "evidence": "Check order-to-shipment traceability records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 10,
+     "section": "",
+     "clause": "8.5.4",
+     "point": "Packing, labelling, and handling of finished tyres controlled prior to and during loading for export shipment.",
+     "resp": "Export Executive / Warehouse",
+     "evidence": "Check packing list, container loading checklist",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 11,
+     "section": "",
+     "clause": "8.5.5",
+     "point": "Post-delivery activities - feedback/complaints from mother company on shipped tyres reviewed and addressed.",
+     "resp": "Export Manager",
+     "evidence": "Check customer feedback/complaint records",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 12,
+     "section": "",
+     "clause": "9.1",
+     "point": "Export performance monitored - on-time shipment %, order fulfilment accuracy tracked and analysed.",
+     "resp": "Export Manager",
+     "evidence": "Check KPI records, dispatch performance reports",
+     "status": "C",
+     "remark": ""
+    },
+    {
+     "g": 13,
+     "section": "",
+     "clause": "9.1.2",
+     "point": "Customer satisfaction - feedback from mother company obtained, reviewed, and used for improvement.",
+     "resp": "Export Manager",
+     "evidence": "Check customer satisfaction / communication records",
+     "status": "C",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  },
+  {
+   "key": "finance",
+   "name": "Finance",
+   "docNo": "QM/CL/08",
+   "issue": "02",
+   "rev": "00",
+   "issueDate": "2026.04.20",
+   "title": "QMS Audit Check Sheet.\n(Finance Department)",
+   "rows": [
+    {
+     "g": 1,
+     "section": "",
+     "clause": "4.1",
+     "point": "Internal & external issues affecting financial performance and QMS resourcing identified (e.g. raw material/compound cost fluctuation, forex exposure on imports from mother company).",
+     "resp": "Finance Manager",
+     "evidence": "Check financial review records, risk register",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 2,
+     "section": "",
+     "clause": "4.2",
+     "point": "Needs and expectations of relevant interested parties (mother company, banks, statutory/tax authorities) determined.",
+     "resp": "Finance Manager",
+     "evidence": "Check stakeholder requirement records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 3,
+     "section": "",
+     "clause": "5.1.1",
+     "point": "Top management commitment to providing adequate financial resources for the QMS demonstrated.",
+     "resp": "Director / Finance Manager",
+     "evidence": "Check budget approval records, resource allocation records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 4,
+     "section": "",
+     "clause": "5.2.2",
+     "point": "Quality policy communicated to and understood by finance department staff.",
+     "resp": "Finance Manager",
+     "evidence": "Check policy display, random interview",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 5,
+     "section": "",
+     "clause": "7.1",
+     "point": "Resources required for finance operations (systems, competent manpower) determined and provided.",
+     "resp": "Finance Manager",
+     "evidence": "Check resource plan, system access/user records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 6,
+     "section": "",
+     "clause": "8.4.1",
+     "point": "Externally provided processes/services relevant to finance (banking, customs/clearing agents, external auditors) evaluated and monitored.",
+     "resp": "Finance Manager",
+     "evidence": "Check vendor evaluation records",
+     "status": "",
+     "remark": ""
+    },
+    {
+     "g": 7,
+     "section": "",
+     "clause": "9.1",
+     "point": "Financial performance indicators monitored, measured, analysed and reported to management.",
+     "resp": "Finance Manager",
+     "evidence": "Check financial KPI reports, management review inputs",
+     "status": "",
+     "remark": ""
+    }
+   ],
+   "auditDate": "",
+   "auditor": ""
+  }
+ ]
+},KEY='fitl_audit_v1';
+document.getElementById('logo').src=LOGO;
+const $=id=>document.getElementById(id);
+
+/* ---- sign-in and electronic signature: answered by the management system page (not available when this page is opened alone) ---- */
+let AUTH={server:false,user:null};
+addEventListener('message',ev=>{if(ev.source===parent&&ev.data&&ev.data.type==='fitl-auth-state'){AUTH={server:!!ev.data.server,user:ev.data.user};if(typeof onAuthChange==='function')onAuthChange()}});
+try{if(parent!==window)parent.postMessage({type:'fitl-auth-request'},'*')}catch(e){}
+function fitlSign(o){return new Promise(res=>{
+  if(parent===window||!AUTH.server){res({ok:false,reason:'noserver'});return}
+  const id='s'+Math.random().toString(36).slice(2),h=ev=>{if(ev.source===parent&&ev.data&&ev.data.type==='fitl-sign-result'&&ev.data.id===id){removeEventListener('message',h);res(ev.data)}};
+  addEventListener('message',h);parent.postMessage({type:'fitl-sign-request',id,purpose:o.purpose,ref:o.ref,content:o.content,summary:o.summary},'*')})}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const dotDate=iso=>{const d=new Date(iso);return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())};
+function onAuthChange(){if(D)render()}
+const today=()=>{const d=new Date();return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())};
+const ST={C:'Conformity',O:'Observation',N:'NC'};
+let D=null,tab='plan',sk=null,nk=null,edit=false,CH=null;
+const TABS=[['plan','Audit plan'],['matrix','Audit matrix'],['check','Check sheets'],['find','Findings & report'],['ncr','Non-conformity reports']];
+
+/* ---------- data ---------- */
+function number(a,r){
+  if(r.status!=='N'&&r.status!=='O')return;const k=r.status==='N'?'NC':'OBS';
+  if(!r.fno||r.fno.indexOf(k)!==0){a.fseq[k]=(a.fseq[k]||0)+1;r.fno=k+'-'+pad(a.fseq[k])}
+  r.fu=r.fu||{owner:'',due:'',action:'',state:'Open',capa:false};
+}
+const TEAMKEY={mgmt:'management',hr:'hr',mix:'mixing',tyre:'process',tech:'technical',maint:'maintenance',export:'export',finance:'finance'};
+function teamFor(a,sh){const w=TEAMKEY[sh.key]||sh.name.toLowerCase();return a.teams.find(t=>String(t.dept).toLowerCase().indexOf(w)>=0)}
+function tagOf(a){if(!a.tag){const m=/^(\d{4})\.(\d{2})/.exec((a.plan||{}).meetDate||''),d=new Date();a.tag=m?m[1].slice(2)+m[2]:String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)}return a.tag}
+const teamDate=t=>{const m=t&&/\d{4}\.\d{2}\.\d{2}/.exec(t.date||'');return m?m[0]:''};
+function ensureNcr(a,sh,r){
+  if(r.status!=='N'||r.ncr)return;a.fseq.NCR=(a.fseq.NCR||0)+1;const t=teamFor(a,sh);
+  r.ncr={no:'NCR-'+tagOf(a)+'-'+pad(a.fseq.NCR),date:sh.auditDate||teamDate(t)||today(),category:'Minor',auditors:t?[t.leader,t.m1,t.m2].filter(Boolean).join(', '):'',auditee:r.resp||'',
+    requirement:(r.clause?'ISO 9001:2015 clause '+r.clause+' — ':'')+r.point,statement:r.remark||'',evidence:r.evidence||'',correction:'',correctionDate:'',rootCause:'',ackBy:'',ackDate:'',verifiedBy:'',verifyDate:'',effective:'',closureDate:''};
+}
+function seedState(){
+  const a=JSON.parse(JSON.stringify(SEED));a.id='a'+uid();a.fseq={NC:0,OBS:0};
+  a.sheets.forEach(s=>s.rows.forEach(r=>{r.id='r'+uid();number(a,r);ensureNcr(a,s,r)}));
+  return{audits:[a],cur:a.id};
+}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.audits)&&s.audits.length){
+    // audits saved before the reports existed: give every NC its report
+    s.audits.forEach(a=>{a.fseq=a.fseq||{NC:0,OBS:0};a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N'){number(a,r);ensureNcr(a,sh,r)}}))});return s}}catch(_){}return seedState()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(_){toast('Could not save — browser storage is full. Download a backup from the cover page.')}};
+const cur=()=>D.audits.find(a=>a.id===D.cur)||D.audits[0];
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3200)}
+function stats(s){const n=s.rows.length,c=s.rows.filter(r=>r.status==='C').length,o=s.rows.filter(r=>r.status==='O').length,x=s.rows.filter(r=>r.status==='N').length;return{n,c,o,x,done:c+o+x}}
+const tokens=s=>String(s||'').match(/\d+(?:\.\d+)*/g)||[];
+const covers=(rc,c)=>tokens(rc).some(t=>t===c||t.indexOf(c+'.')===0);
+function findRow(rid){const a=cur();for(const s of a.sheets){const r=s.rows.find(x=>x.id===rid);if(r)return{s,r}}return{}}
+
+/* ---------- screens ---------- */
+function render(){
+  const a=cur();$('sub').textContent=a.title+' · '+a.type+' · '+a.standard;
+  $('round').innerHTML=D.audits.map(x=>'<option value="'+x.id+'"'+(x.id===D.cur?' selected':'')+'>'+esc(x.title)+'</option>').join('');
+  $('nav').innerHTML=TABS.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>').join('');
+  if(CH){CH.destroy();CH=null}
+  const v={plan:viewPlan,matrix:viewMatrix,check:viewCheck,find:viewFind,ncr:viewNcr}[tab](a);$('main').innerHTML=v.h;if(v.after)v.after();
+}
+const inp=(path,val,ph)=>'<input type="text" data-b="'+path+'" value="'+esc(val)+'"'+(ph?' placeholder="'+ph+'"':'')+'>';
+function viewPlan(a){
+  const p=a.plan;
+  let h='<div class="card pn"><h2>Audit programme</h2><div class="g"><div class="w2"><label class="f">Audit title</label>'+inp('title',a.title)+'</div><div><label class="f">Type of audit</label>'+inp('type',a.type)+'</div><div><label class="f">Standard</label>'+inp('standard',a.standard)+'</div><div class="w2"><label class="f">Scope</label><textarea data-b="scope" rows="4">'+esc(a.scope)+'</textarea></div></div></div>';
+  h+='<div class="g" style="margin-bottom:14px"><div class="card pn" style="margin:0"><h2>Audit planning meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.meetDate',p.meetDate)+'</div><div><label class="f">Time</label>'+inp('plan.meetTime',p.meetTime)+'</div><div><label class="f">Venue</label>'+inp('plan.meetVenue',p.meetVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.meetPart',p.meetPart)+'</div></div></div>'+
+   '<div class="card pn" style="margin:0"><h2>Audit closing meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.closeDate',p.closeDate)+'</div><div><label class="f">Time</label>'+inp('plan.closeTime',p.closeTime)+'</div><div><label class="f">Venue</label>'+inp('plan.closeVenue',p.closeVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.closePart',p.closePart)+'</div></div></div></div>';
+  h+='<div class="card pn"><h2>Audit teams and schedule</h2><div class="tw"><table><thead><tr><th>Team</th><th>Department / process</th><th>Team leader</th><th>Member 1</th><th>Member 2</th><th>Audit date</th><th>Time</th><th>Venue</th><th></th></tr></thead><tbody>'+
+   a.teams.map((t,i)=>'<tr>'+['no','dept','leader','m1','m2','date','time','venue'].map(f=>'<td><input type="text" data-team="'+i+'" data-f="'+f+'" value="'+esc(t[f])+'" style="'+(f==='no'?'width:48px':'min-width:'+(f==='dept'||f==='date'||f==='time'?'120':'105')+'px')+'"></td>').join('')+'<td><button class="btn sm ghost" data-act="delteam" data-i="'+i+'" title="Remove team">✕</button></td></tr>').join('')+'</tbody></table></div><div style="margin-top:10px"><button class="btn sm" data-act="addteam">+ Add team</button></div></div>';
+  return{h};
+}
+function viewMatrix(a){
+  const M=a.matrix;
+  let h='<div class="card pn"><h2>Audit matrix — clauses × departments</h2><p class="note" style="margin:0 0 10px">Tick the departments that are audited against each clause. The small number is how many check-sheet points of that department cover the clause; an amber <b class="z">0</b> means it is planned but no check point exists yet.</p><div class="tw mx"><table><thead><tr><th>Clause</th><th>Requirement</th>'+M.depts.map(d=>'<th class="c">'+esc(d.label)+'</th>').join('')+'<th class="c">Departments</th></tr></thead><tbody>'+
+   M.clauses.map((c,ci)=>'<tr><td><b>'+esc(c.no)+'</b></td><td>'+esc(c.name)+'</td>'+M.depts.map(d=>{const on=c.d.includes(d.key),n=pointsFor(a,d.key,c.no);return'<td class="c"><label><input type="checkbox" data-mx="'+ci+'" data-d="'+d.key+'"'+(on?' checked':'')+'>'+(on?'<div class="n'+(n?'':' z')+'">'+n+'</div>':'')+'</label></td>'}).join('')+'<td class="c">'+c.d.length+'</td></tr>').join('')+
+   '<tr><td></td><td><b>Clauses per department</b></td>'+M.depts.map(d=>'<td class="c"><b>'+M.clauses.filter(c=>c.d.includes(d.key)).length+'</b></td>').join('')+'<td></td></tr></tbody></table></div></div>';
+  return{h};
+}
+function pointsFor(a,key,clause){const s=a.sheets.find(x=>x.key===key);return s?s.rows.filter(r=>covers(r.clause,clause)).length:0}
+function viewCheck(a){
+  if(!sk||!a.sheets.some(s=>s.key===sk))sk=a.sheets[0].key;const s=a.sheets.find(x=>x.key===sk),st=stats(s);
+  let h='<div class="lay"><div class="card rail">'+a.sheets.map(x=>{const q=stats(x);return'<button class="'+(x.key===sk?'on':'')+'" data-sheet="'+x.key+'"><b>'+esc(x.name)+'</b><small>'+esc(x.docNo)+' · '+q.done+' of '+q.n+' audited'+(q.x?' · <span style="color:var(--red-d)">'+q.x+' NC</span>':'')+'</small><div class="bar2"><i style="width:'+(q.n?q.done/q.n*100:0)+'%"></i></div></button>'}).join('')+'</div><div>';
+  h+='<div class="doc"><div><b>'+esc(s.docNo)+'</b> · Issue No '+esc(s.issue)+' · Revision No '+esc(s.rev)+' · Issue date '+esc(s.issueDate)+'<br><span style="font-family:var(--head);font-size:20px;text-transform:uppercase">'+esc(s.title.replace(/\n/g,' '))+'</span></div><div style="text-align:right"><span class="chip C">'+st.c+' conformity</span> <span class="chip O">'+st.o+' observation</span> <span class="chip N">'+st.x+' NC</span><div style="margin-top:6px"><label style="cursor:pointer;font-size:12.5px"><input type="checkbox" data-act="edit"'+(edit?' checked':'')+'> Edit check points</label></div></div></div>';
+  h+='<div class="card tw"><table><thead><tr><th>Clause</th><th>Audit checklist point</th><th>Responsibility</th><th>Evidence to be checked</th><th>Audit status</th><th>Remarks</th>'+(edit?'<th></th>':'')+'</tr></thead><tbody>';
+  let prevG=null,prevSec=null;
+  s.rows.forEach((r,i)=>{
+    if(r.section&&r.section!==prevSec)h+='<tr class="sect"><td colspan="'+(edit?7:6)+'">'+esc(r.section)+'</td></tr>';prevSec=r.section;
+    const first=r.g!==prevG;prevG=r.g;
+    const c1=edit?'<input type="text" data-r="'+r.id+'" data-f="clause" value="'+esc(r.clause)+'" style="width:78px">':'<b>'+esc(r.clause)+'</b>';
+    const c2=edit?'<textarea data-r="'+r.id+'" data-f="point" rows="2">'+esc(r.point)+'</textarea>':esc(r.point);
+    const c3=edit?'<input type="text" data-r="'+r.id+'" data-f="resp" value="'+esc(r.resp)+'">':esc(r.resp);
+    const c4=edit?'<textarea data-r="'+r.id+'" data-f="evidence" rows="2">'+esc(r.evidence)+'</textarea>':esc(r.evidence);
+    h+='<tr class="'+(first?'':'cont')+'" data-row="'+r.id+'"><td>'+((first||edit)?c1:'')+'</td><td class="pt">'+((first||edit)?c2:'<span class="note">↳ same point</span>')+'</td><td>'+((first||edit)?c3:'')+'</td><td class="ev">'+c4+'</td>'+
+     '<td><div class="seg">'+['C','O','N'].map(k=>'<button class="'+k+(r.status===k?' on':'')+'" data-st="'+k+'" data-rid="'+r.id+'" title="'+ST[k]+'">'+(k==='N'?'NC':k==='O'?'Obs.':'Conf.')+'</button>').join('')+'</div>'+(r.fno&&(r.status==='N'||r.status==='O')?'<div class="note" style="margin-top:3px">'+r.fno+'</div>':'')+'</td>'+
+     '<td class="rm"><textarea data-r="'+r.id+'" data-f="remark" rows="2">'+esc(r.remark)+'</textarea></td>'+(edit?'<td><button class="btn sm ghost" data-act="delrow" data-rid="'+r.id+'" title="Remove point">✕</button></td>':'')+'</tr>';
+  });
+  h+='</tbody></table></div>'+(edit?'<div style="margin-top:10px"><button class="btn sm" data-act="addrow">+ Add check point</button></div>':'');
+  const sg=s.auditSig,sgBtn='<button class="btn sm" data-act="signsheet" data-sk="'+s.key+'">Sign again</button>';
+  h+='<div class="card pn" style="margin-top:14px"><div class="g">'+(sg?'<div class="w2"><label class="f">Auditor\'s signature</label>'+sigBox(sg,sg.content!==sheetContent(a,s),sgBtn)+'</div>':AUTH.server?'<div class="w2"><label class="f">Auditor\'s signature</label><div class="sigbox empty"><button class="btn red" data-act="signsheet" data-sk="'+s.key+'">Sign this check sheet as auditor</button><div class="note" style="margin-top:4px">'+(AUTH.user?'Signing as '+esc(AUTH.user.name)+'.':'You will be asked to sign in first.')+'</div></div></div>':'<div><label class="f">Date</label><input type="text" data-sf="auditDate" value="'+esc(s.auditDate)+'" placeholder="'+today()+'"></div><div><label class="f">Auditor name</label><input type="text" data-sf="auditor" value="'+esc(s.auditor)+'"></div>')+'<div><label class="f">Not yet audited</label><div style="padding:6px 0"><b>'+(st.n-st.done)+'</b> of '+st.n+' points</div></div></div></div></div></div>';
+  return{h};
+}
+function allFindings(a){const o=[];a.sheets.forEach(s=>s.rows.forEach(r=>{if(r.status==='N'||r.status==='O')o.push({s,r})}));return o.sort((x,y)=>(x.r.status===y.r.status?0:x.r.status==='N'?-1:1)||(x.r.fno<y.r.fno?-1:1))}
+
+/* ---------- send non-conformities to the Weekly Management Meeting (the Management Agenda) ---------- */
+function wmmItem(a,sh,r){
+  const n=r.ncr||{},u=r.fu||{},no=n.no||r.fno;
+  return{key:'audit:'+a.id+':'+no,date:String(n.date||sh.auditDate||today()).replace(/\./g,'-'),manual:true,department:sh.name.toUpperCase(),topicCategory:'INTERNAL AUDIT',issueType:'05. Other',
+    issueDescription:'Internal audit non-conformity '+no+' ('+(n.category||'Minor')+') — '+sh.name+(r.clause?', clause '+r.clause:'')+': '+(n.statement||r.remark||r.point),
+    impact:'Found in '+a.title+' against: '+(n.requirement||r.point)+'.',actionRequired:'Agree the corrective action, the owner and the date'+(u.action?' — proposed: '+u.action:'')+'.',
+    name:n.auditors||'Internal audit',responsibility:n.auditee||r.resp||''};
+}
+function sendWmm(rows){
+  if(!rows.length)return 0;
+  if(parent===window){toast('Sending to the meeting works inside the Ferentino management system.');return 0}
+  const a=cur();parent.postMessage({type:'fitl-wmm-requirements',source:'Internal Audit',items:rows.map(({s,r})=>wmmItem(a,s,r))},'*');
+  rows.forEach(({r})=>{r.fu=r.fu||{};r.fu.wmm=true});save();return rows.length;
+}
+const ncFindings=a=>{const o=[];a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N')o.push({s:sh,r})}));return o};
+const ncrBase=(a,sh,r)=>{const n=r.ncr,u=r.fu||{};return[a.title,sh.name,n.no,n.date,n.category,r.clause,n.requirement,n.statement||r.remark||'',n.evidence,n.correction,n.rootCause,u.action||'',u.owner||'',u.due||''].join('|')};
+const sigContent=(kind,a,sh,r)=>kind==='ack'?'ACK|'+ncrBase(a,sh,r):'VER|'+ncrBase(a,sh,r)+'|'+(r.ncr.effective||'')+'|'+(r.ncr.ackSig?r.ncr.ackSig.id:'');
+const sheetContent=(a,sh)=>'AUDIT|'+a.title+'|'+sh.docNo+'|'+sh.rows.map(r=>r.id+':'+r.status+':'+r.remark).join(';');
+function sigBox(g,stale,act){return'<div class="sigbox'+(stale?' stale':'')+'"><b>✔ '+esc(g.name)+'</b>'+(g.designation?', '+esc(g.designation):'')+'<div class="note">Signed electronically '+esc(new Date(g.at).toLocaleString())+' · Sig #'+g.id+'</div>'+(stale?'<div class="warn">This was changed after it was signed. Sign again to confirm it.</div><div style="margin-top:6px">'+act+'</div>':'')+'</div>'}
+function sigBlock(a,sh,r,kind){
+  const n=r.ncr,g=n[kind+'Sig'],lab=kind==='ack'?'Acknowledged by (auditee / process owner)':'Verified by (auditor)';
+  const btn='<button class="btn sm" data-act="sign" data-k="'+kind+'" data-rid="'+r.id+'">Sign again</button>';
+  if(g)return'<div class="w2"><label class="f">'+lab+'</label>'+sigBox(g,g.content!==sigContent(kind,a,sh,r),btn)+'</div>';
+  if(AUTH.server)return'<div class="w2"><label class="f">'+lab+'</label><div class="sigbox empty"><button class="btn red" data-act="sign" data-k="'+kind+'" data-rid="'+r.id+'">Sign with my password</button><div class="note" style="margin-top:4px">'+(AUTH.user?'Signing as '+esc(AUTH.user.name)+'.':'You will be asked to sign in first.')+'</div></div></div>';
+  return kind==='ack'?f2('ackBy',r,'Acknowledged by (auditee)')+f2('ackDate',r,'Date','yyyy.mm.dd'):f2('verifiedBy',r,'Verified by (auditor)')+f2('verifyDate',r,'Date verified','yyyy.mm.dd');
+}
+const f2=(k,r,lab,ph)=>'<div><label class="f">'+lab+'</label><input type="text" data-n="'+r.id+'" data-f="'+k+'" value="'+esc(r.ncr[k])+'" placeholder="'+esc(ph||'')+'"></div>';
+const ncrRows=a=>{const o=[];a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N'&&r.ncr)o.push({s:sh,r})}));return o};
+function viewNcr(a){
+  const L=ncrRows(a);
+  if(!L.length)return{h:'<div class="card empty"><b>No non-conformities in this audit round yet.</b><br>When a check point is marked <b>NC</b> on the check sheets, its non-conformity report appears here, filled in from the audit.</div>'};
+  if(!L.some(x=>x.r.id===nk))nk=L[0].r.id;
+  const {s:sh,r}=L.find(x=>x.r.id===nk),n=r.ncr,u=r.fu=r.fu||{owner:'',due:'',action:'',state:'Open',capa:false};
+  const f=(k,lab,ph,type)=>'<div'+(type==='area'?' class="w2"':'')+'><label class="f">'+lab+'</label>'+(type==='area'?'<textarea data-n="'+r.id+'" data-f="'+k+'" rows="3" placeholder="'+esc(ph||'')+'">'+esc(n[k])+'</textarea>':'<input type="text" data-n="'+r.id+'" data-f="'+k+'" value="'+esc(n[k])+'" placeholder="'+esc(ph||'')+'">')+'</div>';
+  const fu=(k,lab,ph,type)=>'<div'+(type==='area'?' class="w2"':'')+'><label class="f">'+lab+'</label>'+(type==='area'?'<textarea data-u="'+r.id+'" data-f="'+k+'" rows="3" placeholder="'+esc(ph||'')+'">'+esc(u[k])+'</textarea>':'<input type="text" data-u="'+r.id+'" data-f="'+k+'" value="'+esc(u[k])+'" placeholder="'+esc(ph||'')+'">')+'</div>';
+  let h='<div class="lay"><div class="card rail">'+L.map(x=>'<button class="'+(x.r.id===nk?'on':'')+'" data-ncr="'+x.r.id+'"><b>'+esc(x.r.ncr.no)+'</b><small>'+esc(x.s.name)+(x.r.clause?' · clause '+esc(x.r.clause):'')+' · '+esc(x.r.ncr.category)+'</small><div style="margin-top:4px"><span class="chip '+((x.r.fu||{}).state==='Closed'?'C':'N')+'">'+((x.r.fu||{}).state==='Closed'?'Closed':'Open')+'</span></div></button>').join('')+'</div>';
+  h+='<div class="card pn ncr-form"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div style="flex:1;min-width:220px"><h2 style="margin:0">Non-conformity report</h2><div class="sub" style="font-size:12.5px;color:var(--soft)">'+esc(a.title)+' · '+esc(sh.name)+' ('+esc(sh.docNo)+') · finding '+esc(r.fno)+'</div></div><button class="btn" data-act="ncrprint" data-rid="'+r.id+'">Print / Save as PDF</button>'+(u.wmm?'<span class="chip C">In the weekly meeting ✓</span>':'<button class="btn" data-act="wmm" data-rid="'+r.id+'">Send to Weekly Management Meeting</button>')+'</div><p class="note" style="margin:-4px 0 12px">Whether this non-conformity goes to CAPA is decided at the Weekly Management Meeting, after it has been reviewed there.</p>';
+  h+='<h3>1 · The finding</h3><div class="g">'+f('no','Report no')+f('date','Date raised','yyyy.mm.dd')+'<div><label class="f">Category</label><select data-n="'+r.id+'" data-f="category"><option'+(n.category==='Major'?' selected':'')+'>Major</option><option'+(n.category!=='Major'?' selected':'')+'>Minor</option></select></div>'+f('auditors','Auditor(s)')+f('auditee','Auditee (responsible person)')+
+    f('requirement','Requirement that is not met','The clause or procedure requirement','area')+f('statement','Non-conformity found','What was seen: '+(r.remark||'describe the finding'),'area')+f('evidence','Objective evidence checked','Records, documents, observations','area')+'</div>';
+  h+='<h3>2 · Correction and root cause</h3><div class="g">'+f('correction','Immediate correction / containment','What was done straight away','area')+f('correctionDate','Date of correction','yyyy.mm.dd')+f('rootCause','Root cause (why did it happen?)','5-why or fishbone summary','area')+'</div>';
+  h+='<h3>3 · Corrective action</h3><div class="g">'+fu('action','Corrective action to stop it happening again','','area')+fu('owner','Responsible person')+fu('due','Target date','yyyy.mm.dd')+'<div><label class="f">Status</label><select data-u="'+r.id+'" data-f="state"><option'+(u.state!=='Closed'?' selected':'')+'>Open</option><option'+(u.state==='Closed'?' selected':'')+'>Closed</option></select></div></div>';
+  h+='<h3>4 · Acknowledgement and verification</h3><div class="g">'+sigBlock(a,sh,r,'ack')+
+    '<div><label class="f">Effectiveness of the action</label><select data-n="'+r.id+'" data-f="effective"><option value="">Not verified yet</option><option'+(n.effective==='Effective'?' selected':'')+'>Effective</option><option'+(n.effective==='Not effective'?' selected':'')+'>Not effective</option></select></div>'+f('closureDate','Closure date','yyyy.mm.dd')+sigBlock(a,sh,r,'ver')+'</div></div></div>';
+  return{h};
+}
+const sigPrint=g=>g?'<br><small>✔ Signed electronically · '+esc(new Date(g.at).toLocaleString())+' · Sig #'+g.id+(g.designation?' · '+esc(g.designation):'')+'</small>':'';
+function ncrPrint(rid){
+  const a=cur(),{s:sh,r}=findRow(rid);if(!r||!r.ncr)return;const n=r.ncr,u=r.fu||{},e=x=>esc(x||'').replace(/\n/g,'<br>');
+  const row=(l,v,big)=>'<tr><th>'+l+'</th><td'+(big?' class="big"':'')+' colspan="3">'+(v?e(v):'')+'</td></tr>';
+  $('printArea').innerHTML='<table class="nf head"><tr><td rowspan="2" class="lg"><img src="'+LOGO+'" alt="">FERENTINO INDUSTRIAL TYRES (PVT) LTD<br>SRI LANKA</td><td class="sys">QUALITY MANAGEMENT SYSTEM</td><th>Report no</th><td><b>'+e(n.no)+'</b></td></tr><tr><td class="ttl">NON-CONFORMITY REPORT</td><th>Date</th><td>'+e(n.date)+'</td></tr></table>'+
+   '<table class="nf"><tr><th>Audit</th><td>'+e(a.title)+' · '+e(a.standard)+'</td><th>Department / process</th><td>'+e(sh.name)+' ('+e(sh.docNo)+')</td></tr><tr><th>Clause</th><td>'+e(r.clause)+'</td><th>Category</th><td>'+(n.category==='Major'?'☒':'☐')+' Major &nbsp;&nbsp; '+(n.category!=='Major'?'☒':'☐')+' Minor</td></tr><tr><th>Auditor(s)</th><td>'+e(n.auditors)+'</td><th>Auditee</th><td>'+e(n.auditee)+'</td></tr></table>'+
+   '<table class="nf">'+row('Requirement not met',n.requirement,1)+row('Non-conformity found',n.statement||r.remark,1)+row('Objective evidence',n.evidence,1)+row('Correction / containment',(n.correction||'')+(n.correctionDate?'\n(Date: '+n.correctionDate+')':''),1)+row('Root cause',n.rootCause,1)+row('Corrective action',u.action,1)+
+   '<tr><th>Responsible</th><td>'+e(u.owner)+'</td><th>Target date</th><td>'+e(u.due)+'</td></tr></table>'+
+   '<table class="nf"><tr><th>Acknowledged by (auditee)</th><td class="sig">'+e(n.ackBy)+sigPrint(n.ackSig)+'</td><th>Date</th><td>'+e(n.ackDate)+'</td></tr><tr><th>Verified by (auditor)</th><td class="sig">'+e(n.verifiedBy)+sigPrint(n.verSig)+'</td><th>Date verified</th><td>'+e(n.verifyDate)+'</td></tr><tr><th>Effectiveness</th><td>'+(n.effective==='Effective'?'☒':'☐')+' Effective &nbsp;&nbsp; '+(n.effective==='Not effective'?'☒':'☐')+' Not effective</td><th>Closed on</th><td>'+e(n.closureDate)+(u.state==='Closed'&&!n.closureDate?'Closed':'')+'</td></tr></table>';
+  setTimeout(()=>window.print(),60);
+}
+function viewFind(a){
+  const fs=allFindings(a),T=a.sheets.reduce((q,s)=>{const z=stats(s);q.n+=z.n;q.c+=z.c;q.o+=z.o;q.x+=z.x;return q},{n:0,c:0,o:0,x:0}),done=T.c+T.o+T.x,openF=fs.filter(f=>(f.r.fu||{}).state!=='Closed').length;
+  let h='<div class="tiles"><div class="card t"><small>Check points audited</small><b>'+done+'<span style="font-size:18px;color:var(--soft)"> / '+T.n+'</span></b></div><div class="card t"><small>Conformity</small><b style="color:var(--green)">'+T.c+'</b><small>'+(done?Math.round(T.c/done*100):0)+' % of audited points</small></div><div class="card t"><small>Observations</small><b style="color:#B97708">'+T.o+'</b></div><div class="card t"><small>Non-conformities (NC)</small><b style="color:var(--red)">'+T.x+'</b></div><div class="card t"><small>Findings still open</small><b>'+openF+'</b></div></div>';
+  h+='<div class="card cb"><canvas id="c1"></canvas></div>';
+  const unsent=ncFindings(a).filter(x=>!(x.r.fu||{}).wmm).length;
+  h+='<div class="card pn"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><h2 style="margin:0;flex:1">Findings</h2>'+(ncFindings(a).length?(unsent?'<button class="btn red" data-act="wmmall">Send all NCs to the Weekly Management Meeting ('+unsent+')</button>':'<span class="chip C">All NCs sent to the Weekly Management Meeting ✓</span>'):'')+'</div>'+(fs.length?'<div class="tw"><table><thead><tr><th>No</th><th>Department</th><th>Clause</th><th>Audit point and finding</th><th>Owner</th><th>Due date</th><th>Corrective action</th><th>State</th><th>NCR</th><th>Weekly meeting</th></tr></thead><tbody>'+
+   fs.map(({s,r})=>{const u=r.fu||{};return'<tr><td><span class="chip '+r.status+'">'+esc(r.fno)+'</span></td><td>'+esc(s.name)+'</td><td>'+esc(r.clause)+'</td><td style="min-width:260px"><b>'+esc(r.point)+'</b><div class="note" style="margin-top:2px">'+(r.remark?esc(r.remark):'No remark written yet')+'</div></td>'+
+    '<td><input type="text" data-u="'+r.id+'" data-f="owner" value="'+esc(u.owner)+'" style="min-width:110px"></td><td><input type="text" data-u="'+r.id+'" data-f="due" value="'+esc(u.due)+'" placeholder="yyyy.mm.dd" style="width:105px"></td><td><textarea data-u="'+r.id+'" data-f="action" rows="2" style="min-width:210px">'+esc(u.action)+'</textarea></td>'+
+    '<td><select data-u="'+r.id+'" data-f="state"><option'+(u.state!=='Closed'?' selected':'')+'>Open</option><option'+(u.state==='Closed'?' selected':'')+'>Closed</option></select></td><td>'+(r.status==='N'&&r.ncr?'<button class="btn sm" data-act="openncr" data-rid="'+r.id+'">'+esc(r.ncr.no)+'</button>':'<span class="note">—</span>')+'</td><td>'+(r.status==='N'?(u.wmm?'<span class="chip C">Sent ✓</span>':'<button class="btn sm" data-act="wmm" data-rid="'+r.id+'">Send to meeting</button>'):'<span class="note">—</span>')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">No observations or non-conformities recorded yet.</div>')+'</div>';
+  return{h,after:()=>{if(typeof Chart==='undefined'||!$('c1'))return;Chart.defaults.font.family="Inter,system-ui,sans-serif";
+    CH=new Chart($('c1'),{type:'bar',data:{labels:a.sheets.map(s=>s.name),datasets:[['Conformity','c','#2C7A4B'],['Observation','o','#D69E2E'],['NC','x','#DA1B22']].map(d=>({label:d[0],data:a.sheets.map(s=>stats(s)[d[1]]),backgroundColor:d[2],stack:'s'})).concat([{label:'Not yet audited',data:a.sheets.map(s=>{const q=stats(s);return q.n-q.done}),backgroundColor:'#DDD8CF',stack:'s'}])},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:'Audit results by department'}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}})}};
+}
+
+/* ---------- events ---------- */
+function setPath(o,p,v){const k=p.split('.');let t=o;for(let i=0;i<k.length-1;i++)t=t[k[i]];t[k[k.length-1]]=v}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab]');if(t){tab=t.dataset.tab;render();return}
+  const sh=e.target.closest('[data-sheet]');if(sh){sk=sh.dataset.sheet;render();return}
+  const nr=e.target.closest('[data-ncr]');if(nr){nk=nr.dataset.ncr;render();return}
+  const st=e.target.closest('[data-st]');if(st){const a=cur(),{r}=findRow(st.dataset.rid);if(!r)return;r.status=r.status===st.dataset.st?'':st.dataset.st;number(a,r);ensureNcr(a,findRow(r.id).s,r);save();render();return}
+  const ac=e.target.closest('[data-act]');if(!ac)return;const a=cur(),act=ac.dataset.act;
+  if(act==='addteam'){a.teams.push({no:a.teams.length+1,dept:'',leader:'',m1:'',m2:'',date:'',time:'',venue:''});save();render()}
+  else if(act==='delteam'){a.teams.splice(+ac.dataset.i,1);save();render()}
+  else if(act==='delrow'){const {s,r}=findRow(ac.dataset.rid);if(r&&confirm('Remove this check point?')){s.rows=s.rows.filter(x=>x!==r);save();render()}}
+  else if(act==='addrow'){const s=a.sheets.find(x=>x.key===sk);s.rows.push({id:'r'+uid(),g:Math.max(0,...s.rows.map(r=>r.g))+1,section:(s.rows[s.rows.length-1]||{}).section||'',clause:'',point:'New audit check point',resp:'',evidence:'',status:'',remark:''});save();render()}
+  else if(act==='wmm'){const x=findRow(ac.dataset.rid);const n=sendWmm(x.r?[x]:[]);if(n){render();toast((x.r.ncr?x.r.ncr.no:x.r.fno)+' sent to the Weekly Management Meeting as a new requirement')}}
+  else if(act==='wmmall'){const n=sendWmm(ncFindings(a).filter(x=>!(x.r.fu||{}).wmm));if(n){render();toast(n+' non-conformit'+(n===1?'y':'ies')+' sent to the Weekly Management Meeting as new requirements')}}
+  else if(act==='sign'){const {s:sh,r}=findRow(ac.dataset.rid),k=ac.dataset.k;if(!r||!r.ncr)return;const c=sigContent(k,a,sh,r),n=r.ncr;
+    fitlSign({purpose:(k==='ack'?'Acknowledgement of non-conformity report':'Verification of non-conformity report'),ref:n.no,content:c,summary:n.no+' · '+sh.name+(r.clause?' · clause '+r.clause:'')+' · '+n.category+' — '+(n.statement||r.remark||r.point)}).then(res=>{
+      if(res.ok){const g=res.sig;n[k+'Sig']={id:g.id,name:g.name,designation:g.designation,at:g.at,hash:g.hash,content:c};
+        if(k==='ack'){n.ackBy=g.name;n.ackDate=dotDate(g.at)}else{n.verifiedBy=g.name;n.verifyDate=dotDate(g.at)}save();render();toast('Signed by '+g.name+' (Sig #'+g.id+')')}
+      else if(res.reason!=='cancelled')toast('Signing is only possible when the system is opened from the company server.')})}
+  else if(act==='signsheet'){const sh=a.sheets.find(x=>x.key===ac.dataset.sk),c=sheetContent(a,sh),q=stats(sh);
+    fitlSign({purpose:'Audit check sheet signed by the auditor',ref:sh.docNo+' · '+a.title,content:c,summary:sh.name+' · '+q.done+' of '+q.n+' points audited · '+q.c+' conformity, '+q.o+' observation, '+q.x+' NC'}).then(res=>{
+      if(res.ok){const g=res.sig;sh.auditSig={id:g.id,name:g.name,designation:g.designation,at:g.at,hash:g.hash,content:c};sh.auditor=g.name;sh.auditDate=dotDate(g.at);save();render();toast('Check sheet signed by '+g.name+' (Sig #'+g.id+')')}
+      else if(res.reason!=='cancelled')toast('Signing is only possible when the system is opened from the company server.')})}
+  else if(act==='openncr'){nk=ac.dataset.rid;tab='ncr';render();window.scrollTo(0,0)}
+  else if(act==='ncrprint')ncrPrint(ac.dataset.rid);
+  else if(act==='capa'){const {s,r}=findRow(ac.dataset.rid);if(!r)return;
+    if(parent===window){toast('Raising in CAPA works inside the Ferentino management system.');return}
+    parent.postMessage({type:'fitl-capa-requests',items:[{key:'audit:'+a.id+':'+r.fno,date:(s.auditDate||today()).replace(/\./g,'-'),text:'Internal audit non-conformity '+r.fno+' — '+s.name+(r.clause?', clause '+r.clause:'')+': '+r.point+(r.remark?'. '+r.remark:''),dept:s.name}]},'*');
+    r.fu=r.fu||{};r.fu.capa=true;save();render();toast(r.fno+' sent to the CAPA platform as a new issue')}
+});
+document.addEventListener('change',e=>{const t=e.target,a=cur();
+  if(t.id==='round'){D.cur=t.value;sk=null;save();render();return}
+  if(t.dataset.act==='edit'){edit=t.checked;render();return}
+  if(t.dataset.b){setPath(a,t.dataset.b,t.value);save();if(t.dataset.b==='title')render();return}
+  if(t.dataset.team!=null){a.teams[+t.dataset.team][t.dataset.f]=t.value;save();return}
+  if(t.dataset.mx!=null){const c=a.matrix.clauses[+t.dataset.mx],d=t.dataset.d;c.d=t.checked?Array.from(new Set(c.d.concat(d))):c.d.filter(x=>x!==d);save();render();return}
+  if(t.dataset.r){const {s:sx,r}=findRow(t.dataset.r);if(r){r[t.dataset.f]=t.value;save();if(t.dataset.f==='clause'||sx.auditSig||(r.ncr&&(r.ncr.ackSig||r.ncr.verSig)))render()}return}
+  if(t.dataset.u){const {r}=findRow(t.dataset.u);if(r){r.fu=r.fu||{};r.fu[t.dataset.f]=t.value;save();if(t.dataset.f==='state'||(r.ncr&&(r.ncr.ackSig||r.ncr.verSig)))render()}return}
+  if(t.dataset.n){const {r}=findRow(t.dataset.n);if(r&&r.ncr){r.ncr[t.dataset.f]=t.value;save();if(t.dataset.f==='category'||r.ncr.ackSig||r.ncr.verSig)render()}return}
+  if(t.dataset.sf){const s=a.sheets.find(x=>x.key===sk);s[t.dataset.sf]=t.value;save()}
+});
+$('newr').onclick=()=>{
+  const a=cur(),n=new Date(),MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('host').innerHTML='<div class="veil"><div class="modal"><h2>New audit round</h2><p class="note" style="margin-top:0">The new round starts from the current one: same teams, matrix and check points, with every audit status, remark and finding cleared.</p><label class="f">Audit title</label><input type="text" id="nt" value="Internal Audit '+n.getFullYear()+' '+MON[n.getMonth()]+'"><div class="foot"><button class="btn" id="nc">Cancel</button><button class="btn red" id="ny">Create round</button></div></div></div>';
+  $('nc').onclick=()=>$('host').innerHTML='';
+  $('ny').onclick=()=>{const t=$('nt').value.trim();if(!t){toast('Give the new round a title');return}
+    const b=JSON.parse(JSON.stringify(a));b.id='a'+uid();b.title=t;b.fseq={NC:0,OBS:0};b.teams.forEach(x=>{x.date='';x.time=''});Object.assign(b.plan,{meetDate:'',meetTime:'',closeDate:'',closeTime:''});
+    delete b.tag;b.sheets.forEach(s=>{s.auditDate='';s.auditor='';s.rows.forEach(r=>{r.status='';r.remark='';delete r.fno;delete r.fu;delete r.ncr});delete s.auditSig});
+    D.audits.push(b);D.cur=b.id;sk=null;tab='plan';save();$('host').innerHTML='';render();toast('New audit round created')};
+};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('host').innerHTML=''});
+
+/* ---------- Excel, laid out like the audit workbook ---------- */
+$('xl').onclick=()=>{
+  if(typeof XLSX==='undefined'){toast('The Excel library did not load — check the internet connection.');return}
+  const a=cur(),wb=XLSX.utils.book_new(),A=[[' '+a.title],['Scope',a.scope],[],['Type of Audit',a.type],['Standard',a.standard],[],['Team Number','Department','Team Leader','Team Member 1','Team Member 2','Audit Date','Time','Venue']]
+   .concat(a.teams.map(t=>[t.no,t.dept,t.leader,t.m1,t.m2,t.date,t.time,t.venue])).concat([[],['Audit Planning Meeting'],['Date',a.plan.meetDate],['Time',a.plan.meetTime],['Venue',a.plan.meetVenue],['Participants',a.plan.meetPart],[],['Audit Closing Meeting'],['Date',a.plan.closeDate],['Time',a.plan.closeTime],['Venue',a.plan.closeVenue],['Participants',a.plan.closePart]]);
+  const ws0=XLSX.utils.aoa_to_sheet(A);ws0['!cols']=[{wch:16},{wch:26},{wch:16},{wch:16},{wch:16},{wch:22},{wch:22},{wch:16}];XLSX.utils.book_append_sheet(wb,ws0,'Audit Plan');
+  const M=[['Clause Number','Clause'].concat(a.matrix.depts.map(d=>d.label))].concat(a.matrix.clauses.map(c=>[c.no,c.name].concat(a.matrix.depts.map(d=>c.d.includes(d.key)?'y':''))));
+  const wsM=XLSX.utils.aoa_to_sheet(M);wsM['!cols']=[{wch:14},{wch:56}].concat(a.matrix.depts.map(()=>({wch:14})));XLSX.utils.book_append_sheet(wb,wsM,'Audit Matrix');
+  a.sheets.forEach(s=>{
+    const R=[['QUALITY MANAGEMENT SYSTEM','','','','','Document No: '+s.docNo],['','','','','','Issue No: '+s.issue,'Revision No: '+s.rev],[s.title,'','','','','Issue Date: '+s.issueDate],[],['Section','Clause no','Audit Checklist Point','Responsibility','Evidence to be checked','Conformity','Observation','NC','Remarks']];
+    s.rows.forEach(r=>R.push([r.section,r.clause,r.point,r.resp,r.evidence,r.status==='C'?true:'',r.status==='O'?true:'',r.status==='N'?true:'',r.remark]));
+    R.push([],['Date',s.auditDate,'','Auditor Name',s.auditor,'','','','Auditor Signature']);
+    const w=XLSX.utils.aoa_to_sheet(R);w['!cols']=[{wch:14},{wch:10},{wch:56},{wch:26},{wch:44},{wch:12},{wch:12},{wch:8},{wch:50}];XLSX.utils.book_append_sheet(wb,w,s.name.slice(0,31));
+  });
+  const F=[['No','Type','Department','Clause','Audit point','Finding / remark','Owner','Due date','Corrective action','State']].concat(allFindings(a).map(({s,r})=>[r.fno,ST[r.status],s.name,r.clause,r.point,r.remark,(r.fu||{}).owner||'',(r.fu||{}).due||'',(r.fu||{}).action||'',(r.fu||{}).state||'Open']));
+  const wsF=XLSX.utils.aoa_to_sheet(F);wsF['!cols']=[{wch:9},{wch:12},{wch:22},{wch:10},{wch:50},{wch:50},{wch:16},{wch:12},{wch:44},{wch:9}];XLSX.utils.book_append_sheet(wb,wsF,'Findings');
+  const NR=[['Report no','Date','Department','Clause','Category','Requirement not met','Non-conformity found','Evidence','Correction','Root cause','Corrective action','Responsible','Target date','Status','Verified by','Date verified','Effectiveness','Closed on','Acknowledged by','Signature no. (ack.)','Signature no. (verif.)']].concat(ncrRows(a).map(({s,r})=>{const n=r.ncr,u=r.fu||{};return[n.no,n.date,s.name,r.clause,n.category,n.requirement,n.statement||r.remark,n.evidence,n.correction,n.rootCause,u.action||'',u.owner||'',u.due||'',u.state||'Open',n.verifiedBy,n.verifyDate,n.effective,n.closureDate,n.ackBy||'',n.ackSig?n.ackSig.id:'',n.verSig?n.verSig.id:'']}));
+  const wsN=XLSX.utils.aoa_to_sheet(NR);wsN['!cols']=[{wch:14},{wch:11},{wch:22},{wch:9},{wch:9},{wch:44},{wch:44},{wch:30},{wch:30},{wch:30},{wch:36},{wch:16},{wch:11},{wch:8},{wch:16},{wch:11},{wch:13},{wch:11}];XLSX.utils.book_append_sheet(wb,wsN,'NCR register');
+  XLSX.writeFile(wb,a.title.replace(/[^\w ]+/g,'').trim().replace(/ +/g,'_')+'.xlsx');
+};
+
+D=load();render();
+})();
+</script>
+</body>
+</html>

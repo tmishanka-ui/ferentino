@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context &amp; Risk Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#EEF1EC; --surface:#fff; --ink:#1E2A22; --soft:#5B695F; --border:#D8DED2;
+    --low:#2F6B3C; --lowbg:#E3EFE5; --med:#7A4E00; --medbg:#FBEFD2; --high:#8C1F1F; --highbg:#F7DADA;
+    --d:'Fraunces',Georgia,serif; --b:'IBM Plex Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--b);font-size:14px}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 64px}
+  header.top{display:flex;flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand img{height:30px;display:block}
+  h1{font-family:var(--d);font-size:1.5rem;font-weight:600;margin:0}
+  .sub{font-size:.8rem;color:var(--soft);margin:2px 0 0}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:var(--surface);border:1px solid var(--border);padding:6px 12px;font-size:.78rem;color:var(--soft)}
+  .stat b{display:block;font-family:var(--d);font-size:1.15rem;color:var(--ink)}
+  nav.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--ink);margin-bottom:20px}
+  nav.tabs button{font-family:var(--b);font-size:.85rem;font-weight:500;padding:9px 14px;border:1px solid transparent;border-bottom:none;background:none;cursor:pointer;color:var(--soft)}
+  nav.tabs button small{display:block;font-size:.68rem;font-weight:400;opacity:.8}
+  nav.tabs button.on{background:var(--ink);color:#fff}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .bar h2{font-family:var(--d);font-size:1.2rem;margin:0}
+  .bar p{margin:2px 0 0;font-size:.8rem;color:var(--soft);max-width:70ch}
+  .btn{font-family:var(--b);font-size:.8rem;padding:7px 12px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
+  .btn:hover{background:var(--ink);color:#fff}
+  .btn.pri{background:var(--ink);color:#fff}
+  .btn.pri:hover{background:#34473a}
+  .btn.quiet{border-color:var(--border);color:var(--soft)}
+  .btn.sm{padding:4px 9px;font-size:.75rem}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  .sec{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--c,#999);padding:14px 16px;margin-bottom:16px}
+  .sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .sec-head .ab{font-family:var(--d);font-size:1.7rem;font-weight:600;color:var(--c)}
+  .sec-head h3{font-family:var(--d);font-size:1.05rem;margin:0}
+  .sec-head .s{font-size:.75rem;color:var(--soft)}
+  .hint{font-size:.8rem;color:var(--soft);margin:0 0 10px}
+  .entry{border:1px solid var(--border);border-left:4px solid var(--soft);padding:10px;margin-bottom:10px;background:#FAFBF9}
+  .entry.lvl-low{border-left-color:var(--low)} .entry.lvl-medium{border-left-color:#C9962B} .entry.lvl-high{border-left-color:#B33A3A}
+  .entry-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+  .num{font-family:var(--d);font-weight:600;min-width:34px;color:var(--soft);padding-top:6px;font-size:.85rem}
+  textarea,input[type=text],input[type=date],select{font-family:var(--b);font-size:.82rem;color:var(--ink);border:1px solid var(--border);background:#fff;padding:6px 7px;width:100%;outline:none}
+  textarea{resize:vertical;min-height:34px;overflow:hidden}
+  textarea:focus,input:focus,select:focus{box-shadow:0 0 0 1px var(--ink)}
+  .x{border:none;background:none;font-size:1.2rem;line-height:1;color:var(--soft);cursor:pointer;padding:4px 6px}
+  .x:hover{color:var(--high)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px}
+  .fld{display:flex;flex-direction:column;gap:3px;font-size:.7rem;color:var(--soft)}
+  .fld>span{font-weight:500}
+  .score{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;align-items:end;padding-top:8px;border-top:1px dashed var(--border)}
+  .result{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.78rem;min-height:32px}
+  .lvl{font-weight:600;padding:3px 9px;font-size:.75rem}
+  .lvl.low{background:var(--lowbg);color:var(--low)} .lvl.medium{background:var(--medbg);color:var(--med)} .lvl.high{background:var(--highbg);color:var(--high)}
+  .calc{color:var(--soft)}
+  .flag{font-size:.75rem;padding:5px 8px;margin-top:8px;background:var(--medbg);color:var(--med);border-left:3px solid #C9962B}
+  .flag.high{background:var(--highbg);color:var(--high);border-left-color:#B33A3A}
+  .flag.ok{background:var(--lowbg);color:var(--low);border-left-color:var(--low)}
+  .chk{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink);padding-top:16px}
+  .chk input{width:auto}
+  .quads{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:900px){.quads{grid-template-columns:1fr 1fr}}
+  .rank{font-size:.75rem;color:var(--soft)}
+  .ro{font-size:.88rem;padding:6px 0}
+  table.ref{border-collapse:collapse;width:100%;font-size:.8rem;margin:8px 0 14px}
+  table.ref th,table.ref td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top;background:#fff}
+  table.ref th{background:#F3F5F1;font-weight:600}
+  .scroll{overflow-x:auto}
+  .formula{font-family:var(--d);background:#fff;border:1px solid var(--border);padding:10px 14px;margin:8px 0;font-size:.95rem}
+  .doccard{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--border);padding:12px 14px;margin-bottom:10px}
+  .doccard h4{margin:0;font-family:var(--d);font-size:1rem}
+  .doccard p{margin:2px 0 0;font-size:.78rem;color:var(--soft)}
+  .checks{background:#fff;border:1px solid var(--border);padding:10px 14px;margin:14px 0}
+  .checks li{font-size:.8rem;margin:3px 0}
+  .checks .w{color:var(--med)} .checks .h{color:var(--high)}
+  .empty{font-style:italic;color:var(--soft);font-size:.82rem;padding:6px 0}
+  details{margin-bottom:14px;background:#fff;border:1px solid var(--border);padding:8px 12px}
+  summary{cursor:pointer;font-weight:500;font-size:.85rem}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;font-size:.82rem;display:none;z-index:9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <img alt="Ferentino" src="data:image/jpeg;base64,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">
+      <div>
+        <h1>Context &amp; risk board</h1>
+        <p class="sub">PESTEL, SWOT, Issues and Opportunities — scored to FIT/Q/CH-GEN-32</p>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="panel"></main>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+// ==== LOGIC START ====
+var LOGO_B64 = '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';
+
+var PESTEL_CATS = [
+  {id:'political',label:'Political',ab:'Po',color:'#3E4C6B',hint:'Government policy, trade rules, political stability, regulation.'},
+  {id:'economic',label:'Economic',ab:'Ec',color:'#1F6F5C',hint:'Growth, inflation, exchange rates, cost of capital, employment.'},
+  {id:'social',label:'Social',ab:'So',color:'#B5651D',hint:'Demographics, culture, attitudes, how people live and work.'},
+  {id:'technological',label:'Technological',ab:'Te',color:'#34618F',hint:'Innovation, automation, R&D activity, pace of tech change.'},
+  {id:'environmental',label:'Environmental',ab:'En',color:'#4B6043',hint:'Climate, sustainability expectations, resource availability.'},
+  {id:'legal',label:'Legal',ab:'Le',color:'#6B3F5E',hint:'Laws, compliance duties, employment and safety rules, litigation risk.'}
+];
+var SWOT_QUADS = [
+  {id:'strengths',label:'Strengths',ab:'S',code:'S',color:'#2F6B3C',sub:'Internal, positive',hint:'What FITL does well or has more of than others.'},
+  {id:'opportunities',label:'Opportunities',ab:'O',code:'O',color:'#1F6F8B',sub:'External, positive — from PESTEL',hint:'Outside trends or gaps FITL could make use of.'},
+  {id:'weaknesses',label:'Weaknesses',ab:'W',code:'W',color:'#A64B2A',sub:'Internal, negative',hint:'Where FITL is at a disadvantage or short of resources.'},
+  {id:'threats',label:'Threats',ab:'T',code:'T',color:'#8C3038',sub:'External, negative — from PESTEL',hint:'Outside forces that could cause harm or create risk.'}
+];
+var DOCS = {
+  pestel:{no:'27',code:'FIT/Q/RG-GEN-27',title:'PESTEL ANALYSIS TABLE',file:'27_FIT_Q_RG_GEN_27_PESTEL_Analysis_Report.docx',page:'A4 landscape'},
+  swot:{no:'28',code:'FIT/Q/RG-GEN-28',title:'SWOT ANALYSIS TABLE',file:'28_FIT_Q_RG_GEN_28_SWOT_Analysis_Report.docx',page:'A4 portrait'},
+  issues:{no:'22',code:'FIT/Q/RG-GEN-22',title:'ISSUE REGISTER',file:'22_FIT_Q_RG_GEN_22_Issue_Register.docx',page:'A3 landscape'},
+  opps:{no:'24',code:'FIT/Q/RG-GEN-24',title:'RECORD FOR OPPORTUNITIES',file:'24_FIT_Q_RG_GEN_24_Record_for_Opportunities.docx',page:'A4 landscape'}
+};
+var CRIT = {
+  L:{label:'Legal liabilities',opts:[['1','1 · No legal exposure'],['2','2 · Fine / contract penalty'],['3','3 · Criminal / termination']]},
+  P:{label:'Public / stakeholder concern',opts:[['1','1 · Never'],['2','2 · Sometimes'],['3','3 · Often']]},
+  F:{label:'Frequency',opts:[['1','1 · Less than once a year'],['2','2 · 1 month to 1 year'],['3','3 · Often / routine']]},
+  S:{label:'Severity',opts:[['1','1 · Minor / amenity'],['2','2 · Quality, cost, air/water/soil'],['3','3 · Health, safety, continuity']]}
+};
+var SITS = {Normal:10,Abnormal:12,Emergency:15};
+var RESP = {
+  Low:'Acceptable. Maintain existing controls; no further action required.',
+  Medium:'Requires a defined control action, owner, and review within an agreed timeframe.',
+  High:'Requires immediate control action and escalation to Top Management / Director.'
+};
+var LEVEL_NAME = {Low:'Low / Not Significant',Medium:'Medium / Significant',High:'High / Significant — Priority'};
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function fmtDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s||'')?s.replace(/-/g,'.'):(s||'');}
+
+function calc(it){
+  var sig=(it.P+it.F)*(it.L+it.S);
+  var m10=SITS[it.sit]||10;
+  var rating=Math.round(sig*m10)/10;
+  var level=rating>=24?'High':(rating>=16?'Medium':'Low');
+  return {sig:sig,m:m10/10,rating:rating,level:level,significant:rating>=16};
+}
+
+function newItem(type,cat){
+  return {id:uid(),type:type,cat:cat||'',text:'',date:todayISO(),L:1,P:1,F:1,S:1,sit:'Normal',
+    pol:'',timeframe:'',source:'',pestelRef:'',
+    inIssues:(type==='pestel'||cat==='weaknesses'),
+    ie:'External',party:'',desc:'',riskRef:'',status:'Open',
+    oppSource:'',oppRef:'',
+    opp:{benefit:'',action:'',resp:'',target:'',status:'Open'}};
+}
+function defaultState(){
+  return {tab:'pestel',settings:{issueNo:'02',issueDate:'2026.04.20',revNo:'00',revDate:'',
+    reviewed:'Asst. Manager-Quality and Process',approved:'General Manager',scoringTable:true},items:[]};
+}
+function valid(it){return (it.text||'').trim().length>0;}
+
+function derive(S){
+  var items=S.items, D={pRows:[],pNo:{},sQ:{},sNo:{},sRank:{},opps:[],oppNo:{},issues:[]};
+  var n=0;
+  PESTEL_CATS.forEach(function(c){
+    var list=items.filter(function(i){return i.type==='pestel'&&i.cat===c.id&&valid(i);});
+    if(!list.length)D.pRows.push({cat:c,blank:true});
+    list.forEach(function(it){n++;D.pNo[it.id]=n;D.pRows.push({cat:c,item:it,no:n});});
+  });
+  SWOT_QUADS.forEach(function(q){
+    var list=items.filter(function(i){return i.type==='swot'&&i.cat===q.id&&valid(i);}).map(function(it,idx){return {it:it,idx:idx,c:calc(it)};});
+    list.sort(function(a,b){return b.c.rating-a.c.rating||a.idx-b.idx;});
+    var prev=null,rank=0;
+    D.sQ[q.id]=list.map(function(x,pos){
+      if(prev===null||x.c.rating!==prev){rank=pos+1;prev=x.c.rating;}
+      D.sNo[x.it.id]=pos+1;D.sRank[x.it.id]=rank;
+      return {item:x.it,no:pos+1,rank:rank,c:x.c,code:q.code+(pos+1)};
+    });
+  });
+  // opportunities
+  var used={};
+  D.pRows.forEach(function(r){
+    if(!r.item||r.item.pol!=='Opportunity')return;
+    var it=r.item;
+    var linked=items.filter(function(s){return s.type==='swot'&&s.cat==='opportunities'&&s.pestelRef===it.id&&valid(s);});
+    var refs=['FIT/Q/RG-GEN-27, No.'+r.no];
+    linked.forEach(function(s){used[s.id]=1;refs.push('FIT/Q/RG-GEN-28 (Opportunities), No.'+D.sNo[s.id]);});
+    D.opps.push({primary:it,kind:'pestel',source:linked.length?'PESTEL / SWOT':'PESTEL',text:it.text,ref:refs.join('; '),date:it.date,c:calc(it),linkedIds:linked.map(function(s){return s.id;})});
+  });
+  items.forEach(function(s){
+    if(s.type==='swot'&&s.cat==='opportunities'&&valid(s)&&!used[s.id])
+      D.opps.push({primary:s,kind:'swot',source:'SWOT',text:s.text,ref:'FIT/Q/RG-GEN-28 (Opportunities), No.'+D.sNo[s.id],date:s.date,c:calc(s),linkedIds:[]});
+  });
+  items.forEach(function(m){
+    if(m.type==='opp'&&valid(m))
+      D.opps.push({primary:m,kind:'manual',source:m.oppSource||'',text:m.text,ref:m.oppRef||'',date:m.date,c:calc(m),linkedIds:[]});
+  });
+  D.opps.forEach(function(o,i){o.no=i+1;D.oppNo[o.primary.id]=i+1;o.linkedIds.forEach(function(id){D.oppNo[id]=i+1;});});
+  // issues
+  D.pRows.forEach(function(r){
+    if(r.item&&r.item.inIssues!==false)D.issues.push({item:r.item,ie:'External',origin:'PESTEL No.'+r.no});
+  });
+  items.forEach(function(s){
+    if(s.type==='swot'&&(s.cat==='strengths'||s.cat==='weaknesses')&&s.inIssues&&valid(s))
+      D.issues.push({item:s,ie:'Internal',origin:'SWOT '+(s.cat==='strengths'?'S':'W')+D.sNo[s.id]});
+  });
+  items.forEach(function(s){
+    if(s.type==='swot'&&(s.cat==='opportunities'||s.cat==='threats')&&s.inIssues&&valid(s))
+      D.issues.push({item:s,ie:'External',origin:'SWOT '+(s.cat==='opportunities'?'O':'T')+D.sNo[s.id]});
+  });
+  items.forEach(function(m){
+    if(m.type==='issue'&&valid(m))D.issues.push({item:m,ie:m.ie||'External',origin:'Manual'});
+  });
+  D.issues.forEach(function(r,i){
+    r.no=i+1;r.c=calc(r.item);
+    var it=r.item;
+    var oppNo=D.oppNo[it.id];
+    if(oppNo)r.ref='RG-GEN-24, No.'+oppNo;
+    else if(it.riskRef)r.ref=it.riskRef;
+    else r.ref=r.c.significant?'To be added to RG-GEN-23':'';
+    r.auto=!!oppNo;
+    r.party=it.party||(r.item.type==='pestel'?'Macro Environment':'');
+  });
+  return D;
+}
+
+// ---------- Word (.docx) generation ----------
+var DX={
+  rpr:function(o){o=o||{};var s='';
+    if(o.font)s+='<w:rFonts w:ascii="'+o.font+'" w:hAnsi="'+o.font+'" w:cs="'+o.font+'"/>';
+    if(o.b)s+='<w:b/><w:bCs/>'; if(o.i)s+='<w:i/><w:iCs/>';
+    if(o.sz)s+='<w:sz w:val="'+o.sz+'"/><w:szCs w:val="'+o.sz+'"/>';
+    return s?'<w:rPr>'+s+'</w:rPr>':'';},
+  run:function(t,o){return '<w:r>'+DX.rpr(o)+'<w:t xml:space="preserve">'+esc(t)+'</w:t></w:r>';},
+  p:function(runs,o){o=o||{};var pp='';
+    if(o.style)pp+='<w:pStyle w:val="'+o.style+'"/>';
+    if(o.keepNext)pp+='<w:keepNext/>';
+    if(o.num!=null)pp+='<w:numPr><w:ilvl w:val="0"/><w:numId w:val="'+o.num+'"/></w:numPr>';
+    if(o.before!=null||o.after!=null)pp+='<w:spacing'+(o.before!=null?' w:before="'+o.before+'"':'')+(o.after!=null?' w:after="'+o.after+'"':'')+'/>';
+    if(o.jc)pp+='<w:jc w:val="'+o.jc+'"/>';
+    return '<w:p>'+(pp?'<w:pPr>'+pp+'</w:pPr>':'')+(Array.isArray(runs)?runs.join(''):(runs||''))+'</w:p>';},
+  paras:function(text,o){o=o||{};
+    var lines=String(text==null?'':text).split('\n');
+    return lines.map(function(l){return DX.p(l===''?'':DX.run(l,o.run),{jc:o.jc,style:o.style});}).join('');},
+  tc:function(w,inner,o){o=o||{};var pr='<w:tcW w:w="'+w+'" w:type="dxa"/>';
+    if(o.span)pr+='<w:gridSpan w:val="'+o.span+'"/>';
+    if(o.vm)pr+=o.vm==='restart'?'<w:vMerge w:val="restart"/>':'<w:vMerge/>';
+    if(o.va)pr+='<w:vAlign w:val="'+o.va+'"/>';
+    return '<w:tc><w:tcPr>'+pr+'</w:tcPr>'+(inner||DX.p(''))+'</w:tc>';},
+  tbl:function(widths,rows,o){o=o||{};var tot=widths.reduce(function(a,b){return a+b;},0);
+    return '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="'+tot+'" w:type="dxa"/><w:tblLayout w:type="fixed"/>'+
+      '<w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="70" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar>'+
+      '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>'+
+      '<w:tblGrid>'+widths.map(function(w){return '<w:gridCol w:w="'+w+'"/>';}).join('')+'</w:tblGrid>'+rows.join('')+'</w:tbl>';},
+  split:function(pct,total){var w=pct.map(function(p){return Math.floor(total*p/100);});
+    var d=total-w.reduce(function(a,b){return a+b;},0);w[w.length-1]+=d;return w;}
+};
+function dataTable(pct,heads,rows,total,sz){
+  var w=DX.split(pct,total);
+  var hr='<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>'+heads.map(function(h,i){return DX.tc(w[i],DX.paras(h,{run:{b:1,sz:sz}}));}).join('')+'</w:tr>';
+  var body=rows.map(function(r){
+    return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+r.map(function(c,i){
+      var o=(c&&typeof c==='object')?c:{t:c};
+      return DX.tc(w[i],DX.paras(o.t,{run:{sz:sz,i:o.i,b:o.b},jc:o.jc}));
+    }).join('')+'</w:tr>';
+  });
+  return DX.tbl(w,[hr].concat(body));
+}
+function guideXml(items,owner){
+  var x=DX.p(DX.run('Column Guide',{b:1}),{before:240,after:60,keepNext:true});
+  items.forEach(function(g){x+=DX.p([DX.run(g[0],{b:1}),DX.run(': '+g[1])],{num:1});});
+  if(owner)x+=DX.p(DX.run('Ownership',{b:1}),{before:120,after:40,keepNext:true})+DX.p(DX.run(owner));
+  return x;
+}
+function scoringTable(rows,total){
+  if(!rows.length)return '';
+  var heads=['Ref','Item','L','P','F','S','Significance','Situation (M)','Risk Rating','Level'];
+  var data=rows.map(function(r){return [r.ref,r.text,String(r.it.L),String(r.it.P),String(r.it.F),String(r.it.S),String(r.c.sig),r.it.sit+' ('+r.c.m+')',String(r.c.rating),r.c.level];});
+  return DX.p(DX.run('Scoring Basis — FIT/Q/CH-GEN-32',{b:1}),{before:240,after:60,keepNext:true})+
+    DX.p(DX.run('Significance = (P + F) × (L + S); Risk Rating = Significance × M. Level: Low < 16, Medium 16–23, High ≥ 24.',{i:1,sz:18}),{after:80,keepNext:true})+
+    dataTable([7,31,5,5,5,5,12,11,9,10],heads,data,total,18);
+}
+var IMPACT_NOTE='Impact is derived from the Risk Rating calculated under FIT/Q/CH-GEN-32: High ≥ 24, Medium 16–23, Low < 16.';
+
+var PAGES={
+  'A4L':{w:16838,h:11906,orient:'landscape',mar:1000},
+  'A4P':{w:11906,h:16838,orient:'portrait',mar:1000},
+  'A3L':{w:23811,h:16838,orient:'landscape',mar:1200}
+};
+var HDR_PCT=[3634,2700,1096,1424,1119,1009];
+
+function headerXml(doc,st,tw,logoCx){
+  var w=DX.split(HDR_PCT.map(function(x){return x/109.82;}),tw);
+  var cal={font:'Calibri',sz:18};
+  function hp(t,o){return DX.p(t===''?'':DX.run(t,Object.assign({},cal,o||{})),{style:'Header',jc:(o&&o.jc)||null});}
+  var logoCy=Math.round(logoCx/6.025);
+  var drawing='<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+logoCx+'" cy="'+logoCy+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="Logo"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="logo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+logoCx+'" cy="'+logoCy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+  var span3=w[3]+w[4]+w[5];
+  var pageNo=DX.p([DX.run('Page ',cal),
+    '<w:fldSimple w:instr=" PAGE \\* Arabic "><w:r>'+DX.rpr(cal)+'<w:t>1</w:t></w:r></w:fldSimple>',
+    DX.run(' of ',cal),
+    '<w:fldSimple w:instr=" NUMPAGES \\* Arabic "><w:r>'+DX.rpr(cal)+'<w:t>1</w:t></w:r></w:fldSimple>'],{style:'Header'});
+  var r1='<w:tr><w:trPr><w:trHeight w:val="476"/></w:trPr>'+
+    DX.tc(w[0],DX.p(drawing,{style:'Header'}),{va:'center'})+
+    DX.tc(w[1],hp('QUALITY MANAGEMENT SYSTEM',{jc:'center'}),{va:'center'})+
+    DX.tc(w[2],hp('Doc No'))+
+    DX.tc(span3,hp(doc.code),{span:3})+'</w:tr>';
+  var r2='<w:tr>'+
+    DX.tc(w[0],hp('FERENTINO INDUSTRIAL TYRES (PVT) LTD')+hp('SRI LANKA'),{vm:'restart'})+
+    DX.tc(w[1],DX.p(DX.run(doc.title,{b:1,sz:20}),{jc:'center'}),{vm:'restart',va:'center'})+
+    DX.tc(w[2],hp('Issue No'))+DX.tc(w[3],hp(st.issueNo))+DX.tc(w[4],hp('Revision No'))+DX.tc(w[5],hp(st.revNo))+'</w:tr>';
+  var r3='<w:tr>'+DX.tc(w[0],DX.p('',{style:'Header'}),{vm:'cont'})+DX.tc(w[1],DX.p('',{style:'Header'}),{vm:'cont'})+
+    DX.tc(w[2],hp('Issue Date'))+DX.tc(w[3],hp(st.issueDate))+DX.tc(w[4],hp('Revision Date'))+DX.tc(w[5],hp(st.revDate))+'</w:tr>';
+  var r4='<w:tr>'+DX.tc(w[0],DX.p('',{style:'Header'}),{vm:'cont'})+DX.tc(w[1],DX.p('',{style:'Header'}),{vm:'cont'})+
+    DX.tc(w[2],hp('Page No'))+DX.tc(span3,pageNo,{span:3})+'</w:tr>';
+  r3=r3.replace(/<w:vMerge\/>/g,'<w:vMerge/>');
+  return DX.tbl(w,[r1,r2,r3,r4])+DX.p('',{style:'Header'});
+}
+function footerXml(st,tw){
+  var w=DX.split([57,43],tw);
+  var f={font:'Roboto',sz:18};
+  function fp(t){return DX.p(DX.run(t,f),{style:'Footer'});}
+  var rows=[['Reviewed By:',st.reviewed],['Approved By:',st.approved]].map(function(r){
+    return '<w:tr>'+DX.tc(w[0],fp(r[0]))+DX.tc(w[1],fp(r[1]))+'</w:tr>';});
+  return DX.tbl(w,rows)+DX.p('',{style:'Footer'});
+}
+var NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+var XMLH='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+function stylesXml(){
+  var b='<w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>';
+  return XMLH+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-GB" w:eastAsia="en-US" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+  '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+  '<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>'+
+  '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'+
+  '<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:uiPriority w:val="39"/><w:tblPr><w:tblBorders>'+b+'</w:tblBorders></w:tblPr></w:style>'+
+  '<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style>'+
+  '<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/><w:rPr><w:rFonts w:ascii="Roboto" w:hAnsi="Roboto" w:cs="Roboto"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style>'+
+  '</w:styles>';
+}
+function numberingXml(){
+  return XMLH+'<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>';
+}
+
+function docBody(key,S,D,tw){
+  var sz=18, x='';
+  function title(t){return DX.p(DX.run(t,{b:1,sz:22}),{jc:'center',before:120,after:160});}
+  var dt=DOCS[key];
+  x+=title(dt.title);
+  if(key==='pestel'){
+    var rows=D.pRows.map(function(r){
+      if(r.blank)return ['',r.cat.label,'','','','','',''];
+      var it=r.item,c=calc(it);
+      return [String(r.no),r.cat.label,it.text,it.pol||'',c.level,it.timeframe||'',it.source||'',fmtDate(it.date)];
+    });
+    x+=dataTable([5,12,31,12,9,10,13,8],['No','Category','Issue','Opportunity / Threat','Impact (H/M/L)','Timeframe','Source','Date Identified'],rows,tw,sz);
+    x+=DX.p(DX.run(IMPACT_NOTE,{i:1,sz:18}),{before:80});
+    if(S.settings.scoringTable){
+      var sr=D.pRows.filter(function(r){return r.item;}).map(function(r){return {ref:'No.'+r.no,text:r.item.text,it:r.item,c:calc(r.item)};});
+      x+=scoringTable(sr,tw);
+    }
+    x+=guideXml([
+      ['Category','one of the six PESTEL categories (Political, Economic, Social, Technological, Environmental, Legal) — see FIT/Q/QSP-GEN-11, Section 5.2 for FITL-specific prompts under each.'],
+      ['Issue','a specific, concrete statement — not a generic heading.'],
+      ['Impact','High/Medium/Low — how much this could affect FITL if it plays out.'],
+      ['Timeframe','Immediate / Short-term / Long-term — how soon it\'s expected to matter.'],
+      ['Source','where this was identified — see FIT/Q/QSP-GEN-11, Section 5.4 for suggested sources per category.']
+    ],null);
+  }
+  if(key==='swot'){
+    var quadTitles={strengths:'Strengths (Internal, Positive)',weaknesses:'Weaknesses (Internal, Negative)',opportunities:'Opportunities (External, Positive — from PESTEL)',threats:'Threats (External, Negative — from PESTEL)'};
+    ['strengths','weaknesses','opportunities','threats'].forEach(function(q){
+      var list=D.sQ[q],ext=(q==='opportunities'||q==='threats');
+      x+=DX.p(DX.run(quadTitles[q],{b:1}),{before:160,after:80,keepNext:true});
+      var rows=list.map(function(r){
+        var it=r.item,base=[String(r.no),it.text];
+        if(ext)base.push(it.pestelRef&&D.pNo[it.pestelRef]?'FIT/Q/RG-GEN-27, No.'+D.pNo[it.pestelRef]:'');
+        base.push(r.c.level,String(r.rank));return base;});
+      if(!rows.length)rows=[ext?['1','','','','']:['1','','','']];
+      x+=ext?dataTable([7,45,24,12,12],['No','Item','Linked PESTEL Ref','Impact (H/M/L)','Rank'],rows,tw,sz)
+            :dataTable([8,62,15,15],['No','Item','Impact (H/M/L)','Rank'],rows,tw,sz);
+    });
+    x+=DX.p(DX.run(IMPACT_NOTE+' Rank is by Risk Rating within each quadrant (equal ratings share a rank).',{i:1,sz:18}),{before:100});
+    if(S.settings.scoringTable){
+      var rr=[];SWOT_QUADS.forEach(function(q){D.sQ[q.id].forEach(function(r){rr.push({ref:r.code,text:r.item.text,it:r.item,c:r.c});});});
+      x+=scoringTable(rr,tw);
+    }
+    x+=guideXml([
+      ['Item','a specific, concrete statement, not a vague category — see FIT/Q/QSP-GEN-11, Section 5.5.'],
+      ['Linked PESTEL Ref','for Opportunities/Threats, the row number on FIT/Q/RG-GEN-27 this was drawn from — keeps the two records traceable to each other.'],
+      ['Rank','priority order within each quadrant, based on impact and likelihood — do not mix internal and external items into the same quadrant.']
+    ],null);
+  }
+  if(key==='issues'){
+    var ir=D.issues.map(function(r){
+      var it=r.item,desc=(it.desc||'').trim();
+      var line='Risk rating '+r.c.rating+' — '+LEVEL_NAME[r.c.level]+' (FIT/Q/CH-GEN-32)';
+      return [String(r.no),it.text,r.ie,r.party,(desc?desc+'\n':'')+line,fmtDate(it.date),r.ref,it.status||'Open'];
+    });
+    if(!ir.length)ir=[['1','','','','','','','']];
+    x+=dataTable([4,20,8,10,30,8,12,8],['No','Issue','Internal / External','Related Interested Party','Description / Reason for Consideration','Date Identified','Linked Risk/Opportunity Ref (RG-GEN-23)','Status'],ir,tw,sz+2);
+    x+=guideXml([
+      ['Issue','state it specifically — not a generic heading. Drawn from the PESTEL Analysis Table (FIT/Q/RG-GEN-27) for external issues, or from process/competence/audit review for internal issues.'],
+      ['Related Interested Party','cross-reference to the Record for Interested Parties (FIT/Q/RG-GEN-21) where the issue originates from a specific party\'s needs or expectations.'],
+      ['Linked Risk/Opportunity Ref','once the issue is scored for risk, the corresponding row number on the Risk Assessment Register (FIT/Q/RG-GEN-23).'],
+      ['Status','Open (still being monitored) or Closed (issue no longer relevant / fully resolved).']
+    ],'Maintained by the System Coordinator (SC); reviewed alongside FIT/Q/QSP-GEN-11 (annually, or when a significant internal/external change occurs).');
+  }
+  if(key==='opps'){
+    var orow=D.opps.map(function(o){
+      var p=o.primary,f=p.opp||{};
+      var resp=(f.resp||'').trim();
+      if(!resp&&o.c.level==='High')resp='Top Management / Director';
+      return [String(o.no),o.source,o.text,o.ref,f.benefit||'',f.action||'',resp,fmtDate(f.target),f.status||'Open',fmtDate(o.date)];
+    });
+    if(!orow.length)orow=[['1','','','','','','','','','']];
+    x+=dataTable([3.5,8,17,13,12.5,14.5,9,8,6.5,8],['No','Source','Opportunity','Related Reference','Potential Benefit','Action to Pursue','Responsible','Target Date','Status','Date Identified'],orow,tw,sz);
+    x+=DX.p(DX.run('Opportunities rated High under FIT/Q/CH-GEN-32 (Risk Rating ≥ 24) require immediate action and escalation to Top Management / Director.',{i:1,sz:18}),{before:80});
+    x+=guideXml([
+      ['Source','where the opportunity was identified — the PESTEL Analysis Table, the SWOT Analysis Table, the Risk Assessment Register (an opportunity often sits alongside a risk in the same row), a customer/market observation, or an internal audit/Management Review.'],
+      ['Related Reference','the row number on the source record this came from, so the two stay traceable to each other.'],
+      ['Action to Pursue','the concrete next step — not every opportunity is acted on immediately, but every one gets a decision, even if that decision is "monitor only."'],
+      ['Status','Open (being pursued or monitored), Actioned (a decision has been implemented), or Closed (no longer relevant).']
+    ],'Maintained by the System Coordinator (SC); reviewed alongside FIT/Q/QSP-GEN-12 (twice per annum at minimum) and whenever a new opportunity is identified through the organizational context review (FIT/Q/QSP-GEN-11).');
+  }
+  return x;
+}
+
+function buildDocx(key,S,JSZipCtor){
+  var D=derive(S),dt=DOCS[key];
+  var pg=PAGES[{pestel:'A4L',swot:'A4P',issues:'A3L',opps:'A4L'}[key]];
+  var tw=pg.w-2*pg.mar;
+  var logoCx=Math.min(2286000,Math.floor((DX.split(HDR_PCT.map(function(x){return x/109.82;}),tw)[0]-240)*635));
+  var body=docBody(key,S,D,tw);
+  var sect='<w:sectPr><w:headerReference w:type="default" r:id="rId4"/><w:footerReference w:type="default" r:id="rId5"/><w:pgSz w:w="'+pg.w+'" w:h="'+pg.h+'"'+(pg.orient==='landscape'?' w:orient="landscape"':'')+'/><w:pgMar w:top="1700" w:right="'+pg.mar+'" w:bottom="1100" w:left="'+pg.mar+'" w:header="284" w:footer="200" w:gutter="0"/></w:sectPr>';
+  var docXml=XMLH+'<w:document '+NS+'><w:body>'+body+sect+'</w:body></w:document>';
+  var z=new JSZipCtor();
+  z.file('[Content_Types].xml',XMLH+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+  z.file('_rels/.rels',XMLH+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  z.file('word/document.xml',docXml);
+  z.file('word/_rels/document.xml.rels',XMLH+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>');
+  z.file('word/styles.xml',stylesXml());
+  z.file('word/numbering.xml',numberingXml());
+  z.file('word/settings.xml',XMLH+'<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>');
+  z.file('word/header1.xml',XMLH+'<w:hdr '+NS+'>'+headerXml(dt,S.settings,tw,logoCx)+'</w:hdr>');
+  z.file('word/_rels/header1.xml.rels',XMLH+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.jpg"/></Relationships>');
+  z.file('word/footer1.xml',XMLH+'<w:ftr '+NS+'>'+footerXml(S.settings,tw)+'</w:ftr>');
+  z.file('word/media/logo.jpg',LOGO_B64,{base64:true});
+  return z;
+}
+
+function runChecks(S,D){
+  var out=[];
+  function add(doc,lvl,msg){out.push({doc:doc,lvl:lvl,msg:msg});}
+  var noText=S.items.filter(function(i){return !valid(i);}).length;
+  if(noText)add('All','w',noText+' entr'+(noText>1?'ies have':'y has')+' no text and will be left out of the documents.');
+  var a=D.pRows.filter(function(r){return r.item&&!r.item.pol;}).length;
+  if(a)add('PESTEL (RG-GEN-27)','w',a+' entr'+(a>1?'ies are':'y is')+' not marked Opportunity or Threat — they will not feed SWOT or Opportunities.');
+  a=D.pRows.filter(function(r){return r.item&&!r.item.timeframe;}).length;
+  if(a)add('PESTEL (RG-GEN-27)','w',a+' entr'+(a>1?'ies have':'y has')+' no timeframe.');
+  a=0;['opportunities','threats'].forEach(function(q){D.sQ[q].forEach(function(r){if(!r.item.pestelRef)a++;});});
+  if(a)add('SWOT (RG-GEN-28)','w',a+' Opportunity/Threat item'+(a>1?'s are':' is')+' not linked to a PESTEL entry.');
+  a=D.issues.filter(function(r){return r.c.significant&&!r.auto&&!r.item.riskRef;}).length;
+  if(a)add('Issues (RG-GEN-22)','h',a+' significant issue'+(a>1?'s have':' has')+' no RG-GEN-23 reference yet — enter them in the Risk Assessment Register.');
+  var miss=0,high=0;
+  D.opps.forEach(function(o){var f=o.primary.opp||{};
+    if(o.c.significant&&(!(f.action||'').trim()||(!(f.resp||'').trim()&&o.c.level!=='High')||!f.target))miss++;
+    if(o.c.level==='High')high++;});
+  if(miss)add('Opportunities (RG-GEN-24)','w',miss+' significant opportunit'+(miss>1?'ies need':'y needs')+' an action, owner and target date.');
+  if(high)add('Opportunities (RG-GEN-24)','h',high+' High-rated opportunit'+(high>1?'ies require':'y requires')+' escalation to Top Management / Director.');
+  return out;
+}
+// ==== LOGIC END ====
+
+if(typeof document==='undefined'){return;}   // logic only (tests)
+
+// ---------- state + storage ----------
+var KEY='fitl-context-board-v2';
+var SEED_2026 = [{"k":"p1","type":"pestel","cat":"economic","text":"Global econonomic conditions affecting industry and customer demands","pol":"Threat","L":1,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Issue No.1","desc":"Need / expectation: Estimated globle economic groth is 3.1%. But this slidely lower due to higher energy price.\nReason for consideration: Production volume dicrease comparare to year 2025.\nRisk: Business stability\nExisting control: To start new project to reduce manufacturing cost."},{"k":"t1","type":"swot","cat":"threats","text":"Global econonomic conditions affecting industry and customer demands","ref":"p1","L":1,"P":2,"F":2,"S":3},{"k":"o1","type":"opp","text":"Global econonomic conditions affecting industry and customer demands — To start cost reduction initiatives. Optimixe proction efficiency.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.1","action":"To start new project to reduce manufacturing cost.","L":1,"P":2,"F":2,"S":3},{"k":"p2","type":"pestel","cat":"political","text":"America imposed increased tax rates for export.","pol":"Threat","L":1,"P":1,"F":1,"S":1,"source":"Context of the Organization 2026 — Issue No.2","desc":"Need / expectation: MITL is 100% exporting to Europe contries.\nReason for consideration: Our sister company FTCL has American customer base. Hence their production volume is impacted.\nRisk: Off schedulling mixing machinary of FTCL hence compound supply is inconsitance. Black compound mixing on MITL mixer. Colour variation in Non-marking compounds.\nExisting control: Maintain buffer stock for black compounds. Maintain buffer stock of Raw material for black mixing."},{"k":"t2","type":"swot","cat":"threats","text":"America imposed increased tax rates for export.","ref":"p2","L":1,"P":1,"F":1,"S":1},{"k":"o2","type":"opp","text":"America imposed increased tax rates for export. — Increase mixer utilization by mixing black compounds.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.2","action":"Maintain buffer stock for black compounds. Maintain buffer stock of Raw material for black mixing.","L":1,"P":1,"F":1,"S":1},{"k":"p3","type":"pestel","cat":"economic","text":"Currency exchange rate USD to LKR is increasing.","pol":"Threat","L":1,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Issue No.3","desc":"Need / expectation: Ensure stable Raw material price this helps to maintain product pricing & maintain supply chain.\nReason for consideration: To maintain purchacing price of raw materials, machinery and spare parts. Keep stable product pricing. To prevent disruptions of annual budgets, cost projections and profit margins.\nRisk: Cash flow & payment risk; Production losses due to unavailability of raw materials.\nExisting control: Moniter the behaviour of currency fluctuations"},{"k":"t3","type":"swot","cat":"threats","text":"Currency exchange rate USD to LKR is increasing.","ref":"p3","L":1,"P":2,"F":2,"S":3},{"k":"o3","type":"opp","text":"Currency exchange rate USD to LKR is increasing. — Marker competitiveness; Confidence of stakegolders; Business continuity","oppSource":"Context of the Organization 2026","oppRef":"Issue No.3","action":"Moniter the behaviour of currency fluctuations","L":1,"P":2,"F":2,"S":3},{"k":"p4","type":"pestel","cat":"political","text":"Political stability of country.","pol":"Threat","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Issue No.4","desc":"Need / expectation: Predictable policies for business operations. (Taxes , Import export rules & labour regulations)\nReason for consideration: Continuity of supply chain; Buitl business confidence; Uninterupted polycies.\nRisk: Reduce customer confidence. Strics from government ralated service providers."},{"k":"t4","type":"swot","cat":"threats","text":"Political stability of country.","ref":"p4","L":2,"P":2,"F":3,"S":3},{"k":"o4","type":"opp","text":"Political stability of country. — Encourage to busuness growth.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.4","action":"","L":2,"P":2,"F":3,"S":3},{"k":"w5","type":"swot","cat":"weaknesses","text":"Minimum basic salary increase.","inIssues":true,"L":2,"P":2,"F":2,"S":2,"source":"Context of the Organization 2026 — Issue No.5","desc":"Need / expectation: Plan & manage cost impact effectively.\nReason for consideration: Impact wage structure & overoll finace planing.\nRisk: Increase operational cost; Increase product pricing. Decrease profit marging."},{"k":"o5","type":"opp","text":"Minimum basic salary increase. — Improve Employee satisfaction.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.5","action":"","L":2,"P":2,"F":2,"S":2},{"k":"p6","type":"pestel","cat":"legal","text":"EUDR regulations by European union.","pol":"Threat","L":2,"P":2,"F":2,"S":2,"source":"Context of the Organization 2026 — Issue No.6","desc":"Need / expectation: Develop EUDR certified vendors for Natural rubber & use EUDR certified RSS to the products.\nReason for consideration: This is mandatary requirement to export Europe.\nRisk: Increasing rubber pricess & tyre price."},{"k":"t6","type":"swot","cat":"threats","text":"EUDR regulations by European union.","ref":"p6","L":2,"P":2,"F":2,"S":2},{"k":"o6","type":"opp","text":"EUDR regulations by European union. — Manufacturing process is running enviorenmental friendely.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.6","action":"","L":2,"P":2,"F":2,"S":2},{"k":"w7","type":"swot","cat":"weaknesses","text":"High labour turn over","inIssues":true,"L":1,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Issue No.7","desc":"Need / expectation: Maintain manpower requirement according to production out put.\nReason for consideration: Production losses due to manpower shortage.\nRisk: Unable to meet on time delivery. Energy losses & increase KWH/Tyre Kg"},{"k":"o7","type":"opp","text":"High labour turn over — Skill development of new comers. Enhance compitency level.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.7","action":"","L":1,"P":2,"F":2,"S":3},{"k":"p8","type":"pestel","cat":"environmental","text":"Effect of climatre changers.","pol":"Threat","L":2,"P":2,"F":2,"S":2,"source":"Context of the Organization 2026 — Issue No.8","desc":"Need / expectation: Compliance with regulations. Sustainable production (use eco friendly raw materials & energy efficient process); Follow 3R principle for waste management.\nReason for consideration: Increased supply chain disruptions.\nRisk: Material shortage; Proction loss\nExisting control: Review related KPI target."},{"k":"t8","type":"swot","cat":"threats","text":"Effect of climatre changers.","ref":"p8","L":2,"P":2,"F":2,"S":2},{"k":"o8","type":"opp","text":"Effect of climatre changers. — New product innovation towards sustainability. Start energy saving project. Waste reduction.","oppSource":"Context of the Organization 2026","oppRef":"Issue No.8","action":"Review related KPI target.","L":2,"P":2,"F":2,"S":2},{"k":"i1","type":"issue","text":"Certification Body: Audit for ISO 9001:2015 & Issue Certification; Withdraw certification","party":"Certification Body","ie":"External","desc":"Need / expectation: Good level of System compliance to ISO 9001:2015 requirements maintain best process and good quality in our products by taking safety precautions and utilizing machineries in best manner.\nRisk: Company reputation risk; Negative reference; Customer dissatisfaction\nExisting control: Via Internal audits / External audit","L":1,"P":1,"F":1,"S":3,"source":"Context of the Organization 2026 — Interested party No.1"},{"k":"io1","type":"opp","text":"Certification Body — Continual improvement through QMS quality improvement of product and process.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.1","action":"Via Internal audits / External audit","L":1,"P":1,"F":1,"S":3},{"k":"i2","type":"issue","text":"Customers: Customer satisfaction; Fluctuation of customer demand; Customer complains.","party":"Customers","ie":"External","desc":"Need / expectation: Design new products, quality consistency, product reliability, price, quick response & on-time delivery of products\nRisk: Lost customer thrust; Lost market share\nExisting control: Production scheduling and control/ Quality Inspection/ Machine Maintenance/ Instrument calibration","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Interested party No.2"},{"k":"io2","type":"opp","text":"Customers — Looking for new business opportunity. Increased profitability. Reduce claim.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.2","action":"Production scheduling and control/ Quality Inspection/ Machine Maintenance/ Instrument calibration","L":2,"P":2,"F":3,"S":3},{"k":"i3","type":"issue","text":"Suppliers/ Sub Contractors: Product quality fluctuations/ Delivery delays","party":"Suppliers/ Sub Contractors","ie":"External","desc":"Need / expectation: On-time payment; Shorter credit periods; Continuous orders\nRisk: Delays in production schedules/ product rejects/ Delayed customer orders\nExisting control: Monitoring of supplies/ Delivery times/ Supplier evaluation","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Interested party No.3"},{"k":"io3","type":"opp","text":"Suppliers/ Sub Contractors — On time Delivery , low reject production","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.3","action":"Monitoring of supplies/ Delivery times/ Supplier evaluation","L":2,"P":2,"F":3,"S":3},{"k":"i4","type":"issue","text":"Competitors: Threat to business.","party":"Competitors","ie":"External","desc":"Need / expectation: Increasing their market share.\nRisk: Lowering of sales revenues and Market share. Competitors are releasing low price product to the market.\nExisting control: Continual monitoring of markets behaviour & Market intelligence","L":1,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Interested party No.4"},{"k":"io4","type":"opp","text":"Competitors — Market intelligence and prospect of increasing market share. Find new biars. Introduce NPD to market.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.4","action":"Continual monitoring of markets behaviour & Market intelligence","L":1,"P":2,"F":2,"S":3},{"k":"i5","type":"issue","text":"Regulatory bodies: Meeting the compliance obligations/ Possible legal actions/ effect on Company reputation","party":"Regulatory bodies","ie":"External","desc":"Need / expectation: Compliance obligations.\nRisk: Legal actions against compliance, obligations & vialations.\nExisting control: Timely achiving requirement from regulatory bodies.","L":2,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Interested party No.5"},{"k":"io5","type":"opp","text":"Regulatory bodies — Good Corporate Governance/ Improved Corporate image/ Better market opportunities.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.5","action":"Timely achiving requirement from regulatory bodies.","L":2,"P":2,"F":2,"S":3},{"k":"i6","type":"issue","text":"BOI & Sri lanka Customs: To follow the BOI requirements.","party":"BOI & Sri lanka Customs","ie":"External","desc":"Need / expectation: Compliance obligations; (Industry standards , Approvals for factory plans)\nExisting control: follow the BOI procedures","L":2,"P":1,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.6"},{"k":"io6","type":"opp","text":"BOI & Sri lanka Customs — Build company reputation.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.6","action":"follow the BOI procedures","L":2,"P":1,"F":1,"S":1},{"k":"i7","type":"issue","text":"Central Environmental Authority: issue licenses, and addresses public complaints related to environmental issues; grants project approvals.","party":"Central Environmental Authority","ie":"External","desc":"Need / expectation: Complyance with EPL.\nRisk: Hold EPL\nExisting control: annually renew of certificates","L":2,"P":2,"F":2,"S":2,"source":"Context of the Organization 2026 — Interested party No.7"},{"k":"io7","type":"opp","text":"Central Environmental Authority — Well aduption of EMS.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.7","action":"annually renew of certificates","L":2,"P":2,"F":2,"S":2},{"k":"i8","type":"issue","text":"Department of Labour: Provide safety & healthy environment.","party":"Department of Labour","ie":"External","desc":"Need / expectation: Follow all applicable rules & regulation.\nRisk: Legal actions agaits vialation of labour rules.\nExisting control: relevant doc & inspection","L":2,"P":1,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.8"},{"k":"io8","type":"opp","text":"Department of Labour — Build company reputation.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.8","action":"relevant doc & inspection","L":2,"P":1,"F":1,"S":1},{"k":"i9","type":"issue","text":"Neighbors: Need to have good relationship with neighbors","party":"Neighbors","ie":"External","desc":"Need / expectation: Environmental protection. Ethical behavior. Compliance with statutory and regulatory requirements.\nRisk: Environmental Performance; concern.\nExisting control: Daily premise inspection records; Noice & vibration records.","L":1,"P":2,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.9"},{"k":"io9","type":"opp","text":"Neighbors — Good relationship / CSR projects for enhancing thire life.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.9","action":"Daily premise inspection records; Noice & vibration records.","L":1,"P":2,"F":1,"S":1},{"k":"i10","type":"issue","text":"Media/ Pressure Groups/ NGOs: Adverse media propaganda / Company reputation","party":"Media/ Pressure Groups/ NGOs","ie":"External","desc":"Need / expectation: Violation of regulations/labour laws\nRisk: Loss of goodwill/ Customer confidence/ possibility of litigation\nExisting control: External communications","L":1,"P":2,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.10"},{"k":"io10","type":"opp","text":"Media/ Pressure Groups/ NGOs — Keep goodwill","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.10","action":"External communications","L":1,"P":2,"F":1,"S":1},{"k":"i11","type":"issue","text":"Emergency Services: Good practice on health and safety of everyone.","party":"Emergency Services","ie":"External","desc":"Need / expectation: Maintain safety precautions\nRisk: Not attending emergency occations.\nExisting control: Objectives; Internal audit; Lead time; Supplier evaluation","L":1,"P":1,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.11"},{"k":"io11","type":"opp","text":"Emergency Services — Safely haddle emwergency situations.","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.11","action":"Objectives; Internal audit; Lead time; Supplier evaluation","L":1,"P":1,"F":1,"S":1},{"k":"i12","type":"issue","text":"Fire Brigade: Provide better safety and Quick response when emergency situation.","party":"Fire Brigade","ie":"External","desc":"Need / expectation: Prompt notification of fires\nExisting control: Maintain Fire Plan & external communications","L":1,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Interested party No.12"},{"k":"io12","type":"opp","text":"Fire Brigade — Get trainings","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.12","action":"Maintain Fire Plan & external communications","L":1,"P":2,"F":2,"S":3},{"k":"i13","type":"issue","text":"Hospitals / Medical Services/ Ambulance Services: Quick response when emergency situation","party":"Hospitals / Medical Services/ Ambulance Services","ie":"External","desc":"Need / expectation: Prompt notification of accidents/injuries Health Regulations\nExisting control: On time renewal","L":1,"P":1,"F":1,"S":1,"source":"Context of the Organization 2026 — Interested party No.13"},{"k":"i14","type":"issue","text":"Health Authorities: violences of precautions given by health authorities","party":"Health Authorities","ie":"External","desc":"Need / expectation: Comply with Health and Hygiene for all the employees, maintain safety regualations of pandemic/after pandamic control and fulfill all safety equipment to the employees\nRisk: factory lockdown /loss of employee\nExisting control: Made a plan for staring production with following safety procedures and arrange total clean up in factory pramises ,bruoght all safety equipments ,made communications with all the employees","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Interested party No.14"},{"k":"io14","type":"opp","text":"Health Authorities — better health & safety practice in the factory","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.14","action":"Made a plan for staring production with following safety procedures and arrange total clean up in factory pramises ,bruoght all safety equipments ,made communications with all the employees","L":2,"P":2,"F":3,"S":3},{"k":"i15","type":"issue","text":"Police: violences of regulations introduced by responsible departments/government","party":"Police","ie":"External","desc":"Need / expectation: Law enforcement & maintain all safety regulations that government act to the industry sector about pandemic control and lockdown period movement\nRisk: factory lockdown /loss of employee\nExisting control: Given wirrten and vocal instructions","L":2,"P":2,"F":2,"S":3,"source":"Context of the Organization 2026 — Interested party No.15"},{"k":"i16","type":"issue","text":"Business Partners: Investor confidence","party":"Business Partners","ie":"External","desc":"Need / expectation: Reasonable return of investments , good corporate governance.\nRisk: business stability\nExisting control: P&L monitoring","L":2,"P":2,"F":2,"S":2,"source":"Context of the Organization 2026 — Interested party No.16"},{"k":"io16","type":"opp","text":"Business Partners — Better improvement investment opportunities","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.16","action":"P&L monitoring","L":2,"P":2,"F":2,"S":2},{"k":"i17","type":"issue","text":"Employees: Maintaining employee morale and motivation; Competency of the employees","party":"Employees","ie":"Internal","desc":"Need / expectation: Job Security , Salary increment; Employee welfare; Ethical management practices Knowledge and training; Worker friendly work stations; EPF/ ETF; Insurance\nRisk: Lack of moral effect the productivity & quality\nExisting control: Provide training, salaries onetime, EPF and ETF,allowanses etc maintain control of safety procedure, display safety instruction at every departments and monitor,ispection in total factory pramises","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Interested party No.17"},{"k":"io17","type":"opp","text":"Employees — Better industrial relations","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.17","action":"Provide training, salaries onetime, EPF and ETF,allowanses etc maintain control of safety procedure, display safety instruction at every departments and monitor,ispection in total factory pramises","L":2,"P":2,"F":3,"S":3},{"k":"i18","type":"issue","text":"Staff level employees: Maintaining employee morale and motivation/ Competency of the employees","party":"Staff level employees","ie":"Internal","desc":"Need / expectation: Safe and healthy work environment. Employee welfare/Ethical management practices/ Knowledge and training\nRisk: High absenteesm/ High turnover of staff level.\nExisting control: Provide training, salaries onetime, EPF and ETF,allowanses etc maintain control of safety procedure, display safety instruction at every departments and monitor,ispection in total factory pramises","L":2,"P":2,"F":3,"S":3,"source":"Context of the Organization 2026 — Interested party No.18"},{"k":"io18","type":"opp","text":"Staff level employees — Making worker friendly environment","oppSource":"Context of the Organization 2026","oppRef":"Interested party No.18","action":"Provide training, salaries onetime, EPF and ETF,allowanses etc maintain control of safety procedure, display safety instruction at every departments and monitor,ispection in total factory pramises","L":2,"P":2,"F":3,"S":3}];
+
+// Entries taken from "Context of the Organization 2026" (issues, interested parties, risks, opportunities).
+// Scores are converted from the register's Probability x Severity (1-3) so each row keeps the same
+// Low / Medium / High level on this board's L-P-F-S method. Review them against FIT/Q/CH-GEN-32.
+function seedItems(){
+  var d=todayISO();
+  return SEED_2026.map(function(r){
+    var n=newItem(r.type,r.cat||'');
+    n.id='sd26-'+r.k; n.seed=r.k; n.text=r.text; n.date=d;
+    ['L','P','F','S'].forEach(function(k){n[k]=r[k];});
+    if(r.pol)n.pol=r.pol;
+    n.source=r.source||''; n.desc=r.desc||''; n.party=r.party||'';
+    if(r.ie)n.ie=r.ie;
+    if(r.inIssues!==undefined)n.inIssues=r.inIssues;
+    if(r.ref)n.pestelRef='sd26-'+r.ref;
+    if(r.type==='opp'){n.oppSource=r.oppSource||'';n.oppRef=r.oppRef||'';n.opp.action=r.action||'';}
+    return n;
+  });
+}
+var SEEDED_KEY='fitl-context-board-seeded-2026';
+var S=load();
+// first run on an empty board: start with the 2026 register
+if(!S.items.length){
+  try{ if(!localStorage.getItem(SEEDED_KEY)){ S.items=seedItems(); localStorage.setItem(SEEDED_KEY,'1'); localStorage.setItem(KEY,JSON.stringify(S)); } }catch(e){}
+}
+function load(){
+  var st=defaultState();
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){var p=JSON.parse(raw);
+      st.tab=p.tab||st.tab;
+      st.settings=Object.assign(st.settings,p.settings||{});
+      st.items=(p.items||[]).map(function(i){var n=newItem(i.type,i.cat);n=Object.assign(n,i);n.opp=Object.assign({benefit:'',action:'',resp:'',target:'',status:'Open'},i.opp||{});return n;});
+      return st;}
+  }catch(e){}
+  // migrate entries typed into the first version of the board
+  try{
+    var old={pestel:JSON.parse(localStorage.getItem('pestel-analysis')||'null'),swot:JSON.parse(localStorage.getItem('swot-analysis')||'null')};
+    ['pestel','swot'].forEach(function(t){
+      if(!old[t]||!old[t].items)return;
+      Object.keys(old[t].items).forEach(function(cat){
+        (old[t].items[cat]||[]).forEach(function(o){var n=newItem(t,cat);n.text=o.text||'';st.items.push(n);});
+      });
+    });
+  }catch(e){}
+  return st;
+}
+var saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},200);}
+function byId(id){return S.items.filter(function(i){return i.id===id;})[0];}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){t.style.display='none';},2600);}
+
+// ---------- html helpers ----------
+function sel(id,f,val,opts){return '<select data-id="'+id+'" data-f="'+f+'">'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(val)===String(o[0])?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select>';}
+function inp(id,f,val,ph,type){return '<input type="'+(type||'text')+'" data-id="'+id+'" data-f="'+f+'" value="'+esc(val)+'" placeholder="'+esc(ph||'')+'">';}
+function ta(id,f,val,ph,rows){return '<textarea rows="'+(rows||2)+'" data-id="'+id+'" data-f="'+f+'" placeholder="'+esc(ph||'')+'">'+esc(val)+'</textarea>';}
+function fld(label,html){return '<label class="fld"><span>'+label+'</span>'+html+'</label>';}
+function chip(it){var c=calc(it);return '<span class="lvl '+c.level.toLowerCase()+'">'+c.level+'</span><span class="calc">Significance '+c.sig+' × M '+c.m+' = <b>'+c.rating+'</b></span>';}
+function scoreBlock(it){
+  var h=['L','P','F','S'].map(function(k){return fld(CRIT[k].label+' ('+k+')',sel(it.id,k,it[k],CRIT[k].opts));}).join('');
+  h+=fld('Situation (M)',sel(it.id,'sit',it.sit,[['Normal','Normal × 1'],['Abnormal','Abnormal × 1.2'],['Emergency','Emergency × 1.5']]));
+  return '<div class="score">'+h+'<div class="result" data-chip="'+it.id+'">'+chip(it)+'</div></div>';
+}
+function lvlClass(it){return 'lvl-'+calc(it).level.toLowerCase();}
+var IMPACT_OPTS=[['','— choose —'],['Opportunity','Opportunity'],['Threat','Threat']];
+
+// ---------- panels ----------
+function panelPestel(){
+  var h='<div class="bar"><div><h2>PESTEL analysis <span class="sub">· FIT/Q/RG-GEN-27</span></h2><p>Record each external issue, mark it Opportunity or Threat, then score it. Impact in the document is worked out from the score.</p></div>'+
+    '<div class="btns"><button class="btn pri" data-act="dl" data-doc="pestel">Download Word</button></div></div>';
+  PESTEL_CATS.forEach(function(c){
+    var list=S.items.filter(function(i){return i.type==='pestel'&&i.cat===c.id;});
+    h+='<section class="sec" style="--c:'+c.color+'"><div class="sec-head"><span class="ab">'+c.ab+'</span><h3>'+c.label+'</h3></div><p class="hint">'+c.hint+'</p>';
+    if(!list.length)h+='<div class="empty">Nothing added yet.</div>';
+    list.forEach(function(it){
+      h+='<div class="entry '+lvlClass(it)+'" data-card="'+it.id+'"><div class="entry-top"><span class="num" data-num="'+it.id+'"></span>'+ta(it.id,'text',it.text,'State the issue specifically — not a generic heading')+'<button class="x" data-act="del" data-id="'+it.id+'" title="Delete">×</button></div>'+
+        '<div class="grid">'+fld('Opportunity / Threat',sel(it.id,'pol',it.pol,IMPACT_OPTS))+
+        fld('Timeframe',sel(it.id,'timeframe',it.timeframe,[['','— choose —'],['Immediate','Immediate'],['Short-term','Short-term'],['Long-term','Long-term']]))+
+        fld('Source',inp(it.id,'source',it.source,'e.g. Customs/trade bulletin'))+fld('Date identified',inp(it.id,'date',it.date,'','date'))+'</div>'+scoreBlock(it)+'</div>';
+    });
+    h+='<button class="btn sm" data-act="add" data-type="pestel" data-cat="'+c.id+'">+ Add '+c.label.toLowerCase()+' issue</button></section>';
+  });
+  return h;
+}
+function pestelOptions(it,D){
+  var want=it.cat==='opportunities'?'Opportunity':'Threat';
+  var o=[['','— not linked —']];
+  D.pRows.forEach(function(r){if(r.item&&r.item.pol===want)o.push([r.item.id,'No.'+r.no+' · '+r.item.text.slice(0,70)]);});
+  return o;
+}
+function panelSwot(){
+  var D=derive(S);
+  var h='<div class="bar"><div><h2>SWOT analysis <span class="sub">· FIT/Q/RG-GEN-28</span></h2><p>Opportunities and Threats come from PESTEL — use the sync button to bring them in with their scores. Rank is automatic, highest Risk Rating first.</p></div>'+
+    '<div class="btns"><button class="btn" data-act="sync">Sync from PESTEL</button><button class="btn pri" data-act="dl" data-doc="swot">Download Word</button></div></div>';
+  h+='<div class="quads">';
+  SWOT_QUADS.forEach(function(q){
+    var list=S.items.filter(function(i){return i.type==='swot'&&i.cat===q.id;});
+    var ext=(q==='opportunities'||q.id==='opportunities'||q.id==='threats');
+    h+='<section class="sec" style="--c:'+q.color+'"><div class="sec-head"><span class="ab">'+q.ab+'</span><div><h3>'+q.label+'</h3><div class="s">'+q.sub+'</div></div></div><p class="hint">'+q.hint+'</p>';
+    if(!list.length)h+='<div class="empty">Nothing added yet.</div>';
+    list.forEach(function(it){
+      var extra=ext?fld('Linked PESTEL entry',sel(it.id,'pestelRef',it.pestelRef,pestelOptions(it,D))):'';
+      h+='<div class="entry '+lvlClass(it)+'" data-card="'+it.id+'"><div class="entry-top"><span class="num rank" data-rank="'+it.id+'"></span>'+ta(it.id,'text',it.text,'A specific, concrete statement — not a vague category')+'<button class="x" data-act="del" data-id="'+it.id+'" title="Delete">×</button></div>'+
+        '<div class="grid">'+extra+fld('Date identified',inp(it.id,'date',it.date,'','date'))+
+        '<label class="chk"><input type="checkbox" data-id="'+it.id+'" data-f="inIssues"'+(it.inIssues?' checked':'')+'> Add to Issue Register</label></div>'+scoreBlock(it)+'</div>';
+    });
+    h+='<button class="btn sm" data-act="add" data-type="swot" data-cat="'+q.id+'">+ Add '+q.label.toLowerCase().replace(/s$/,'')+'</button></section>';
+  });
+  return h+'</div>';
+}
+function panelIssues(){
+  var D=derive(S);
+  var h='<div class="bar"><div><h2>Issue register <span class="sub">· FIT/Q/RG-GEN-22</span></h2><p>Built automatically from PESTEL entries (external), SWOT strengths/weaknesses you tick (internal) and anything added here. Add the party, reason and risk reference.</p></div>'+
+    '<div class="btns"><button class="btn" data-act="add" data-type="issue" data-cat="">+ Add issue</button><button class="btn pri" data-act="dl" data-doc="issues">Download Word</button></div></div>';
+  if(!D.issues.length)h+='<div class="empty">No issues yet. Add PESTEL entries, or add an issue manually.</div>';
+  D.issues.forEach(function(r){
+    var it=r.item,manual=it.type==='issue';
+    h+='<div class="entry '+lvlClass(it)+'" data-card="'+it.id+'"><div class="entry-top"><span class="num">No.'+r.no+'</span><div style="flex:1">'+
+      (manual?ta(it.id,'text',it.text,'Issue'):'<div class="ro">'+esc(it.text)+'</div>')+
+      '<div class="rank">'+r.ie+' · from '+esc(r.origin)+'</div></div>'+
+      (manual?'<button class="x" data-act="del" data-id="'+it.id+'" title="Delete">×</button>':'<button class="btn sm quiet" data-act="unissue" data-id="'+it.id+'">Remove from register</button>')+'</div>'+
+      '<div class="grid">'+(manual?fld('Internal / External',sel(it.id,'ie',it.ie,[['External','External'],['Internal','Internal']])):'')+
+      fld('Related interested party',inp(it.id,'party',it.party,it.type==='pestel'?'Macro Environment':'e.g. Employees'))+
+      fld('Date identified',inp(it.id,'date',it.date,'','date'))+
+      fld('Linked risk / opportunity ref',r.auto?'<div class="ro">'+esc(r.ref)+' (automatic)</div>':inp(it.id,'riskRef',it.riskRef,'RG-GEN-23, No.__'))+
+      fld('Status',sel(it.id,'status',it.status,[['Open','Open'],['Closed','Closed']]))+'</div>'+
+      fld('Description / reason for consideration',ta(it.id,'desc',it.desc,'Why this matters to FITL'))+
+      '<div class="result" style="margin-top:8px" data-chip="'+it.id+'">'+chip(it)+'</div>'+
+      (manual?scoreBlock(it).replace('<div class="result" data-chip="'+it.id+'">'+chip(it)+'</div>',''):'')+
+      '<div data-flag="'+it.id+'"></div></div>';
+  });
+  var avail=S.items.filter(function(i){return (i.type==='pestel'||i.type==='swot')&&valid(i)&&!i.inIssues&&i.inIssues!==undefined&&(i.type==='pestel'||i.cat!=='opportunities'&&i.cat!=='threats'||true);});
+  avail=avail.filter(function(i){return !i.inIssues;});
+  if(avail.length){
+    h+='<details><summary>Not in the register ('+avail.length+')</summary><div style="margin-top:8px">'+avail.map(function(i){
+      return '<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="flex:1;font-size:.82rem">'+esc(i.text)+' <span class="rank">· '+(i.type==='pestel'?'PESTEL':'SWOT '+i.cat)+'</span></span><button class="btn sm" data-act="inissue" data-id="'+i.id+'">Add</button></div>';}).join('')+'</div></details>';
+  }
+  return h;
+}
+function panelOpps(){
+  var D=derive(S);
+  var h='<div class="bar"><div><h2>Record for opportunities <span class="sub">· FIT/Q/RG-GEN-24</span></h2><p>PESTEL entries marked Opportunity and SWOT Opportunities appear here automatically (linked ones merge into one row). Add the benefit, action, owner and target date.</p></div>'+
+    '<div class="btns"><button class="btn" data-act="add" data-type="opp" data-cat="">+ Add opportunity</button><button class="btn pri" data-act="dl" data-doc="opps">Download Word</button></div></div>';
+  if(!D.opps.length)h+='<div class="empty">No opportunities yet. Mark a PESTEL entry as Opportunity, or add one manually (e.g. from a Management Review).</div>';
+  D.opps.forEach(function(o){
+    var it=o.primary,f=it.opp,manual=it.type==='opp';
+    h+='<div class="entry '+lvlClass(it)+'" data-card="'+it.id+'"><div class="entry-top"><span class="num">No.'+o.no+'</span><div style="flex:1">'+
+      (manual?ta(it.id,'text',it.text,'Opportunity'):'<div class="ro">'+esc(o.text)+'</div>')+
+      '<div class="rank">'+(manual?'':esc(o.source)+' · '+esc(o.ref))+'</div></div>'+
+      (manual?'<button class="x" data-act="del" data-id="'+it.id+'" title="Delete">×</button>':'')+'</div>'+
+      (manual?'<div class="grid">'+fld('Source',inp(it.id,'oppSource',it.oppSource,'e.g. Risk Assessment Register'))+fld('Related reference',inp(it.id,'oppRef',it.oppRef,'e.g. FIT/Q/RG-GEN-23, No.1'))+fld('Date identified',inp(it.id,'date',it.date,'','date'))+'</div>':'')+
+      '<div class="grid">'+fld('Potential benefit',ta(it.id,'opp.benefit',f.benefit,'',2))+fld('Action to pursue',ta(it.id,'opp.action',f.action,'Every opportunity gets a decision — even "monitor only"',2))+
+      fld('Responsible',inp(it.id,'opp.resp',f.resp,'Defaults to Top Management if High'))+fld('Target date',inp(it.id,'opp.target',f.target,'','date'))+
+      fld('Status',sel(it.id,'opp.status',f.status,[['Open','Open'],['Actioned','Actioned'],['Closed','Closed']]))+'</div>'+
+      '<div class="result" data-chip="'+it.id+'">'+chip(it)+'</div>'+(manual?scoreBlock(it).replace('<div class="result" data-chip="'+it.id+'">'+chip(it)+'</div>',''):'')+
+      '<div data-flag="'+it.id+'"></div></div>';
+  });
+  return h;
+}
+function panelMatrix(){
+  var D=derive(S);
+  var all=[];
+  D.pRows.forEach(function(r){if(r.item)all.push({it:r.item,where:'PESTEL No.'+r.no});});
+  SWOT_QUADS.forEach(function(q){D.sQ[q.id].forEach(function(r){all.push({it:r.item,where:'SWOT '+r.code});});});
+  S.items.forEach(function(m){if((m.type==='issue'||m.type==='opp')&&valid(m))all.push({it:m,where:m.type==='issue'?'Issue (manual)':'Opportunity (manual)'});});
+  all.forEach(function(a){a.c=calc(a.it);});
+  all.sort(function(a,b){return b.c.rating-a.c.rating;});
+  var cnt={High:0,Medium:0,Low:0};all.forEach(function(a){cnt[a.c.level]++;});
+  var h='<div class="bar"><div><h2>Risk &amp; significance rating matrix <span class="sub">· FIT/Q/CH-GEN-32</span></h2><p>One method for QMS risks and EMS aspects. Every entry on this board is scored with it.</p></div></div>';
+  h+='<div class="stats" style="margin-bottom:14px"><div class="stat"><b>'+cnt.High+'</b>High</div><div class="stat"><b>'+cnt.Medium+'</b>Medium</div><div class="stat"><b>'+cnt.Low+'</b>Low</div></div>';
+  h+='<div class="scroll"><table class="ref"><tr><th>Criterion</th><th>Question</th><th>Low (1)</th><th>Medium (2)</th><th>High (3)</th></tr>'+
+   '<tr><td><b>Legal Liabilities (L)</b></td><td>Is it regulated, or subject to legal/contractual consequence?</td><td>Not regulated / no legal exposure</td><td>Possible fine or contractual penalty</td><td>Criminal action or contract termination</td></tr>'+
+   '<tr><td><b>Public / Stakeholder Concern (P)</b></td><td>Has a customer, regulator, the public or another stakeholder ever expressed concern?</td><td>Never</td><td>Sometimes</td><td>Often</td></tr>'+
+   '<tr><td><b>Frequency (F)</b></td><td>How often does it occur?</td><td>Less than once a year</td><td>Between 1 month and 1 year</td><td>Often (routine/continuous)</td></tr>'+
+   '<tr><td><b>Severity (S)</b></td><td>What is the overall severity of the impact if it occurs?</td><td>Impact on amenity / minor inconvenience</td><td>Impact on minor quality, cost, water, soil, or air</td><td>Detrimental to human health, safety, flora/fauna, or business continuity</td></tr></table></div>';
+  h+='<div class="formula">Significance = (P + F) × (L + S) &nbsp;·&nbsp; Risk Rating = Significance × M</div>'+
+   '<p class="hint">M: Normal 1 · Abnormal 1.2 · Emergency 1.5. Significance ranges 4–36 (≥ 16 is Significant); Risk Rating ranges 4–54.</p>'+
+   '<div class="scroll"><table class="ref"><tr><th>Risk Rating</th><th>Level</th><th>Required response</th></tr>'+
+   '<tr><td>&lt; 16</td><td><span class="lvl low">Low / Not Significant</span></td><td>'+RESP.Low+'</td></tr>'+
+   '<tr><td>16–23</td><td><span class="lvl medium">Medium / Significant</span></td><td>'+RESP.Medium+'</td></tr>'+
+   '<tr><td>≥ 24</td><td><span class="lvl high">High / Significant — Priority</span></td><td>'+RESP.High+'</td></tr></table></div>';
+  h+='<h2 style="font-family:var(--d);font-size:1.1rem;margin:18px 0 6px">Priority list</h2>';
+  if(!all.length)h+='<div class="empty">Nothing scored yet.</div>';
+  else h+='<div class="scroll"><table class="ref"><tr><th>Item</th><th>Where</th><th>Sig.</th><th>M</th><th>Rating</th><th>Level</th><th>Required response</th></tr>'+all.map(function(a){
+    return '<tr><td>'+esc(a.it.text)+'</td><td>'+esc(a.where)+'</td><td>'+a.c.sig+'</td><td>'+a.c.m+'</td><td><b>'+a.c.rating+'</b></td><td><span class="lvl '+a.c.level.toLowerCase()+'">'+a.c.level+'</span></td><td>'+RESP[a.c.level]+'</td></tr>';}).join('')+'</table></div>';
+  return h;
+}
+function panelDocs(){
+  var D=derive(S),st=S.settings;
+  var counts={pestel:D.pRows.filter(function(r){return r.item;}).length,swot:Object.keys(D.sQ).reduce(function(n,k){return n+D.sQ[k].length;},0),issues:D.issues.length,opps:D.opps.length};
+  var h='<div class="bar"><div><h2>Generate documents</h2><p>Each file is built from the entries on the board, in the FIT document format with the standard header and Reviewed/Approved footer.</p></div><div class="btns"><button class="btn pri" data-act="dlall">Download all four (.zip)</button></div></div>';
+  h+='<div class="sec" style="--c:#2F6B3C"><div class="sec-head"><h3>2026 Context of the Organization register</h3></div><p class="hint">Adds the register\'s issues, interested parties, risks and opportunities to the board. Entries already added are skipped, so it is safe to press more than once.</p><button class="btn" data-act="seed">Load 2026 register</button></div>';
+  h+='<div class="sec" style="--c:#1E2A22"><div class="sec-head"><h3>Document control</h3></div><div class="grid">'+
+    fld('Issue No',inp('settings','issueNo',st.issueNo))+fld('Issue date',inp('settings','issueDate',st.issueDate,'yyyy.mm.dd'))+fld('Revision No',inp('settings','revNo',st.revNo))+fld('Revision date',inp('settings','revDate',st.revDate,'yyyy.mm.dd'))+
+    fld('Reviewed by',inp('settings','reviewed',st.reviewed))+fld('Approved by',inp('settings','approved',st.approved))+
+    '<label class="chk"><input type="checkbox" data-id="settings" data-f="scoringTable"'+(st.scoringTable?' checked':'')+'> Add scoring-basis table to PESTEL and SWOT</label></div></div>';
+  ['issues','opps','pestel','swot'].forEach(function(k){var d=DOCS[k];
+    h+='<div class="doccard"><div><h4>'+d.code+' — '+d.title.charAt(0)+d.title.slice(1).toLowerCase()+'</h4><p>'+counts[k]+' row'+(counts[k]===1?'':'s')+' · '+d.page+' · '+d.file+'</p></div><button class="btn" data-act="dl" data-doc="'+k+'">Download Word</button></div>';});
+  var ch=runChecks(S,D);
+  h+='<div class="checks"><b>Checks before issuing</b>'+(ch.length?'<ul>'+ch.map(function(c){return '<li class="'+c.lvl+'"><b>'+c.doc+':</b> '+esc(c.msg)+'</li>';}).join('')+'</ul>':'<p class="hint" style="margin:6px 0 0">Nothing outstanding.</p>')+'</div>';
+  return h;
+}
+
+var TABS=[['pestel','PESTEL','RG-GEN-27',panelPestel],['swot','SWOT','RG-GEN-28',panelSwot],['issues','Issues','RG-GEN-22',panelIssues],['opps','Opportunities','RG-GEN-24',panelOpps],['matrix','Matrix','CH-GEN-32',panelMatrix],['docs','Documents','Word files',panelDocs]];
+function render(){
+  document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-act="tab" data-tab="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+t[1]+'<small>'+t[2]+'</small></button>';}).join('');
+  var t=TABS.filter(function(x){return x[0]===S.tab;})[0]||TABS[0];
+  document.getElementById('panel').innerHTML=t[3]();
+  document.querySelectorAll('#panel textarea').forEach(grow);
+  refresh();
+}
+function grow(el){el.style.height='auto';el.style.height=Math.max(34,el.scrollHeight)+'px';}
+
+// refresh derived read-outs without re-rendering inputs
+function refresh(){
+  var D=derive(S);
+  S.items.forEach(function(it){
+    var c=calc(it);
+    var chipEl=document.querySelector('[data-chip="'+it.id+'"]');if(chipEl)chipEl.innerHTML=chip(it);
+    var card=document.querySelector('[data-card="'+it.id+'"]');
+    if(card){card.className='entry lvl-'+c.level.toLowerCase();}
+    var n=document.querySelector('[data-num="'+it.id+'"]');if(n)n.textContent=D.pNo[it.id]?'No.'+D.pNo[it.id]:'—';
+    var r=document.querySelector('[data-rank="'+it.id+'"]');if(r)r.textContent=D.sRank[it.id]?'Rank '+D.sRank[it.id]:'—';
+    var fl=document.querySelector('[data-flag="'+it.id+'"]');
+    if(fl){
+      var html='';
+      if(S.tab==='opps'){
+        var f=it.opp;
+        if(c.level==='High')html='<div class="flag high">High — immediate action and escalation to Top Management / Director.'+((f.resp||'').trim()?'':' Responsible will print as Top Management / Director.')+'</div>';
+        else if(c.level==='Medium'&&(!(f.action||'').trim()||!(f.resp||'').trim()||!f.target))html='<div class="flag">Medium — needs a defined action, owner and target date.</div>';
+        else if(c.level==='Low')html='<div class="flag ok">Low — maintain existing controls.</div>';
+      }else if(S.tab==='issues'){
+        var row=D.issues.filter(function(x){return x.item.id===it.id;})[0];
+        if(c.significant&&row&&!row.auto&&!it.riskRef)html='<div class="flag'+(c.level==='High'?' high':'')+'">'+c.level+' — enter this in the Risk Assessment Register (RG-GEN-23) and add the row reference.</div>';
+      }
+      fl.innerHTML=html;
+    }
+  });
+  var all=S.items.filter(valid).map(calc);
+  document.getElementById('stats').innerHTML='<div class="stat"><b>'+all.length+'</b>scored entries</div><div class="stat"><b>'+all.filter(function(c){return c.significant;}).length+'</b>significant</div><div class="stat"><b>'+all.filter(function(c){return c.level==='High';}).length+'</b>high priority</div>';
+}
+
+// ---------- events ----------
+function setPath(obj,path,val){var p=path.split('.');var o=obj;for(var i=0;i<p.length-1;i++)o=o[p[i]];o[p[p.length-1]]=val;}
+function onField(e){
+  var t=e.target;if(!t.dataset||!t.dataset.f)return;
+  var id=t.dataset.id,f=t.dataset.f;
+  var val=t.type==='checkbox'?t.checked:t.value;
+  if(id==='settings'){S.settings[f]=val;save();return;}
+  var it=byId(id);if(!it)return;
+  if(['L','P','F','S'].indexOf(f)>=0)val=parseInt(val,10);
+  setPath(it,f,val);
+  if(f==='pestelRef'&&val){
+    var p=byId(val);
+    if(p){['L','P','F','S','sit'].forEach(function(k){it[k]=p[k];});if(!it.text.trim())it.text=p.text;it.date=p.date;render();save();return;}
+  }
+  if(t.tagName==='TEXTAREA')grow(t);
+  if(f==='pol'||f==='inIssues'&&false){}
+  save();refresh();
+}
+document.addEventListener('input',function(e){if(e.target.tagName==='TEXTAREA'||e.target.type==='text')onField(e);});
+document.addEventListener('change',function(e){if(e.target.tagName==='SELECT'||e.target.type==='date'||e.target.type==='checkbox')onField(e);});
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var a=b.dataset.act;
+  if(a==='tab'){S.tab=b.dataset.tab;save();render();window.scrollTo(0,0);}
+  else if(a==='add'){var n=newItem(b.dataset.type,b.dataset.cat);S.items.push(n);save();render();var el=document.querySelector('[data-card="'+n.id+'"] textarea');if(el)el.focus();}
+  else if(a==='del'){S.items=S.items.filter(function(i){return i.id!==b.dataset.id;});S.items.forEach(function(i){if(i.pestelRef===b.dataset.id)i.pestelRef='';});save();render();}
+  else if(a==='unissue'||a==='inissue'){var it=byId(b.dataset.id);if(it){it.inIssues=(a==='inissue');save();render();}}
+  else if(a==='sync'){
+    var D=derive(S),made=0;
+    D.pRows.forEach(function(r){
+      if(!r.item||!r.item.pol)return;
+      var linked=S.items.some(function(s){return s.type==='swot'&&s.pestelRef===r.item.id;});
+      if(linked)return;
+      var n=newItem('swot',r.item.pol==='Opportunity'?'opportunities':'threats');
+      n.text=r.item.text;n.pestelRef=r.item.id;n.date=r.item.date;['L','P','F','S','sit'].forEach(function(k){n[k]=r.item[k];});
+      S.items.push(n);made++;
+    });
+    save();render();toast(made?made+' item'+(made>1?'s':'')+' brought in from PESTEL.':'Everything marked Opportunity or Threat in PESTEL is already in SWOT.');
+  }
+  else if(a==='seed'){
+    var have={};S.items.forEach(function(i){if(i.seed)have[i.seed]=1;});
+    var add=seedItems().filter(function(i){return !have[i.seed];});
+    if(!add.length){toast('The 2026 register is already on the board.');}
+    else{S.items=S.items.concat(add);save();render();toast(add.length+' entries added from the 2026 Context of the Organization register.');}
+  }
+  else if(a==='dl'){download(b.dataset.doc);}
+  else if(a==='dlall'){downloadAll();}
+});
+
+function saveBlob(blob,name){var u=URL.createObjectURL(blob);var l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();document.body.removeChild(l);setTimeout(function(){URL.revokeObjectURL(u);},1500);}
+function needZip(){if(typeof JSZip==='undefined'){toast('Word export needs an internet connection to load its zip library — check your connection and reload.');return true;}return false;}
+function download(key){
+  if(needZip())return;
+  buildDocx(key,S,JSZip).generateAsync({type:'blob',compression:'DEFLATE',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}).then(function(b){saveBlob(b,DOCS[key].file);toast('Downloaded '+DOCS[key].code);});
+}
+function downloadAll(){
+  if(needZip())return;
+  var out=new JSZip(),keys=['issues','opps','pestel','swot'];
+  Promise.all(keys.map(function(k){return buildDocx(k,S,JSZip).generateAsync({type:'uint8array',compression:'DEFLATE'}).then(function(d){out.file(DOCS[k].file,d);});}))
+    .then(function(){return out.generateAsync({type:'blob'});})
+    .then(function(b){saveBlob(b,'FITL_Context_Documents.zip');toast('Downloaded all four documents');});
+}
+
+render();
+})();
+</script>
+</body>
+</html>
