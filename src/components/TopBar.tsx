@@ -16,6 +16,11 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   '/admin/people': ['People and passwords', 'Administrator'],
   '/admin/audit': ['Audit log', 'Administrator'],
   '/admin/data': ['Stored data', 'Administrator'],
+  '/stores/receive': ['Stores Department', 'Receive'],
+  '/stores/issue': ['Stores Department', 'Issue'],
+  '/stores/stock': ['Stores Department', 'Stock'],
+  '/stores/movements': ['Stores Department', 'Movements'],
+  '/stores/backup': ['Stores Department', 'Backup'],
 };
 
 export function TopBar({ section, tabLabel, pathname, onMenu }: { section?: Section; tabLabel?: string; pathname: string; onMenu: () => void }) {

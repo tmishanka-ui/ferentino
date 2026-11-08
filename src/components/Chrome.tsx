@@ -53,6 +53,9 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
               <span className="nav-ico"><Icon name={s.icon} size={16} /></span><span className="t">{s.title}</span>
             </Link>
           ))}
+          <Link href="/stores/receive" className={'nav-link' + (pathname.startsWith('/stores') ? ' on' : '')} style={{ ['--dot' as string]: '#CA8A04' }}>
+            <span className="nav-ico"><Icon name="box" size={16} /></span><span className="t">Stores Department</span>
+          </Link>
           <div className="side-label">Records</div>
           <Link href="/signatures" className={'nav-link' + (pathname.startsWith('/signatures') ? ' on' : '')}>
             <span className="nav-ico"><Icon name="sign" size={16} /></span><span className="t">Signature log</span>

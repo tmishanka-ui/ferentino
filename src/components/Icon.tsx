@@ -22,6 +22,8 @@ const PATHS: Record<string, string> = {
   list: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01',
   db: 'M12 3a8 3 0 1 0 0 6 8 3 0 0 0 0-6z M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
   close: 'M6 6l12 12 M18 6L6 18',
+  box: 'M3 7l9-4 9 4-9 4-9-4z M3 7v10l9 4 9-4V7 M12 11v10 M7.5 5l9 4',
+  qr: 'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M15 15h2v2h-2z M19 15h1v1h-1z M15 19h1v1h-1z M18 18h2v2h-2z',
 };
 
 export type IconKey = keyof typeof PATHS | string;

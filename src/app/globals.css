@@ -87,8 +87,8 @@ h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 500; lett
 .gate-card { width: min(400px, 100%); }
 .gate-card h2 { font-size: 30px; margin-bottom: 4px; }
 .tabs-inline { display: flex; gap: 4px; margin: 16px 0 4px; padding: 4px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 9px; }
-.tabs-inline button { flex: 1; min-height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 500; }
-.tabs-inline button.on { background: var(--bg-raise); color: var(--text); box-shadow: 0 0 0 1px var(--border-strong); }
+.tabs-inline button, .tabs-inline a { flex: 1; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 500; text-align: center; }
+.tabs-inline button.on, .tabs-inline a.on { background: var(--bg-raise); color: var(--text); box-shadow: 0 0 0 1px var(--border-strong); }
 .splash { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg-page); text-align: center; padding: 20px; }
 .splash .spin { width: 38px; height: 38px; margin: 0 auto 18px; border-radius: 50%; border: 3px solid var(--border-strong); border-top-color: var(--brand); animation: spin 0.9s linear infinite; }
 .splash p { margin: 0; color: var(--text-2); }
@@ -192,6 +192,32 @@ td.act { white-space: nowrap; text-align: right; }
 td.act .btn { margin-left: 6px; }
 .empty { padding: 28px; text-align: center; color: var(--text-2); }
 .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 12.5px; }
+
+/* ---------- stores department ---------- */
+.input.lg { min-height: 56px; font-size: 19px; padding: 0 16px; }
+.scan-wrap { position: relative; }
+.suggest { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 14px 34px rgba(0, 0, 0, .45); overflow: hidden; }
+.suggest button { display: flex; width: 100%; justify-content: space-between; gap: 10px; min-height: 44px; padding: 0 14px; border: 0; background: transparent; text-align: left; font-size: 14px; }
+.suggest button:hover, .suggest button:focus-visible { background: var(--bg-hover); }
+.suggest .bal { color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+.bin-panel { margin-top: 18px; padding: 18px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; }
+.bin-top { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
+.bin-balance { font: 600 clamp(40px, 7vw, 68px)/1 var(--font-display); color: var(--text); }
+.bin-balance .unit { font-size: .4em; color: var(--text-2); font-family: var(--font-body); }
+.bin-balance.low { color: var(--bad); }
+.qr-box { display: flex; flex-direction: column; gap: 10px; }
+.qr-row { display: flex; gap: 14px; align-items: center; }
+.qr-row img { background: #fff; border-radius: 6px; padding: 6px; }
+.qr-ph { background: var(--bg-hover); border-radius: 6px; }
+.qr-code { font: 700 16px ui-monospace, 'Cascadia Mono', Consolas, monospace; }
+tr.low td { color: var(--bad); }
+.toggle2 { display: flex; gap: 4px; margin-bottom: 14px; padding: 4px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 9px; }
+.toggle2 button { flex: 1; min-height: 38px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font-weight: 500; font-size: 13px; }
+.toggle2 button.on { background: var(--bg-raise); color: var(--text); box-shadow: 0 0 0 1px var(--border-strong); }
+.count-line { margin: 10px 0 0; color: var(--text-2); font-size: 12.5px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-bottom: 16px; }
+.filters .field { margin-top: 0; min-width: 160px; flex: 1; }
+.checkbox { display: flex; align-items: center; min-height: 20px; }
 
 /* ---------- small screens ---------- */
 .scrim { display: none; }

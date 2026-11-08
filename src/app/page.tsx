@@ -29,6 +29,12 @@ export default function Home() {
             <span className="meta"><span>{s.tabs.length} {s.tabs.length === 1 ? 'app' : 'apps'}</span><Icon name="arrow" size={16} /></span>
           </Link>
         ))}
+        <Link href="/stores" className="card" style={{ ['--c' as string]: '#CA8A04' }}>
+          <span className="ico"><Icon name="box" size={22} /></span>
+          <h3>Stores Department</h3>
+          <p>Receive items with a permanent QR code, scan the label to issue, and keep the balance correct automatically.</p>
+          <span className="meta"><span>5 tabs</span><Icon name="arrow" size={16} /></span>
+        </Link>
       </div>
 
       <div className="panel">

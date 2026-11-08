@@ -140,6 +140,7 @@ The API is the same as before (see the table in the old README), so the working 
 
 ### MongoDB collections
 `users`, `sessions`, `resets`, `signatures`, `audit_log`, `counters`, `data_items`, `data_history`, and the GridFS bucket `files` (`files.files`, `files.chunks`).
+The **Stores Department** (`/stores`) keeps its own ledger outside the generic sync system: `stores_items` (one document per item/QR code) and `stores_txns` (one document per receipt or issue); the balance is never stored, only computed from `stores_txns`.
 
 ## Things to know
 * **One page's records = one MongoDB document**, and MongoDB limits a document to 16 MB, so `MAX_DATA_MB` is capped at 15 (the MySQL version allowed 64). Attached files are not affected (GridFS, up to `MAX_FILE_MB`). If a page ever reaches the limit it says *"too large to save"* and the page's records need splitting.

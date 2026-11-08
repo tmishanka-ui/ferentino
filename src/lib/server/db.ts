@@ -32,6 +32,16 @@ export interface DataItem {
 export interface HistoryEntry { _id: number; k: string; version: number; v: string | null; saved_ms: number; saved_at: string; saved_by_name: string | null }
 export interface Counter { _id: string; v: number }
 
+export interface StoreItem {
+  _id: string; // item code, e.g. FITL-ST-00001
+  name: string; nameLower: string; category: string; unit: string; location: string;
+  minLevel: number | null; createdAt: string; createdBy: string;
+}
+export interface StoreTxn {
+  _id: string; code: string; type: 'R' | 'I'; date: string; ts: number; qty: number;
+  ref: string; party: string; person: string; remarks: string; enteredBy: string;
+}
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -44,6 +54,8 @@ export interface Store {
   items: Collection<DataItem>;
   history: Collection<HistoryEntry>;
   files: GridFSBucket;
+  storesItems: Collection<StoreItem>;
+  storesTxns: Collection<StoreTxn>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -71,6 +83,8 @@ async function connect(): Promise<Store> {
     items: db.collection<DataItem>('data_items'),
     history: db.collection<HistoryEntry>('data_history'),
     files: new GridFSBucket(db, { bucketName: 'files' }),
+    storesItems: db.collection<StoreItem>('stores_items'),
+    storesTxns: db.collection<StoreTxn>('stores_txns'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),
@@ -80,6 +94,10 @@ async function connect(): Promise<Store> {
     s.items.createIndex({ seq: 1 }),
     s.history.createIndex({ k: 1, _id: -1 }),
     db.collection('files.files').createIndex({ filename: 1, uploadDate: -1 }),
+    s.storesItems.createIndex({ nameLower: 1 }, { unique: true }),
+    s.storesTxns.createIndex({ code: 1 }),
+    s.storesTxns.createIndex({ date: 1 }),
+    s.storesTxns.createIndex({ code: 1, date: 1, ts: 1 }),
   ]);
   await firstStart(s);
   return s;
