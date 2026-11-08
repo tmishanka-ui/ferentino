@@ -120,7 +120,8 @@ export default function IssueTab() {
     if (!r.ok) { setMsg(r.j.error || 'Could not issue.'); return; }
     animateNumber(r.j.balanceBefore, r.j.balanceAfter, setDisplayBalance);
     setItem((prev) => prev ? { ...prev, balance: r.j.balanceAfter, issued: round3(prev.issued + qn) } : prev);
-    setRecent((prev) => [{ id: 'just-now', code: item.code, type: 'I', date, ts: Date.now(), qty: qn, ref, party: department, person, remarks, enteredBy: '', balanceAfter: r.j.balanceAfter }, ...prev].slice(0, 5));
+    const row: StoreTxnRow = { id: 'just-now', code: item.code, type: 'I', date, ts: Date.now(), qty: qn, ref, party: department, person, remarks, enteredBy: '', balanceAfter: r.j.balanceAfter };
+    setRecent((prev) => [row, ...prev].slice(0, 5));
     setDoneMsg(`Issued ${fmtQty(qn)} ${r.j.unit} to ${department}. Balance ${r.j.balanceBefore} → ${r.j.balanceAfter} ${r.j.unit}.`);
     setQty(''); setRef(''); setRemarks('');
     load();
