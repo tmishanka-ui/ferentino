@@ -43,8 +43,15 @@ export interface StoreTxn {
 }
 /* The Press Downtime import can be too large for a browser's localStorage (which the generic
    data_items/localStorage sync is built around and would otherwise try to mirror into every
-   signed-in browser), so it gets its own small dedicated collection instead, one document only. */
-export interface DowntimeDoc { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+   signed-in browser), so it gets its own small dedicated storage instead: one small metadata
+   document (file names, tablet report log) plus one row per downtime record — never one big
+   blob, since a Vercel Function also refuses any single request/response over 4.5 MB. */
+export interface DowntimeMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+export interface DowntimeRecord {
+  _id: string; src: 'PRW' | 'TR';
+  s: number; y: number; m: number; w: number; dw: number; dd: number;
+  c: string; r: string; l: string; p: string; sh: string; n: number; tab: string;
+}
 
 export interface Store {
   client: MongoClient;
@@ -60,7 +67,8 @@ export interface Store {
   files: GridFSBucket;
   storesItems: Collection<StoreItem>;
   storesTxns: Collection<StoreTxn>;
-  downtime: Collection<DowntimeDoc>;
+  downtimeMeta: Collection<DowntimeMeta>;
+  downtimeRecords: Collection<DowntimeRecord>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -90,7 +98,8 @@ async function connect(): Promise<Store> {
     files: new GridFSBucket(db, { bucketName: 'files' }),
     storesItems: db.collection<StoreItem>('stores_items'),
     storesTxns: db.collection<StoreTxn>('stores_txns'),
-    downtime: db.collection<DowntimeDoc>('downtime_data'),
+    downtimeMeta: db.collection<DowntimeMeta>('downtime_meta'),
+    downtimeRecords: db.collection<DowntimeRecord>('downtime_records'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),
@@ -104,6 +113,7 @@ async function connect(): Promise<Store> {
     s.storesTxns.createIndex({ code: 1 }),
     s.storesTxns.createIndex({ date: 1 }),
     s.storesTxns.createIndex({ code: 1, date: 1, ts: 1 }),
+    s.downtimeRecords.createIndex({ src: 1 }),
   ]);
   await firstStart(s);
   return s;

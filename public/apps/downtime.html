@@ -86,46 +86,46 @@ function kl(k,t){if(t=='day')return fd(k,{weekday:'short',day:'numeric',month:'s
 const TABLET_NAMES=['Tablet 1 — 1M & 2M','Tablet 2 — 3M & 4M','Tablet 3 — 5M & 6M','Tablet 4 — 7M'];
 let PRW=[],PRWname='',TR=[],TRF=[],trSeen=new Set(),prodBad={n:0,codes:new Map()};
 const readBuf=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res({name:f.name,buffer:fr.result});fr.onerror=()=>rej(new Error('Could not read '+f.name));fr.readAsArrayBuffer(f)});
-/* ---------- persistence: saved directly to the server in its own small collection (not this
-   browser's localStorage, which the host page would otherwise try to mirror into every signed-in
-   browser — this import is routinely too large for that shared, limited storage). ---------- */
-let dtVer=0;
-function dtGet(){
- return fetch('/api/downtime',{credentials:'same-origin'}).then(r=>{
-  if(!r.ok)return r.json().catch(()=>({})).then(j=>{throw new Error(j.error||('the server answered '+r.status))});
-  return r.json();
- }).then(j=>{dtVer=j.version||0;return j.data});
+/* ---------- persistence: saved directly to the server, always in small pieces — a Vercel
+   Function refuses any single request or response body over 4.5 MB, so this never sends or
+   asks for more than a couple of thousand records at once (see /api/downtime and
+   /api/downtime/records: one small metadata document, plus one row per downtime record). ---------- */
+const chunk=(a,n)=>{const o=[];for(let i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o};
+const asJson=r=>r.ok?r.json():r.json().catch(()=>({})).then(j=>{throw new Error(j.error||('the server answered '+r.status))});
+function metaGet(){return fetch('/api/downtime',{credentials:'same-origin'}).then(asJson).then(j=>j.data)}
+function metaPut(){
+ const data={PRWname,TRF,prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN};
+ return fetch('/api/downtime',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1','X-Force':'1'},body:JSON.stringify({data})}).then(asJson);
 }
-function dtApply(d){
- if(!d)return;
- PRW=d.PRW||[];PRWname=d.PRWname||'';TR=d.TR||[];TRF=d.TRF||[];trSeen=new Set(d.trSeen||[]);
- prodBad={n:(d.prodBad&&d.prodBad.n)||0,codes:new Map((d.prodBad&&d.prodBad.codes)||[])};FN=d.FN||'';
- R=PRW.concat(TR);
+function recordsGetAll(){
+ const all=[];
+ const page=skip=>fetch('/api/downtime/records?skip='+skip+'&limit=2000',{credentials:'same-origin'}).then(asJson)
+  .then(j=>{const rows=j.records||[];all.push(...rows);return j.more?page(skip+rows.length):all});
+ return page(0);
 }
-function dtPut(){
- const data={PRW,PRWname,TR,TRF,trSeen:[...trSeen],prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN};
- return fetch('/api/downtime',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1','X-Base-Version':String(dtVer)},body:JSON.stringify({data})}).then(r=>{
-  if(r.status===409)return 'conflict';
-  if(!r.ok)return r.json().catch(()=>({})).then(j=>{throw new Error(j.error||('the server answered '+r.status))});
-  return r.json().then(j=>{dtVer=j.version;return 'ok'});
- });
+function postRecords(src,records,replace){
+ let batches=chunk(records,1500);
+ if(replace&&!batches.length)batches=[[]];
+ let p=Promise.resolve();
+ batches.forEach((batch,i)=>{p=p.then(()=>fetch('/api/downtime/records',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1'},body:JSON.stringify({src,records:batch,replace:replace&&i===0})}).then(asJson))});
+ return p;
 }
-/** parses the raw files into the current PRW/TR/… globals (used for the first attempt, and again to replay the same import onto a freshly-fetched copy if somebody else saved in between) */
+function recordsClear(){return fetch('/api/downtime/records',{method:'DELETE',credentials:'same-origin',headers:{'X-FIT-Request':'1'}}).then(r=>{if(!r.ok)throw new Error('the server answered '+r.status)})}
+/** parses the raw files into the current PRW/TR/… globals, and reports only what is new from this
+    import — that is all that needs to reach the server (addTrace already dedupes within one import). */
 function applyFiles(list){
- const trace=[],prodFiles=[];
+ const trace=[],prodFiles=[];let newTR=[],replacePRW=false;
  list.forEach(f=>{const names=sheetNames(f.buffer);
-  if(names.includes('Downtime log')){addTrace(f,names);trace.push(f)}
-  else{const r=parseProduction(f.buffer);PRW=r.out;PRWname=f.name;prodBad={n:r.badN,codes:r.bad};prodFiles.push(f)}});
+  if(names.includes('Downtime log')){const before=TR.length;addTrace(f,names);newTR=newTR.concat(TR.slice(before));trace.push(f)}
+  else{const r=parseProduction(f.buffer);PRW=r.out;PRWname=f.name;prodBad={n:r.badN,codes:r.bad};prodFiles.push(f);replacePRW=true}});
  R=PRW.concat(TR);
- return {trace,prodFiles};
+ return {trace,prodFiles,newTR,replacePRW};
 }
-function pushToServer(list,attempt){
- attempt=attempt||1;
- return dtPut().then(res=>{
-  if(res!=='conflict')return;
-  if(attempt>=3){$('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server: somebody else is saving at the same time. Please try the import again.</b>';return}
-  return dtGet().then(d=>{dtApply(d);applyFiles(list);return pushToServer(list,attempt+1)});
- }).catch(e=>{
+function pushToServer(newTR,replacePRW){
+ const jobs=[metaPut()];
+ if(newTR.length)jobs.push(postRecords('TR',newTR,false));
+ if(replacePRW)jobs.push(postRecords('PRW',PRW,true));
+ return Promise.all(jobs).catch(e=>{
   $('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server: '+esc(e.message)+'. The import is only visible on this computer until this is retried.</b>';
  });
 }
@@ -134,9 +134,8 @@ $('#f').onchange=e=>{const files=[...e.target.files];e.target.value='';if(!files
  Promise.all(files.map(readBuf)).then(list=>setTimeout(()=>{try{ingest(list,true)}catch(x){$('#st').textContent='Could not read the workbook: '+x.message}},30)).catch(x=>{$('#st').textContent=x.message})};
 $('#clr').onclick=()=>{PRW=[];PRWname='';TR=[];TRF=[];trSeen=new Set();R=[];FN='';prodBad={n:0,codes:new Map()};
  $('#app').hidden=true;$('#em').hidden=false;$('#bx').disabled=$('#bp').disabled=true;$('#st').textContent='Clearing…';
- fetch('/api/downtime',{method:'DELETE',credentials:'same-origin',headers:{'X-FIT-Request':'1'}}).then(r=>{
-  if(!r.ok)throw new Error('the server answered '+r.status);
-  dtVer=0;$('#st').textContent='Everything was cleared. Import the reports again to begin.';
+ Promise.all([recordsClear(),fetch('/api/downtime',{method:'DELETE',credentials:'same-origin',headers:{'X-FIT-Request':'1'}})]).then(()=>{
+  $('#st').textContent='Everything was cleared. Import the reports again to begin.';
  }).catch(e=>{$('#st').innerHTML='<b style="color:#DA1B22">Could not clear the saved data on the server: '+esc(e.message)+'</b>'});
 };
 const dparts=s=>{const d=dt(s),y=d.getUTCFullYear(),doy=s-Math.floor(j1(y))+1;return{y,m:d.getUTCMonth()+1,w:Math.floor((doy+new Date(Date.UTC(y,0,1)).getUTCDay()-1)/7)+1,dw:d.getUTCDay(),dd:d.getUTCDate()}};
@@ -157,11 +156,11 @@ function addTrace(f,names){
   const lm=press.match(/^(\d+)M\d+$/),resp=String(iRs>=0?r[iRs]:'').trim();
   let rs=resp?resp.charAt(0).toUpperCase()+resp.slice(1).toLowerCase():'';if(!RC[rs])rs='Unrecognised';
   const cause=String((iR>=0?r[iR]:'')||(iRC>=0?r[iRC]:'')||'').trim().replace(/\s+/g,' ')||'Reason not recorded',shf=String(iS>=0?r[iS]:'').trim();
-  TR.push(Object.assign(dparts(s),{s,c:cause,r:rs,l:lm?'Line '+lm[1]:'Unknown',p:'S3A'+press,sh:/^n/i.test(shf)?'Night':/^d/i.test(shf)?'Day':'Unspecified',n,tab:tablet||String(iT>=0?r[iT]:'')||''}));added++}
+  TR.push(Object.assign(dparts(s),{s,c:cause,r:rs,l:lm?'Line '+lm[1]:'Unknown',p:'S3A'+press,sh:/^n/i.test(shf)?'Night':/^d/i.test(shf)?'Day':'Unspecified',n,tab:tablet||String(iT>=0?r[iT]:'')||'',id:key}));added++}
  TRF.push({name:f.name,tablet,added,dup});
 }
 function ingest(list,forward){
- const {trace,prodFiles}=applyFiles(list);
+ const {trace,prodFiles,newTR,replacePRW}=applyFiles(list);
  if(!R.length)throw new Error(trace.length?'these Press Trace reports have no downtime entries yet':'no valid rows found');
  const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s)),dd=x=>fd(x,{day:'numeric',month:'short',year:'numeric'}),parts=[];
  if(TRF.length){const have=new Set(TRF.map(x=>x.tablet).filter(Boolean)),miss=TABLET_NAMES.filter(t=>!have.has(t));
@@ -170,7 +169,7 @@ function ingest(list,forward){
  FN=TRF.length&&!PRW.length?`Press Trace reports (${TRF.length})`:PRWname||FN;
  $('#st').innerHTML=parts.join(' | ')+` · ${dd(mn)} – ${dd(mx)}`+(prodBad.n?` · ${prodBad.n} records have a down-time code not found in “db press line” (${[...prodBad.codes.keys()].slice(0,12).join(', ')}) and are shown as “Unrecognised code”`:'');
  $('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
- pushToServer(list);
+ pushToServer(newTR,replacePRW);
  if(forward&&trace.length&&parent!==window)try{parent.postMessage({type:'fitl-trace-reports',files:trace.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
  /* the production_down_time_report itself also feeds the Production KPI Dashboard */
  if(forward&&prodFiles.length&&parent!==window)try{parent.postMessage({type:'fitl-downtime-workbook',files:prodFiles.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
@@ -352,8 +351,10 @@ $('#hist').addEventListener('input',e=>{if(e.target.id!=='h_q')return;H.q=e.targ
 $('#clr').addEventListener('click',()=>{H.from=H.to=null;H.touched=false;H.sel=null;$('#hist').innerHTML=''});
 
 $('#st').textContent='Loading any previously imported data from the server…';
-dtGet().then(d=>{
- dtApply(d);
+Promise.all([metaGet(),recordsGetAll()]).then(([meta,records])=>{
+ PRWname=(meta&&meta.PRWname)||'';TRF=(meta&&meta.TRF)||[];
+ prodBad={n:(meta&&meta.prodBad&&meta.prodBad.n)||0,codes:new Map((meta&&meta.prodBad&&meta.prodBad.codes)||[])};FN=(meta&&meta.FN)||'';
+ PRW=records.filter(r=>r.src==='PRW');TR=records.filter(r=>r.src==='TR');R=PRW.concat(TR);
  if(!R.length){$('#st').textContent='Import the production down time workbook (sheet “Daily down time”) to begin.';return}
  const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s)),dd=x=>fd(x,{day:'numeric',month:'short',year:'numeric'});
  $('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
