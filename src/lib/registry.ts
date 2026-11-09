@@ -67,5 +67,6 @@ export const sectionById = (id: string) => SECTIONS.find((s) => s.id === id);
 const SY_NAMES: Record<string, string> = {
   fitl_dc: 'Document Control', fitl_waste_v1: 'Waste Disposal', fitl_mkpi_v1: 'Maintenance KPI', fitl_cs_v1: 'Customer Satisfaction',
   fitl_qckpi_v1: 'QC KPI Dashboard', fitl_kpi_v1: 'Production KPI', fitl_kpi45_v1: 'KPI 4.5', fitl_waste_months_v1: 'Waste months', fitl_qckpi_reasons_v1: 'QC KPI reasons',
+  fitl_downtime_v1: 'Press Downtime Dashboard',
 };
 export const itemName = (k: string) => SY_NAMES[k] || k.replace(/^fitl[_-]/, '').replace(/[_-]+/g, ' ');

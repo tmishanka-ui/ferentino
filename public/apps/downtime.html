@@ -91,8 +91,12 @@ const readBuf=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=
    reaches every computer signed into the system, the same way the other dashboards' data does. ---------- */
 const DTKEY='fitl_downtime_v1';
 function persist(){
- try{localStorage.setItem(DTKEY,JSON.stringify({PRW,PRWname,TR,TRF,trSeen:[...trSeen],prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN}))}
- catch(e){console.error('downtime: could not save to this browser',e)}
+ try{localStorage.setItem(DTKEY,JSON.stringify({PRW,PRWname,TR,TRF,trSeen:[...trSeen],prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN}));return true}
+ catch(e){
+  console.error('downtime: could not save to this browser',e);
+  $('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server — this browser\'s storage is full (shared with every other section of this system, e.g. Training photos). The import is only visible on this computer, and will be lost on reload, until some older data elsewhere is cleared.</b>';
+  return false;
+ }
 }
 function restore(){
  try{
