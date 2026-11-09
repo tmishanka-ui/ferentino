@@ -559,8 +559,8 @@ function flushFU(iss,fus){
   acts.forEach(a=>{
     iss.pendingFU.forEach(f=>{
       const ex=a.followups.find(x=>x.meetKey===f.key);
-      if(ex){if(ex.date!==f.date||ex.ref!==f.ref){ex.date=f.date;ex.ref=f.ref;changed=true;}}
-      else{a.followups.push({date:f.date,ref:f.ref,meetKey:f.key});changed=true;}
+      if(ex){if(ex.date!==f.date||ex.ref!==f.ref||ex.note!==(f.note||'')){ex.date=f.date;ex.ref=f.ref;ex.note=f.note||'';changed=true;}}
+      else{a.followups.push({date:f.date,ref:f.ref,note:f.note||'',meetKey:f.key});changed=true;}
     });
     // the form has five slots: keep the latest meeting follow-ups if there are more than fit
     while(a.followups.length>5){const ix=a.followups.findIndex(x=>x.meetKey);if(ix<0)break;a.followups.splice(ix,1);changed=true;}
@@ -813,10 +813,10 @@ const ORD=['1st','2nd','3rd','4th','5th'];
 function viewP12(){
   let list=S.actions.slice();
   const q=V.fq.trim().toLowerCase();
-  if(q)list=list.filter(a=>(a.code+' '+a.issueCode+' '+a.followups.map(f=>f.ref).join(' ')).toLowerCase().includes(q));
+  if(q)list=list.filter(a=>(a.code+' '+a.issueCode+' '+a.followups.map(f=>f.ref+' '+(f.note||'')).join(' ')).toLowerCase().includes(q));
   if(V.fopen)list=list.filter(a=>!a.closed);
   list.sort((a,b)=>codeNum(b.issueCode)-codeNum(a.issueCode)||codeNum(a.code)-codeNum(b.code));
-  let h='<div class="page-head"><div><h2>Follow-up<span class="docno">'+FORMS.p12.no+'</span></h2><p>Record each follow-up of an action plan: the date and what it was checked against (for example a Weekly Management Meeting issue number). Up to five follow-ups per action.</p></div>'+
+  let h='<div class="page-head"><div><h2>Follow-up<span class="docno">'+FORMS.p12.no+'</span></h2><p>Record each follow-up of an action plan: the discussed date, a reference (for example a Weekly Management Meeting issue number) and the update/discussion note from that meeting. Up to five follow-ups per action — hover a filled slot to see its note.</p></div>'+
    '<div class="bar"><button class="btn" data-act="xlsx" data-m="p12">Export Excel</button><button class="btn" data-act="print" data-m="p12">Print / PDF</button></div></div>';
   h+='<div class="bar" style="margin-bottom:12px"><input type="text" data-act="fQ2" placeholder="Search action or issue code" value="'+esc(V.fq)+'" style="min-width:260px"><label style="display:flex;gap:7px;align-items:center;cursor:pointer"><input class="tick" type="checkbox" data-act="fOpen"'+(V.fopen?' checked':'')+'> Open actions only</label><span class="muted">'+list.length+' action'+(list.length===1?'':'s')+'</span></div>';
   if(!list.length)return h+'<div class="card empty">'+(S.actions.length?'No actions match.':'<b>No action plans to follow up yet.</b>')+'</div>';
@@ -825,7 +825,7 @@ function viewP12(){
     h+='<tr><td class="code">'+esc(a.issueCode)+'</td><td class="code">'+esc(a.code)+'</td>';
     for(let k=0;k<5;k++){
       const f=a.followups[k];
-      if(f)h+='<td><button class="slot has" data-act="slot" data-id="'+a.id+'" data-k="'+k+'"><span class="d">'+esc(dot(f.date))+'</span>'+esc(f.ref||'')+'</button></td>';
+      if(f)h+='<td><button class="slot has" data-act="slot" data-id="'+a.id+'" data-k="'+k+'" title="'+esc(f.note||'No discussion note')+'"><span class="d">'+esc(dot(f.date))+'</span>'+esc(f.ref||'')+(f.note?' 📝':'')+'</button></td>';
       else if(k===a.followups.length)h+='<td><button class="slot" data-act="slot" data-id="'+a.id+'" data-k="'+k+'">+ record</button></td>';
       else h+='<td></td>';
     }
@@ -912,8 +912,8 @@ function model(m,opt){
     return{widths:[11,16,80,13],center:[],header:[['Issue Code','Root cause code','Action Plan','Action Plan Code'].map(t=>H(t))],rows};
   }
   if(m==='p12'){
-    const rows=S.actions.slice().sort((a,b)=>codeNum(a.issueCode)-codeNum(b.issueCode)||codeNum(a.code)-codeNum(b.code)).map(a=>[a.issueCode,a.code].concat([0,1,2,3,4].map(k=>a.followups[k]?(dot(a.followups[k].date)+(a.followups[k].ref?'\n'+a.followups[k].ref:'')):'')));
-    return{widths:[11,11,19,19,19,19,19],center:[],header:[['Issue Code','Action Plan code'].concat(ORD.map(o=>o+' follow up date')).map(t=>H(t))],rows};
+    const rows=S.actions.slice().sort((a,b)=>codeNum(a.issueCode)-codeNum(b.issueCode)||codeNum(a.code)-codeNum(b.code)).map(a=>[a.issueCode,a.code].concat([0,1,2,3,4].map(k=>a.followups[k]?(dot(a.followups[k].date)+(a.followups[k].ref?'\n'+a.followups[k].ref:'')+(a.followups[k].note?'\n'+a.followups[k].note:'')):'')));
+    return{widths:[11,11,24,24,24,24,24],center:[],header:[['Issue Code','Action Plan code'].concat(ORD.map(o=>o+' discussed date / reference / note')).map(t=>H(t))],rows};
   }
   if(m==='p26'){
     const p=S.prevent.find(x=>x.id===opt);if(!p)return null;
@@ -1006,11 +1006,11 @@ function onClick(e){
     S.actions.push(ac);if(iss)flushFU(iss);V.newAct={issue:na.issue,roots:[],plan:''};save();render();toast(ac.code+' added');return;}
   if(a==='delAction'){const x=byId(S.actions,el.dataset.id);if(x&&confirm('Delete action plan '+x.code+' and its follow-ups?')){S.actions=S.actions.filter(y=>y!==x);save();render();}return;}
   if(a==='slot'){
-    const x=byId(S.actions,el.dataset.id);const k=+el.dataset.k;if(!x)return;const cur=x.followups[k]||{date:todayISO(),ref:''};
-    modal('<h3>'+ORD[k]+' follow-up — '+esc(x.code)+'</h3><div class="row"><label class="f">Follow-up date</label><input type="date" id="mDate" value="'+esc(cur.date)+'"></div><div class="row"><label class="f">Reference / note</label><input type="text" id="mRef" value="'+esc(cur.ref)+'" placeholder="e.g. WMM-Issue 18"></div><div class="foot">'+(x.followups[k]?'<button class="btn ghost" id="mDel" style="margin-right:auto">Remove</button>':'')+'<button class="btn" id="mNo">Cancel</button><button class="btn red" id="mYes">Save</button></div>',h=>{
+    const x=byId(S.actions,el.dataset.id);const k=+el.dataset.k;if(!x)return;const cur=x.followups[k]||{date:todayISO(),ref:'',note:''};
+    modal('<h3>'+ORD[k]+' follow-up — '+esc(x.code)+'</h3><div class="row"><label class="f">Discussed date</label><input type="date" id="mDate" value="'+esc(cur.date)+'"></div><div class="row"><label class="f">Reference</label><input type="text" id="mRef" value="'+esc(cur.ref)+'" placeholder="e.g. WMM-Issue 18"></div><div class="row"><label class="f">Update / Discussion Note</label><textarea id="mNote" placeholder="What was discussed or updated at this follow-up">'+esc(cur.note||'')+'</textarea></div><div class="foot">'+(x.followups[k]?'<button class="btn ghost" id="mDel" style="margin-right:auto">Remove</button>':'')+'<button class="btn" id="mNo">Cancel</button><button class="btn red" id="mYes">Save</button></div>',h=>{
       $('#mNo',h).onclick=closeModal;
       if($('#mDel',h))$('#mDel',h).onclick=()=>{x.followups.splice(k,1);closeModal();save();render();};
-      $('#mYes',h).onclick=()=>{const d=$('#mDate',h).value;if(!d){toast('Pick the follow-up date');return;}x.followups[k]={date:d,ref:$('#mRef',h).value.trim()};closeModal();save();render();};});return;}
+      $('#mYes',h).onclick=()=>{const d=$('#mDate',h).value;if(!d){toast('Pick the discussed date');return;}x.followups[k]={date:d,ref:$('#mRef',h).value.trim(),note:$('#mNote',h).value.trim()};closeModal();save();render();};});return;}
   if(a==='addPrev'){const p={id:uid(),issueCode:'',dateIssue:todayISO(),dateObserved:todayISO(),observedBy:'',dept:'',observation:'',triggers:[],triggerOther:'',responsibility:'',containment:'',suggested:'',submittedTo:[]};S.prevent.push(p);V.pv=p.id;save();render();return;}
   if(a==='openPrev'){V.pv=el.dataset.id;render();setTimeout(()=>{const c=$('.card.panel');if(c)c.scrollIntoView({block:'start'});},0);return;}
   if(a==='delPrev'){const p=byId(S.prevent,el.dataset.id);if(p&&confirm('Delete this observation form?')){S.prevent=S.prevent.filter(x=>x!==p);V.pv=null;save();render();}return;}

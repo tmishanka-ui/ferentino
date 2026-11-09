@@ -56,8 +56,8 @@ FO:['Format / Form','R',0,'QEG','FRM'],RG:['Register','R',0,'QEG','REG'],CL:['Ch
 const D=[['HR','HR Department','HRM'],['MNT','Maintenance','MNT'],['PRD','Production','PRD'],['MIX','Production – Mixing','MIX'],['TBS','Production – Tyre Building','PRD'],['PLN','Production – Planning','PRD'],['QA','Quality Department','QUA'],['MSY','Quality – Management System','QUA'],['PCS','Quality – Process','QUA'],['FIN','Finance','FIN'],['ACC','Finance – Accounts','FIN'],['STR','Finance – Stores','RMW'],['PUR','Finance – Purchasing','PRC'],['TEC','Technical','TEC'],['EXP','Export','SAL'],['GEN','Company-wide / General','QUA']];
 const fdef=d=>T[d.type][2]?'QUA':(D.find(x=>x[0]==d.dept)||[0,0,'QUA'])[2];
 const fname=d=>{const ti=d.title.replace(/[^A-Za-z0-9 ]/g,'').split(/\s+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join('').slice(0,80);const n=d.hist.filter(h=>h.date==d.revDate&&!h.corr).length;return T[d.type][4]+'_'+ti+'_'+(d.fdept||fdef(d))+'_FIT_'+d.cls+'_'+(d.draft?'DRAFT':dmy(d.revDate)+(n>1?'_r'+pad(n-1):''))};
-const LIBF={manuals:'Manuals',policy:'Policy',sop:'SOP',wi:'Work Instructions',guideline:'Guide Line',sectional:'Sectional Documents',general:'General'};
-const ICON={all:'📚',manuals:'📘',policy:'📜',sop:'📋',wi:'🛠️',guideline:'📖',sectional:'🏭',general:'📁'};
+const LIBF={manuals:'Manuals',policy:'Policy',sop:'SOP',wi:'Work Instructions',guideline:'Guide Line',sectional:'Sectional Documents',general:'General',recordroom:'Record Room'};
+const ICON={all:'📚',manuals:'📘',policy:'📜',sop:'📋',wi:'🛠️',guideline:'📖',sectional:'🏭',general:'📁',recordroom:'🗄️'};
 const libDef=(type,dept)=>({QP:'policy',EP:'policy',QM:'manuals',EM:'manuals',PM:'manuals',QSP:'sop',PRO:'sop',WI:'wi',GL:'guideline'}[type])||((dept&&dept!=='GEN')?'sectional':'general');
 const libOf=d=>{const f=d.libFolder||libDef(d.type,d.dept);return{f,dept:f==='sectional'?(d.libDept||d.dept||''):''}};
 const deptName=c=>(D.find(x=>x[0]==c)||[0,c||'—'])[1];
@@ -86,16 +86,16 @@ function render(){
   let rows=all.filter(d=>inFolder(d,V.f,V.dept));const q=V.q.trim().toLowerCase();
   if(q)rows=rows.filter(d=>(d.no+' '+d.title+' '+T[d.type][0]).toLowerCase().includes(q));
   if(V.type)rows=rows.filter(d=>d.type===V.type);
-  rows.sort((a,b)=>a.no.localeCompare(b.no));
+  rows.sort((a,b)=>a.no.localeCompare(b.no)||String(a.period||'').localeCompare(String(b.period||'')));
   const types=[...new Set(all.filter(d=>inFolder(d,V.f,V.dept)).map(d=>d.type))];
   const title=V.f==='all'?'All documents':LIBF[V.f]+(V.dept?'<span> › '+esc(deptName(V.dept))+'</span>':'');
   let h='<div class="crumb">'+title+'</div><div class="bar"><input type="text" id="q" placeholder="Search number or title" value="'+esc(V.q)+'" style="min-width:260px"><select id="ty"><option value="">All types</option>'+types.map(c=>'<option value="'+c+'"'+(V.type===c?' selected':'')+'>'+esc(T[c][0])+'</option>').join('')+'</select><span class="note">'+rows.length+' document'+(rows.length===1?'':'s')+'</span></div>';
   if(!rows.length){
     h+='<div class="card empty">'+(S.docs.some(d=>d.status==='A')?'<b>Nothing here yet.</b><br>Documents appear in the Library when a file is attached to them in the <b>Document Control System</b> (General › Document Control System › Add Document, or “File…” in the Registry).':'<b>The Library is empty.</b><br>Register a document in the <b>Document Control System</b> and attach its file there — it then appears here in its folder.')+'</div>';
   }else{
-    h+='<div class="card tw"><table><thead><tr><th>Doc no</th><th>Title</th><th>Type</th>'+(V.f==='sectional'&&V.dept?'':'<th>Department</th>')+'<th>Issue / Rev</th><th>Date</th><th></th><th></th></tr></thead><tbody>'+rows.map(d=>{
+    h+='<div class="card tw"><table><thead><tr><th>Doc no</th>'+(V.f==='recordroom'?'<th>Period</th>':'')+'<th>Title</th><th>Type</th>'+(V.f==='sectional'&&V.dept?'':'<th>Department</th>')+'<th>Issue / Rev</th><th>Date</th><th></th><th></th></tr></thead><tbody>'+rows.map(d=>{
       const c=libCur(d),o=libOf(d),stale=c&&(c.iss+c.rev)!==(pad(d.issue)+pad(d.rev));
-      return'<tr><td class="no">'+esc(d.no)+'</td><td><b>'+esc(d.title)+'</b>'+(d.draft?' <span class="chip warn">DRAFT</span>':'')+'<div class="note">'+(c?esc(c.name)+' · '+(c.size/1024).toFixed(0)+' KB':'No file attached yet')+(stale?' · <b style="color:var(--amber)">file is Issue '+c.iss+' / Rev '+c.rev+'</b>':'')+'</div></td><td>'+esc(T[d.type][0])+'</td>'+
+      return'<tr><td class="no">'+esc(d.no)+'</td>'+(V.f==='recordroom'?'<td>'+esc(d.period||'—')+'</td>':'')+'<td><b>'+esc(d.title)+'</b>'+(d.draft?' <span class="chip warn">DRAFT</span>':'')+'<div class="note">'+(c?esc(c.name)+' · '+(c.size/1024).toFixed(0)+' KB':'No file attached yet')+(stale?' · <b style="color:var(--amber)">file is Issue '+c.iss+' / Rev '+c.rev+'</b>':'')+'</div></td><td>'+esc(T[d.type][0])+'</td>'+
         (V.f==='sectional'&&V.dept?'':'<td>'+(o.f==='sectional'?esc(deptName(o.dept)):(T[d.type][2]?'Company-wide':esc(deptName(d.dept))))+'</td>')+
         '<td>'+pad(d.issue)+' / '+pad(d.rev)+'</td><td>'+dmy(d.revDate)+'</td><td><span class="chip '+d.cls.toLowerCase()+'" title="'+({INO:'Internal only',CON:'Confidential',IEX:'May be shared externally'}[d.cls]||'')+'">'+esc(d.cls)+'</span></td>'+
         '<td style="white-space:nowrap">'+(c?'<button class="btn sm red" data-view="'+d.id+'">View</button> <button class="btn sm" data-dl="'+d.id+'">Download</button>':'<span class="note">—</span>')+'</td></tr>'}).join('')+'</tbody></table></div>';
@@ -106,7 +106,7 @@ function render(){
 async function download(d,f){
   const r=await FLIB.get(f.k);if(!r){alert('That file is not stored in this browser. Open the Document Control System and attach it again, or restore a backup.');return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.data],{type:r.type||'application/octet-stream'}));
-  a.download=fname(d)+(f.iss+f.rev===pad(d.issue)+pad(d.rev)?'':'_Rev'+f.iss+'-'+f.rev)+ext(r.name);document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},900);
+  a.download=fname(d)+(d.period?'_'+d.period.replace(/[^A-Za-z0-9]+/g,'-'):'')+(f.iss+f.rev===pad(d.issue)+pad(d.rev)?'':'_Rev'+f.iss+'-'+f.rev)+ext(r.name);document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},900);
 }
 async function preview(rec,box){
   const e=((rec.name||'').toLowerCase().match(/\.([a-z0-9]+)$/)||[])[1]||'';
@@ -125,7 +125,7 @@ function closeView(){urls.splice(0).forEach(u=>URL.revokeObjectURL(u));$('#host'
 async function view(id){
   const d=S.docs.find(x=>x.id===id);if(!d)return;const c=libCur(d),o=libOf(d);
   const fs=(d.files||[]).slice().sort((a,b)=>(b.iss+b.rev+b.at).localeCompare(a.iss+a.rev+a.at));
-  $('#host').innerHTML='<div class="veil"><div class="modal"><div class="mh"><div style="flex:1;min-width:260px"><h2>'+esc(d.title)+'</h2><div class="note"><span class="no" style="font:500 12.5px var(--mono)">'+esc(d.no)+'</span> · '+esc(T[d.type][0])+' · Issue '+pad(d.issue)+' / Rev '+pad(d.rev)+' · '+dmy(d.revDate)+' · '+LIBF[o.f]+(o.f==='sectional'?' › '+esc(deptName(o.dept)):'')+'</div></div><button class="btn red" id="vdl">Download</button><button class="btn" id="vx">Close</button></div><div class="mb"><div id="pvbox"><div class="empty">Opening…</div></div>'+
+  $('#host').innerHTML='<div class="veil"><div class="modal"><div class="mh"><div style="flex:1;min-width:260px"><h2>'+esc(d.title)+'</h2><div class="note"><span class="no" style="font:500 12.5px var(--mono)">'+esc(d.no)+'</span> · '+esc(T[d.type][0])+' · Issue '+pad(d.issue)+' / Rev '+pad(d.rev)+' · '+dmy(d.revDate)+' · '+LIBF[o.f]+(o.f==='sectional'?' › '+esc(deptName(o.dept)):'')+(d.period?' · Period '+esc(d.period):'')+'</div></div><button class="btn red" id="vdl">Download</button><button class="btn" id="vx">Close</button></div><div class="mb"><div id="pvbox"><div class="empty">Opening…</div></div>'+
     '<details><summary>Revision history</summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>Issue / Rev</th><th>Date</th><th>Description of change</th><th>Approved by</th></tr></thead><tbody>'+d.hist.filter(h=>!h.corr).map(h=>'<tr><td>'+pad(h.issue)+' / '+pad(h.rev)+'</td><td>'+dmy(h.date)+'</td><td>'+esc(h.desc)+'</td><td>'+(h.sig?esc(h.sig.name)+' ✔':(h.appr?esc(h.appr):'—'))+'</td></tr>').join('')+'</tbody></table></div></details>'+
     (fs.length>1?'<details><summary>Earlier files ('+(fs.length-1)+')</summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>File</th><th>Issue / Rev</th><th>Added</th><th></th></tr></thead><tbody>'+fs.slice(1).map(f=>'<tr><td>'+esc(f.name)+'</td><td>'+f.iss+' / '+f.rev+'</td><td>'+dmy(f.at.slice(0,10))+'</td><td><button class="btn sm" data-old="'+esc(f.k)+'">Download</button></td></tr>').join('')+'</tbody></table></div></details>':'')+'</div></div></div>';
   $('#vx').onclick=closeView;$('#vdl').onclick=()=>download(d,c);

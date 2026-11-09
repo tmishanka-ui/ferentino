@@ -1076,9 +1076,12 @@
           <h3>${esc(r.issueDescription||'(no description)')}</h3>
           ${r.impact?`<div class="field"><b>Impact:</b> ${esc(r.impact)}</div>`:''}
           ${r.actionRequired?`<div class="field"><b>Action required:</b> ${esc(r.actionRequired)}</div>`:''}
-          ${r.actionPlan&&r.actionPlan.trim()?`<div class="field plan"><b>Action plan:</b><br>${esc(r.actionPlan).replace(/\n/g,'<br>')}</div>`:''}
           <div class="field"><b>Raised by:</b> ${esc(r.name||'—')}${r.responsibility?` &nbsp;·&nbsp; <b>Owner:</b> ${esc(r.responsibility)}`:''}</div>
           ${attachmentsSection(r.attachments, 'requirement', r.issueId)}
+          <div class="field plan">
+            <b>Action plan:</b> <button class="linklike" data-action="edit-action-plan" data-id="${r.issueId}">${r.actionPlan&&r.actionPlan.trim()?'Edit':'+ Write action plan'}</button>
+            ${r.actionPlan&&r.actionPlan.trim()?`<br>${esc(r.actionPlan).replace(/\n/g,'<br>')}`:'<br><span style="color:var(--steel);">Not written yet — agreed at the meeting, before logging follow-up steps.</span>'}
+          </div>
           <div class="steps-row">
             ${renderStepTracker(r.issueId)}
             <button class="linklike" data-action="toggle-history" data-id="${r.issueId}">${expanded?'Hide':'View'} full history${stepCount?` (${stepCount})`:''}</button>
@@ -1123,7 +1126,6 @@
           <div class="form-row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;cursor:pointer;"><input type="checkbox" id="f-rcaRequired" style="width:auto;" ${r.rcaRequired?'checked':''}> RCA required</label></div>
           <div class="form-row"><label>Impact</label><textarea id="f-impact">${esc(r.impact)}</textarea></div>
           <div class="form-row"><label>Action required</label><textarea id="f-actionRequired">${esc(r.actionRequired)}</textarea></div>
-          <div class="form-row"><label>Action plan — agreed at the meeting</label><textarea id="f-actionPlan" rows="4" placeholder="One action per line: what will be done, by whom, by when">${esc(r.actionPlan||'')}</textarea><div style="font-size:11.5px;color:var(--steel);margin-top:3px">Each line becomes an action plan in CAPA (FIT/Q/RG-QA-11) once this issue is sent to CAPA, and stays in step if you change it later.</div></div>
           <div class="form-grid">
             <div class="form-row"><label>Raised by</label><input id="f-name" value="${esc(r.name)}"></div>
             <div class="form-row"><label>Owner / responsibility</label><input id="f-responsibility" value="${esc(r.responsibility)}"></div>
@@ -1131,6 +1133,19 @@
           <div class="modal-actions">
             <button class="ghost" data-action="close-modal">Cancel</button>
             <button class="primary" data-action="save-requirement" data-id="${r.issueId}">Save requirement</button>
+          </div>
+        </div>
+      </div>`;
+    } else if(m.type==='actionPlan'){
+      const r = m.editing;
+      return `<div class="overlay" data-action="close-modal">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>Action plan — issue #${r.issueId}</h3>
+          <div class="form-row" style="margin-top:0"><label style="text-transform:none;font-size:13px;">${esc(r.issueDescription||'')}</label></div>
+          <div class="form-row"><label>Action plan — agreed at the meeting</label><textarea id="f-actionPlanOnly" rows="6" placeholder="One action per line: what will be done, by whom, by when">${esc(r.actionPlan||'')}</textarea><div style="font-size:11.5px;color:var(--steel);margin-top:3px">Each line becomes an action plan in CAPA (FIT/Q/RG-QA-11) once this issue is sent to CAPA, and stays in step if you change it later. Written before logging follow-up steps, not when the requirement is first raised.</div></div>
+          <div class="modal-actions">
+            <button class="ghost" data-action="close-modal">Cancel</button>
+            <button class="primary" data-action="save-action-plan" data-id="${r.issueId}">Save action plan</button>
           </div>
         </div>
       </div>`;
@@ -1250,6 +1265,11 @@
         }
         else if(action==='close-modal'){ state.modal=null; render(); }
         else if(action==='save-requirement'){ saveRequirement(id); }
+        else if(action==='edit-action-plan'){
+          const r = state.requirements.find(x=>String(x.issueId)===String(id));
+          if(r){ state.modal = {type:'actionPlan', editing:r}; render(); }
+        }
+        else if(action==='save-action-plan'){ saveActionPlan(id); }
         else if(action==='save-followup'){ saveFollowup(); }
         else if(action==='new-project'){ state.modal = {type:'project', editing:null}; render(); }
         else if(action==='edit-project'){
@@ -1313,7 +1333,6 @@
       issueDescription: val('f-issueDescription'),
       impact: val('f-impact'),
       actionRequired: val('f-actionRequired'),
-      actionPlan: val('f-actionPlan'),
       name: val('f-name'),
       responsibility: val('f-responsibility'),
       rcaRequired: !!(document.getElementById('f-rcaRequired') && document.getElementById('f-rcaRequired').checked),
@@ -1321,6 +1340,14 @@
     const idx = state.requirements.findIndex(r=>r.issueId===data.issueId);
     // merge so existing photo/video attachments are kept when editing
     if(idx>=0) state.requirements[idx] = {...state.requirements[idx], ...data}; else state.requirements.push(data);
+    state.modal = null;
+    saveState();
+    render();
+  }
+
+  function saveActionPlan(id){
+    const idx = state.requirements.findIndex(r=>String(r.issueId)===String(id));
+    if(idx>=0) state.requirements[idx] = {...state.requirements[idx], actionPlan: val('f-actionPlanOnly')};
     state.modal = null;
     saveState();
     render();
@@ -1430,7 +1457,8 @@
     const fus = state.followups.filter(f=>String(f.issueId)===String(r.issueId))
       .sort((x,y)=>(x.discussedDate||'').localeCompare(y.discussedDate||'') || String(x.followupId||'').localeCompare(String(y.followupId||'')))
       .map(f=>({ key:'agenda:'+r.issueId+':'+f.followupId, date:f.discussedDate||todayStr(),
-        ref:'Weekly meeting issue #'+r.issueId+' — '+(f.status||'follow-up')+(f.actionRequired?' — '+f.actionRequired:'')+(f.followUpDate?' (next: '+f.followUpDate+')':'') }));
+        ref:'Weekly meeting issue #'+r.issueId+' — '+(f.status||'follow-up')+(f.actionRequired?' — '+f.actionRequired:'')+(f.followUpDate?' (next: '+f.followUpDate+')':''),
+        note:String(f.issue||'').trim() }));
     return { key:'agenda:'+r.issueId, issueId:r.issueId, autoKey:r.autoKey||'', date:(r.capa&&r.capa.sentAt)||todayStr(),
       text:String(r.issueDescription||'').trim()+(r.impact?' Impact: '+String(r.impact).trim():''), department:r.department||'',
       actions:lines.map((t,i)=>({ key:'agenda:'+r.issueId+':a'+(i+1), text:t })), followups:fus,
