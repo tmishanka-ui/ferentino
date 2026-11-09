@@ -41,6 +41,10 @@ export interface StoreTxn {
   _id: string; code: string; type: 'R' | 'I'; date: string; ts: number; qty: number;
   ref: string; party: string; person: string; remarks: string; enteredBy: string;
 }
+/* The Press Downtime import can be too large for a browser's localStorage (which the generic
+   data_items/localStorage sync is built around and would otherwise try to mirror into every
+   signed-in browser), so it gets its own small dedicated collection instead, one document only. */
+export interface DowntimeDoc { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
 
 export interface Store {
   client: MongoClient;
@@ -56,6 +60,7 @@ export interface Store {
   files: GridFSBucket;
   storesItems: Collection<StoreItem>;
   storesTxns: Collection<StoreTxn>;
+  downtime: Collection<DowntimeDoc>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -85,6 +90,7 @@ async function connect(): Promise<Store> {
     files: new GridFSBucket(db, { bucketName: 'files' }),
     storesItems: db.collection<StoreItem>('stores_items'),
     storesTxns: db.collection<StoreTxn>('stores_txns'),
+    downtime: db.collection<DowntimeDoc>('downtime_data'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),

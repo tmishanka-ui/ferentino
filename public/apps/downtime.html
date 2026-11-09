@@ -86,31 +86,59 @@ function kl(k,t){if(t=='day')return fd(k,{weekday:'short',day:'numeric',month:'s
 const TABLET_NAMES=['Tablet 1 — 1M & 2M','Tablet 2 — 3M & 4M','Tablet 3 — 5M & 6M','Tablet 4 — 7M'];
 let PRW=[],PRWname='',TR=[],TRF=[],trSeen=new Set(),prodBad={n:0,codes:new Map()};
 const readBuf=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res({name:f.name,buffer:fr.result});fr.onerror=()=>rej(new Error('Could not read '+f.name));fr.readAsArrayBuffer(f)});
-/* ---------- persistence: once imported, the parsed records are kept in this browser's storage,
-   which the host page syncs to the server automatically — so the import survives a reload and
-   reaches every computer signed into the system, the same way the other dashboards' data does. ---------- */
-const DTKEY='fitl_downtime_v1';
-function persist(){
- try{localStorage.setItem(DTKEY,JSON.stringify({PRW,PRWname,TR,TRF,trSeen:[...trSeen],prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN}));return true}
- catch(e){
-  console.error('downtime: could not save to this browser',e);
-  $('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server — this browser\'s storage is full (shared with every other section of this system, e.g. Training photos). The import is only visible on this computer, and will be lost on reload, until some older data elsewhere is cleared.</b>';
-  return false;
- }
+/* ---------- persistence: saved directly to the server in its own small collection (not this
+   browser's localStorage, which the host page would otherwise try to mirror into every signed-in
+   browser — this import is routinely too large for that shared, limited storage). ---------- */
+let dtVer=0;
+function dtGet(){
+ return fetch('/api/downtime',{credentials:'same-origin'}).then(r=>{
+  if(!r.ok)return r.json().catch(()=>({})).then(j=>{throw new Error(j.error||('the server answered '+r.status))});
+  return r.json();
+ }).then(j=>{dtVer=j.version||0;return j.data});
 }
-function restore(){
- try{
-  const raw=localStorage.getItem(DTKEY);if(!raw)return false;
-  const d=JSON.parse(raw);
-  PRW=d.PRW||[];PRWname=d.PRWname||'';TR=d.TR||[];TRF=d.TRF||[];trSeen=new Set(d.trSeen||[]);
-  prodBad={n:(d.prodBad&&d.prodBad.n)||0,codes:new Map((d.prodBad&&d.prodBad.codes)||[])};FN=d.FN||'';
-  R=PRW.concat(TR);return R.length>0;
- }catch(e){return false}
+function dtApply(d){
+ if(!d)return;
+ PRW=d.PRW||[];PRWname=d.PRWname||'';TR=d.TR||[];TRF=d.TRF||[];trSeen=new Set(d.trSeen||[]);
+ prodBad={n:(d.prodBad&&d.prodBad.n)||0,codes:new Map((d.prodBad&&d.prodBad.codes)||[])};FN=d.FN||'';
+ R=PRW.concat(TR);
+}
+function dtPut(){
+ const data={PRW,PRWname,TR,TRF,trSeen:[...trSeen],prodBad:{n:prodBad.n,codes:[...prodBad.codes]},FN};
+ return fetch('/api/downtime',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1','X-Base-Version':String(dtVer)},body:JSON.stringify({data})}).then(r=>{
+  if(r.status===409)return 'conflict';
+  if(!r.ok)return r.json().catch(()=>({})).then(j=>{throw new Error(j.error||('the server answered '+r.status))});
+  return r.json().then(j=>{dtVer=j.version;return 'ok'});
+ });
+}
+/** parses the raw files into the current PRW/TR/… globals (used for the first attempt, and again to replay the same import onto a freshly-fetched copy if somebody else saved in between) */
+function applyFiles(list){
+ const trace=[],prodFiles=[];
+ list.forEach(f=>{const names=sheetNames(f.buffer);
+  if(names.includes('Downtime log')){addTrace(f,names);trace.push(f)}
+  else{const r=parseProduction(f.buffer);PRW=r.out;PRWname=f.name;prodBad={n:r.badN,codes:r.bad};prodFiles.push(f)}});
+ R=PRW.concat(TR);
+ return {trace,prodFiles};
+}
+function pushToServer(list,attempt){
+ attempt=attempt||1;
+ return dtPut().then(res=>{
+  if(res!=='conflict')return;
+  if(attempt>=3){$('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server: somebody else is saving at the same time. Please try the import again.</b>';return}
+  return dtGet().then(d=>{dtApply(d);applyFiles(list);return pushToServer(list,attempt+1)});
+ }).catch(e=>{
+  $('#st').innerHTML+=' · <b style="color:#DA1B22">Not saved to the server: '+esc(e.message)+'. The import is only visible on this computer until this is retried.</b>';
+ });
 }
 $('#f').onchange=e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;
  $('#st').textContent='Reading '+files.map(f=>f.name).join(', ')+' …';
  Promise.all(files.map(readBuf)).then(list=>setTimeout(()=>{try{ingest(list,true)}catch(x){$('#st').textContent='Could not read the workbook: '+x.message}},30)).catch(x=>{$('#st').textContent=x.message})};
-$('#clr').onclick=()=>{PRW=[];PRWname='';TR=[];TRF=[];trSeen=new Set();R=[];FN='';prodBad={n:0,codes:new Map()};try{localStorage.removeItem(DTKEY)}catch(e){}$('#st').textContent='Everything was cleared. Import the reports again to begin.';$('#app').hidden=true;$('#em').hidden=false;$('#bx').disabled=$('#bp').disabled=true};
+$('#clr').onclick=()=>{PRW=[];PRWname='';TR=[];TRF=[];trSeen=new Set();R=[];FN='';prodBad={n:0,codes:new Map()};
+ $('#app').hidden=true;$('#em').hidden=false;$('#bx').disabled=$('#bp').disabled=true;$('#st').textContent='Clearing…';
+ fetch('/api/downtime',{method:'DELETE',credentials:'same-origin',headers:{'X-FIT-Request':'1'}}).then(r=>{
+  if(!r.ok)throw new Error('the server answered '+r.status);
+  dtVer=0;$('#st').textContent='Everything was cleared. Import the reports again to begin.';
+ }).catch(e=>{$('#st').innerHTML='<b style="color:#DA1B22">Could not clear the saved data on the server: '+esc(e.message)+'</b>'});
+};
 const dparts=s=>{const d=dt(s),y=d.getUTCFullYear(),doy=s-Math.floor(j1(y))+1;return{y,m:d.getUTCMonth()+1,w:Math.floor((doy+new Date(Date.UTC(y,0,1)).getUTCDay()-1)/7)+1,dw:d.getUTCDay(),dd:d.getUTCDate()}};
 const sheetNames=buf=>XLSX.read(buf,{type:'array',bookSheets:true}).SheetNames;
 /* Press Trace "complete report": its Downtime log sheet becomes the down-time records; reports from
@@ -133,11 +161,7 @@ function addTrace(f,names){
  TRF.push({name:f.name,tablet,added,dup});
 }
 function ingest(list,forward){
- const trace=[],prodFiles=[];
- list.forEach(f=>{const names=sheetNames(f.buffer);
-  if(names.includes('Downtime log')){addTrace(f,names);trace.push(f)}
-  else{const r=parseProduction(f.buffer);PRW=r.out;PRWname=f.name;prodBad={n:r.badN,codes:r.bad};prodFiles.push(f)}});
- R=PRW.concat(TR);
+ const {trace,prodFiles}=applyFiles(list);
  if(!R.length)throw new Error(trace.length?'these Press Trace reports have no downtime entries yet':'no valid rows found');
  const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s)),dd=x=>fd(x,{day:'numeric',month:'short',year:'numeric'}),parts=[];
  if(TRF.length){const have=new Set(TRF.map(x=>x.tablet).filter(Boolean)),miss=TABLET_NAMES.filter(t=>!have.has(t));
@@ -146,7 +170,7 @@ function ingest(list,forward){
  FN=TRF.length&&!PRW.length?`Press Trace reports (${TRF.length})`:PRWname||FN;
  $('#st').innerHTML=parts.join(' | ')+` · ${dd(mn)} – ${dd(mx)}`+(prodBad.n?` · ${prodBad.n} records have a down-time code not found in “db press line” (${[...prodBad.codes.keys()].slice(0,12).join(', ')}) and are shown as “Unrecognised code”`:'');
  $('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
- persist();
+ pushToServer(list);
  if(forward&&trace.length&&parent!==window)try{parent.postMessage({type:'fitl-trace-reports',files:trace.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
  /* the production_down_time_report itself also feeds the Production KPI Dashboard */
  if(forward&&prodFiles.length&&parent!==window)try{parent.postMessage({type:'fitl-downtime-workbook',files:prodFiles.map(f=>({name:f.name,buffer:f.buffer}))},'*')}catch(_){}
@@ -327,8 +351,15 @@ $('#hist').addEventListener('change',e=>{const i=e.target.id;
 $('#hist').addEventListener('input',e=>{if(e.target.id!=='h_q')return;H.q=e.target.value;const p=e.target.selectionStart;hRender();const n=$('#h_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}});
 $('#clr').addEventListener('click',()=>{H.from=H.to=null;H.touched=false;H.sel=null;$('#hist').innerHTML=''});
 
-if(restore()){$('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
+$('#st').textContent='Loading any previously imported data from the server…';
+dtGet().then(d=>{
+ dtApply(d);
+ if(!R.length){$('#st').textContent='Import the production down time workbook (sheet “Daily down time”) to begin.';return}
  const mn=Math.min(...R.map(r=>r.s)),mx=Math.max(...R.map(r=>r.s)),dd=x=>fd(x,{day:'numeric',month:'short',year:'numeric'});
- $('#st').textContent='Restored from the server · '+nf(R.length)+' records · '+dd(mn)+' – '+dd(mx)+' · Import again to add more.'}
+ $('#em').hidden=true;$('#app').hidden=false;$('#bx').disabled=$('#bp').disabled=false;setType(S.t);hRefresh();
+ $('#st').textContent='Loaded from the server · '+nf(R.length)+' records · '+dd(mn)+' – '+dd(mx)+' · Import again to add more.';
+}).catch(e=>{
+ $('#st').innerHTML='<b style="color:#DA1B22">Could not load saved data from the server: '+esc(e.message)+'</b>';
+});
 try{parent.postMessage({type:'fitl-dash-ready'},'*')}catch(_){}
 </script></body></html>
