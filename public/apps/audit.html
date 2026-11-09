@@ -1646,14 +1646,27 @@ function render(){
   const v={plan:viewPlan,matrix:viewMatrix,check:viewCheck,find:viewFind,ncr:viewNcr}[tab](a);$('main').innerHTML=v.h;if(v.after)v.after();
 }
 const inp=(path,val,ph)=>'<input type="text" data-b="'+path+'" value="'+esc(val)+'"'+(ph?' placeholder="'+ph+'"':'')+'>';
+const TEAMFLDS=['no','dept','leader','leaderEmail','auditee','m1','m2','date','time','venue'];
+const TEAMLBL={no:'Team',dept:'Department / process',leader:'Team leader',leaderEmail:'Leader e-mail',auditee:'Auditee',m1:'Member 1',m2:'Member 2',date:'Audit date',time:'Time',venue:'Venue'};
+const TEAMW={no:'46px',dept:'120px',leaderEmail:'170px',auditee:'125px',date:'120px',time:'120px'};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function viewPlan(a){
   const p=a.plan;
   let h='<div class="card pn"><h2>Audit programme</h2><div class="g"><div class="w2"><label class="f">Audit title</label>'+inp('title',a.title)+'</div><div><label class="f">Type of audit</label>'+inp('type',a.type)+'</div><div><label class="f">Standard</label>'+inp('standard',a.standard)+'</div><div class="w2"><label class="f">Scope</label><textarea data-b="scope" rows="4">'+esc(a.scope)+'</textarea></div></div></div>';
   h+='<div class="g" style="margin-bottom:14px"><div class="card pn" style="margin:0"><h2>Audit planning meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.meetDate',p.meetDate)+'</div><div><label class="f">Time</label>'+inp('plan.meetTime',p.meetTime)+'</div><div><label class="f">Venue</label>'+inp('plan.meetVenue',p.meetVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.meetPart',p.meetPart)+'</div></div></div>'+
    '<div class="card pn" style="margin:0"><h2>Audit closing meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.closeDate',p.closeDate)+'</div><div><label class="f">Time</label>'+inp('plan.closeTime',p.closeTime)+'</div><div><label class="f">Venue</label>'+inp('plan.closeVenue',p.closeVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.closePart',p.closePart)+'</div></div></div></div>';
-  h+='<div class="card pn"><h2>Audit teams and schedule</h2><div class="tw"><table><thead><tr><th>Team</th><th>Department / process</th><th>Team leader</th><th>Member 1</th><th>Member 2</th><th>Audit date</th><th>Time</th><th>Venue</th><th></th></tr></thead><tbody>'+
-   a.teams.map((t,i)=>'<tr>'+['no','dept','leader','m1','m2','date','time','venue'].map(f=>'<td><input type="text" data-team="'+i+'" data-f="'+f+'" value="'+esc(t[f])+'" style="'+(f==='no'?'width:48px':'min-width:'+(f==='dept'||f==='date'||f==='time'?'120':'105')+'px')+'"></td>').join('')+'<td><button class="btn sm ghost" data-act="delteam" data-i="'+i+'" title="Remove team">✕</button></td></tr>').join('')+'</tbody></table></div><div style="margin-top:10px"><button class="btn sm" data-act="addteam">+ Add team</button></div></div>';
-  return{h};
+  h+='<div class="card pn"><h2>Annual audit plan</h2><p class="note" style="margin:0 0 10px">Scheduled month for each team, read from its audit date below.</p><div class="cb" style="padding:0;height:'+Math.max(200,a.teams.length*32+60)+'px"><canvas id="c2"></canvas></div></div>';
+  h+='<div class="card pn"><h2>Audit teams and schedule</h2><p class="note" style="margin:0 0 10px">Assign the Team Leader and Auditee for each department. Give the Team Leader\'s e-mail to notify them that they have been assigned.</p><div class="tw"><table><thead><tr>'+TEAMFLDS.map(f=>'<th>'+TEAMLBL[f]+'</th>').join('')+'<th></th></tr></thead><tbody>'+
+   a.teams.map((t,i)=>{
+     const cells=TEAMFLDS.map(f=>'<td><input type="'+(f==='leaderEmail'?'email':'text')+'" data-team="'+i+'" data-f="'+f+'" value="'+esc(t[f])+'"'+(f==='leaderEmail'?' placeholder="name@company.com"':f==='auditee'?' placeholder="Process owner"':'')+' style="'+(f==='no'?'width:48px':'min-width:'+(TEAMW[f]||'105px'))+'"></td>').join('');
+     const notified=t.leaderEmail&&t.notified&&t.notified.email===t.leaderEmail;
+     const notifyBtn=t.leaderEmail?'<button class="btn sm'+(notified?'':' red')+'" data-act="notifyleader" data-i="'+i+'" title="E-mail the Team Leader that they have been assigned">'+(notified?'✓ Notified':'✉ Notify')+'</button> ':'';
+     return '<tr>'+cells+'<td style="white-space:nowrap">'+notifyBtn+'<button class="btn sm ghost" data-act="delteam" data-i="'+i+'" title="Remove team">✕</button></td></tr>';
+   }).join('')+'</tbody></table></div><div style="margin-top:10px"><button class="btn sm" data-act="addteam">+ Add team</button></div></div>';
+  return{h,after:()=>{if(typeof Chart==='undefined'||!$('c2'))return;Chart.defaults.font.family="Inter,system-ui,sans-serif";
+    const rows=a.teams.map(t=>{const m=/^(\d{4})\.(\d{2})\.(\d{2})/.exec((t.date||'').trim());return{label:t.dept||('Team '+t.no),month:m?(+m[2]-1):null}});
+    CH=new Chart($('c2'),{type:'bar',data:{labels:rows.map(r=>r.label),datasets:[{label:'Scheduled month',data:rows.map(r=>r.month==null?null:[r.month,r.month+1]),backgroundColor:'#2B5A8C',borderRadius:4,barThickness:18}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Annual audit plan — scheduled month by department'}},scales:{x:{min:0,max:12,ticks:{stepSize:1,callback:v=>MONTHS[v]||''}},y:{}}}})}};
 }
 function viewMatrix(a){
   const M=a.matrix;
@@ -1681,8 +1694,8 @@ function viewCheck(a){
      '<td class="rm"><textarea data-r="'+r.id+'" data-f="remark" rows="2">'+esc(r.remark)+'</textarea></td>'+(edit?'<td><button class="btn sm ghost" data-act="delrow" data-rid="'+r.id+'" title="Remove point">✕</button></td>':'')+'</tr>';
   });
   h+='</tbody></table></div>'+(edit?'<div style="margin-top:10px"><button class="btn sm" data-act="addrow">+ Add check point</button></div>':'');
-  const sg=s.auditSig,sgBtn='<button class="btn sm" data-act="signsheet" data-sk="'+s.key+'">Sign again</button>';
-  h+='<div class="card pn" style="margin-top:14px"><div class="g">'+(sg?'<div class="w2"><label class="f">Auditor\'s signature</label>'+sigBox(sg,sg.content!==sheetContent(a,s),sgBtn)+'</div>':AUTH.server?'<div class="w2"><label class="f">Auditor\'s signature</label><div class="sigbox empty"><button class="btn red" data-act="signsheet" data-sk="'+s.key+'">Sign this check sheet as auditor</button><div class="note" style="margin-top:4px">'+(AUTH.user?'Signing as '+esc(AUTH.user.name)+'.':'You will be asked to sign in first.')+'</div></div></div>':'<div><label class="f">Date</label><input type="text" data-sf="auditDate" value="'+esc(s.auditDate)+'" placeholder="'+today()+'"></div><div><label class="f">Auditor name</label><input type="text" data-sf="auditor" value="'+esc(s.auditor)+'"></div>')+'<div><label class="f">Not yet audited</label><div style="padding:6px 0"><b>'+(st.n-st.done)+'</b> of '+st.n+' points</div></div></div></div></div></div>';
+  const sg=s.auditSig,sgBtn='<button class="btn sm" data-act="signsheet" data-sk="'+s.key+'">Sign again</button>',team=teamFor(a,s),leaderHint=team&&team.leader?' <span class="note">(assigned: '+esc(team.leader)+')</span>':'';
+  h+='<div class="card pn" style="margin-top:14px"><div class="g">'+(sg?'<div class="w2"><label class="f">Team Leader\'s signature</label>'+sigBox(sg,sg.content!==sheetContent(a,s),sgBtn)+'</div>':AUTH.server?'<div class="w2"><label class="f">Team Leader\'s signature'+leaderHint+'</label><div class="sigbox empty"><button class="btn red" data-act="signsheet" data-sk="'+s.key+'">Sign this check sheet as Team Leader</button><div class="note" style="margin-top:4px">'+(AUTH.user?'Signing as '+esc(AUTH.user.name)+'.':'You will be asked to sign in first.')+'</div></div></div>':'<div><label class="f">Date</label><input type="text" data-sf="auditDate" value="'+esc(s.auditDate)+'" placeholder="'+today()+'"></div><div><label class="f">Team Leader name</label><input type="text" data-sf="auditor" value="'+esc(s.auditor)+'"></div>')+'<div><label class="f">Not yet audited</label><div style="padding:6px 0"><b>'+(st.n-st.done)+'</b> of '+st.n+' points</div></div></div></div></div></div>';
   return{h};
 }
 function allFindings(a){const o=[];a.sheets.forEach(s=>s.rows.forEach(r=>{if(r.status==='N'||r.status==='O')o.push({s,r})}));return o.sort((x,y)=>(x.r.status===y.r.status?0:x.r.status==='N'?-1:1)||(x.r.fno<y.r.fno?-1:1))}
@@ -1707,11 +1720,11 @@ const sigContent=(kind,a,sh,r)=>kind==='ack'?'ACK|'+ncrBase(a,sh,r):'VER|'+ncrBa
 const sheetContent=(a,sh)=>'AUDIT|'+a.title+'|'+sh.docNo+'|'+sh.rows.map(r=>r.id+':'+r.status+':'+r.remark).join(';');
 function sigBox(g,stale,act){return'<div class="sigbox'+(stale?' stale':'')+'"><b>✔ '+esc(g.name)+'</b>'+(g.designation?', '+esc(g.designation):'')+'<div class="note">Signed electronically '+esc(new Date(g.at).toLocaleString())+' · Sig #'+g.id+'</div>'+(stale?'<div class="warn">This was changed after it was signed. Sign again to confirm it.</div><div style="margin-top:6px">'+act+'</div>':'')+'</div>'}
 function sigBlock(a,sh,r,kind){
-  const n=r.ncr,g=n[kind+'Sig'],lab=kind==='ack'?'Acknowledged by (auditee / process owner)':'Verified by (auditor)';
+  const n=r.ncr,g=n[kind+'Sig'],lab=kind==='ack'?'Corrective action signed by (Auditee)':'Verification signed by (Team Leader)';
   const btn='<button class="btn sm" data-act="sign" data-k="'+kind+'" data-rid="'+r.id+'">Sign again</button>';
   if(g)return'<div class="w2"><label class="f">'+lab+'</label>'+sigBox(g,g.content!==sigContent(kind,a,sh,r),btn)+'</div>';
   if(AUTH.server)return'<div class="w2"><label class="f">'+lab+'</label><div class="sigbox empty"><button class="btn red" data-act="sign" data-k="'+kind+'" data-rid="'+r.id+'">Sign with my password</button><div class="note" style="margin-top:4px">'+(AUTH.user?'Signing as '+esc(AUTH.user.name)+'.':'You will be asked to sign in first.')+'</div></div></div>';
-  return kind==='ack'?f2('ackBy',r,'Acknowledged by (auditee)')+f2('ackDate',r,'Date','yyyy.mm.dd'):f2('verifiedBy',r,'Verified by (auditor)')+f2('verifyDate',r,'Date verified','yyyy.mm.dd');
+  return kind==='ack'?f2('ackBy',r,'Corrective action signed by (Auditee)')+f2('ackDate',r,'Date','yyyy.mm.dd'):f2('verifiedBy',r,'Verified by (Team Leader)')+f2('verifyDate',r,'Date verified','yyyy.mm.dd');
 }
 const f2=(k,r,lab,ph)=>'<div><label class="f">'+lab+'</label><input type="text" data-n="'+r.id+'" data-f="'+k+'" value="'+esc(r.ncr[k])+'" placeholder="'+esc(ph||'')+'"></div>';
 const ncrRows=a=>{const o=[];a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N'&&r.ncr)o.push({s:sh,r})}));return o};
@@ -1728,7 +1741,7 @@ function viewNcr(a){
     f('requirement','Requirement that is not met','The clause or procedure requirement','area')+f('statement','Non-conformity found','What was seen: '+(r.remark||'describe the finding'),'area')+f('evidence','Objective evidence checked','Records, documents, observations','area')+'</div>';
   h+='<h3>2 · Correction and root cause</h3><div class="g">'+f('correction','Immediate correction / containment','What was done straight away','area')+f('correctionDate','Date of correction','yyyy.mm.dd')+f('rootCause','Root cause (why did it happen?)','5-why or fishbone summary','area')+'</div>';
   h+='<h3>3 · Corrective action</h3><div class="g">'+fu('action','Corrective action to stop it happening again','','area')+fu('owner','Responsible person')+fu('due','Target date','yyyy.mm.dd')+'<div><label class="f">Status</label><select data-u="'+r.id+'" data-f="state"><option'+(u.state!=='Closed'?' selected':'')+'>Open</option><option'+(u.state==='Closed'?' selected':'')+'>Closed</option></select></div></div>';
-  h+='<h3>4 · Acknowledgement and verification</h3><div class="g">'+sigBlock(a,sh,r,'ack')+
+  h+='<h3>4 · Sign-off — corrective action (Auditee) and verification (Team Leader)</h3><div class="g">'+sigBlock(a,sh,r,'ack')+
     '<div><label class="f">Effectiveness of the action</label><select data-n="'+r.id+'" data-f="effective"><option value="">Not verified yet</option><option'+(n.effective==='Effective'?' selected':'')+'>Effective</option><option'+(n.effective==='Not effective'?' selected':'')+'>Not effective</option></select></div>'+f('closureDate','Closure date','yyyy.mm.dd')+sigBlock(a,sh,r,'ver')+'</div></div></div>';
   return{h};
 }
@@ -1740,7 +1753,7 @@ function ncrPrint(rid){
    '<table class="nf"><tr><th>Audit</th><td>'+e(a.title)+' · '+e(a.standard)+'</td><th>Department / process</th><td>'+e(sh.name)+' ('+e(sh.docNo)+')</td></tr><tr><th>Clause</th><td>'+e(r.clause)+'</td><th>Category</th><td>'+(n.category==='Major'?'☒':'☐')+' Major &nbsp;&nbsp; '+(n.category!=='Major'?'☒':'☐')+' Minor</td></tr><tr><th>Auditor(s)</th><td>'+e(n.auditors)+'</td><th>Auditee</th><td>'+e(n.auditee)+'</td></tr></table>'+
    '<table class="nf">'+row('Requirement not met',n.requirement,1)+row('Non-conformity found',n.statement||r.remark,1)+row('Objective evidence',n.evidence,1)+row('Correction / containment',(n.correction||'')+(n.correctionDate?'\n(Date: '+n.correctionDate+')':''),1)+row('Root cause',n.rootCause,1)+row('Corrective action',u.action,1)+
    '<tr><th>Responsible</th><td>'+e(u.owner)+'</td><th>Target date</th><td>'+e(u.due)+'</td></tr></table>'+
-   '<table class="nf"><tr><th>Acknowledged by (auditee)</th><td class="sig">'+e(n.ackBy)+sigPrint(n.ackSig)+'</td><th>Date</th><td>'+e(n.ackDate)+'</td></tr><tr><th>Verified by (auditor)</th><td class="sig">'+e(n.verifiedBy)+sigPrint(n.verSig)+'</td><th>Date verified</th><td>'+e(n.verifyDate)+'</td></tr><tr><th>Effectiveness</th><td>'+(n.effective==='Effective'?'☒':'☐')+' Effective &nbsp;&nbsp; '+(n.effective==='Not effective'?'☒':'☐')+' Not effective</td><th>Closed on</th><td>'+e(n.closureDate)+(u.state==='Closed'&&!n.closureDate?'Closed':'')+'</td></tr></table>';
+   '<table class="nf"><tr><th>Corrective action signed by (Auditee)</th><td class="sig">'+e(n.ackBy)+sigPrint(n.ackSig)+'</td><th>Date</th><td>'+e(n.ackDate)+'</td></tr><tr><th>Verified by (Team Leader)</th><td class="sig">'+e(n.verifiedBy)+sigPrint(n.verSig)+'</td><th>Date verified</th><td>'+e(n.verifyDate)+'</td></tr><tr><th>Effectiveness</th><td>'+(n.effective==='Effective'?'☒':'☐')+' Effective &nbsp;&nbsp; '+(n.effective==='Not effective'?'☒':'☐')+' Not effective</td><th>Closed on</th><td>'+e(n.closureDate)+(u.state==='Closed'&&!n.closureDate?'Closed':'')+'</td></tr></table>';
   setTimeout(()=>window.print(),60);
 }
 function viewFind(a){
@@ -1765,21 +1778,26 @@ document.addEventListener('click',e=>{
   const nr=e.target.closest('[data-ncr]');if(nr){nk=nr.dataset.ncr;render();return}
   const st=e.target.closest('[data-st]');if(st){const a=cur(),{r}=findRow(st.dataset.rid);if(!r)return;r.status=r.status===st.dataset.st?'':st.dataset.st;number(a,r);ensureNcr(a,findRow(r.id).s,r);save();render();return}
   const ac=e.target.closest('[data-act]');if(!ac)return;const a=cur(),act=ac.dataset.act;
-  if(act==='addteam'){a.teams.push({no:a.teams.length+1,dept:'',leader:'',m1:'',m2:'',date:'',time:'',venue:''});save();render()}
+  if(act==='addteam'){a.teams.push({no:a.teams.length+1,dept:'',leader:'',leaderEmail:'',auditee:'',m1:'',m2:'',date:'',time:'',venue:''});save();render()}
   else if(act==='delteam'){a.teams.splice(+ac.dataset.i,1);save();render()}
   else if(act==='delrow'){const {s,r}=findRow(ac.dataset.rid);if(r&&confirm('Remove this check point?')){s.rows=s.rows.filter(x=>x!==r);save();render()}}
   else if(act==='addrow'){const s=a.sheets.find(x=>x.key===sk);s.rows.push({id:'r'+uid(),g:Math.max(0,...s.rows.map(r=>r.g))+1,section:(s.rows[s.rows.length-1]||{}).section||'',clause:'',point:'New audit check point',resp:'',evidence:'',status:'',remark:''});save();render()}
   else if(act==='wmm'){const x=findRow(ac.dataset.rid);const n=sendWmm(x.r?[x]:[]);if(n){render();toast((x.r.ncr?x.r.ncr.no:x.r.fno)+' sent to the Weekly Management Meeting as a new requirement')}}
   else if(act==='wmmall'){const n=sendWmm(ncFindings(a).filter(x=>!(x.r.fu||{}).wmm));if(n){render();toast(n+' non-conformit'+(n===1?'y':'ies')+' sent to the Weekly Management Meeting as new requirements')}}
   else if(act==='sign'){const {s:sh,r}=findRow(ac.dataset.rid),k=ac.dataset.k;if(!r||!r.ncr)return;const c=sigContent(k,a,sh,r),n=r.ncr;
-    fitlSign({purpose:(k==='ack'?'Acknowledgement of non-conformity report':'Verification of non-conformity report'),ref:n.no,content:c,summary:n.no+' · '+sh.name+(r.clause?' · clause '+r.clause:'')+' · '+n.category+' — '+(n.statement||r.remark||r.point)}).then(res=>{
+    fitlSign({purpose:(k==='ack'?'Corrective action signed by the Auditee':'Verification signed by the Team Leader'),ref:n.no,content:c,summary:n.no+' · '+sh.name+(r.clause?' · clause '+r.clause:'')+' · '+n.category+' — '+(n.statement||r.remark||r.point)}).then(res=>{
       if(res.ok){const g=res.sig;n[k+'Sig']={id:g.id,name:g.name,designation:g.designation,at:g.at,hash:g.hash,content:c};
         if(k==='ack'){n.ackBy=g.name;n.ackDate=dotDate(g.at)}else{n.verifiedBy=g.name;n.verifyDate=dotDate(g.at)}save();render();toast('Signed by '+g.name+' (Sig #'+g.id+')')}
       else if(res.reason!=='cancelled')toast('Signing is only possible when the system is opened from the company server.')})}
   else if(act==='signsheet'){const sh=a.sheets.find(x=>x.key===ac.dataset.sk),c=sheetContent(a,sh),q=stats(sh);
-    fitlSign({purpose:'Audit check sheet signed by the auditor',ref:sh.docNo+' · '+a.title,content:c,summary:sh.name+' · '+q.done+' of '+q.n+' points audited · '+q.c+' conformity, '+q.o+' observation, '+q.x+' NC'}).then(res=>{
+    fitlSign({purpose:'Audit check sheet signed by the Team Leader',ref:sh.docNo+' · '+a.title,content:c,summary:sh.name+' · '+q.done+' of '+q.n+' points audited · '+q.c+' conformity, '+q.o+' observation, '+q.x+' NC'}).then(res=>{
       if(res.ok){const g=res.sig;sh.auditSig={id:g.id,name:g.name,designation:g.designation,at:g.at,hash:g.hash,content:c};sh.auditor=g.name;sh.auditDate=dotDate(g.at);save();render();toast('Check sheet signed by '+g.name+' (Sig #'+g.id+')')}
       else if(res.reason!=='cancelled')toast('Signing is only possible when the system is opened from the company server.')})}
+  else if(act==='notifyleader'){const i=+ac.dataset.i,t=a.teams[i];if(!t||!t.leaderEmail)return;
+    fetch('/api/notify/audit-leader',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1'},body:JSON.stringify({to:t.leaderEmail,name:t.leader,dept:t.dept,auditTitle:a.title,date:t.date,time:t.time,venue:t.venue})})
+      .then(r=>r.json().catch(()=>({})).then(j=>({ok:r.ok,j})))
+      .then(({ok,j})=>{if(ok){t.notified={at:new Date().toISOString(),email:t.leaderEmail};save();render();toast('E-mailed '+(t.leader||'the Team Leader')+' at '+t.leaderEmail)}else toast(j.error||'Could not send the e-mail.')})
+      .catch(()=>toast('Could not reach the server to send the e-mail.'))}
   else if(act==='openncr'){nk=ac.dataset.rid;tab='ncr';render();window.scrollTo(0,0)}
   else if(act==='ncrprint')ncrPrint(ac.dataset.rid);
   else if(act==='capa'){const {s,r}=findRow(ac.dataset.rid);if(!r)return;
@@ -1803,7 +1821,7 @@ $('newr').onclick=()=>{
   $('host').innerHTML='<div class="veil"><div class="modal"><h2>New audit round</h2><p class="note" style="margin-top:0">The new round starts from the current one: same teams, matrix and check points, with every audit status, remark and finding cleared.</p><label class="f">Audit title</label><input type="text" id="nt" value="Internal Audit '+n.getFullYear()+' '+MON[n.getMonth()]+'"><div class="foot"><button class="btn" id="nc">Cancel</button><button class="btn red" id="ny">Create round</button></div></div></div>';
   $('nc').onclick=()=>$('host').innerHTML='';
   $('ny').onclick=()=>{const t=$('nt').value.trim();if(!t){toast('Give the new round a title');return}
-    const b=JSON.parse(JSON.stringify(a));b.id='a'+uid();b.title=t;b.fseq={NC:0,OBS:0};b.teams.forEach(x=>{x.date='';x.time=''});Object.assign(b.plan,{meetDate:'',meetTime:'',closeDate:'',closeTime:''});
+    const b=JSON.parse(JSON.stringify(a));b.id='a'+uid();b.title=t;b.fseq={NC:0,OBS:0};b.teams.forEach(x=>{x.date='';x.time='';delete x.notified});Object.assign(b.plan,{meetDate:'',meetTime:'',closeDate:'',closeTime:''});
     delete b.tag;b.sheets.forEach(s=>{s.auditDate='';s.auditor='';s.rows.forEach(r=>{r.status='';r.remark='';delete r.fno;delete r.fu;delete r.ncr});delete s.auditSig});
     D.audits.push(b);D.cur=b.id;sk=null;tab='plan';save();$('host').innerHTML='';render();toast('New audit round created')};
 };
@@ -1812,20 +1830,20 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')$('host').innerHTML=
 /* ---------- Excel, laid out like the audit workbook ---------- */
 $('xl').onclick=()=>{
   if(typeof XLSX==='undefined'){toast('The Excel library did not load — check the internet connection.');return}
-  const a=cur(),wb=XLSX.utils.book_new(),A=[[' '+a.title],['Scope',a.scope],[],['Type of Audit',a.type],['Standard',a.standard],[],['Team Number','Department','Team Leader','Team Member 1','Team Member 2','Audit Date','Time','Venue']]
-   .concat(a.teams.map(t=>[t.no,t.dept,t.leader,t.m1,t.m2,t.date,t.time,t.venue])).concat([[],['Audit Planning Meeting'],['Date',a.plan.meetDate],['Time',a.plan.meetTime],['Venue',a.plan.meetVenue],['Participants',a.plan.meetPart],[],['Audit Closing Meeting'],['Date',a.plan.closeDate],['Time',a.plan.closeTime],['Venue',a.plan.closeVenue],['Participants',a.plan.closePart]]);
-  const ws0=XLSX.utils.aoa_to_sheet(A);ws0['!cols']=[{wch:16},{wch:26},{wch:16},{wch:16},{wch:16},{wch:22},{wch:22},{wch:16}];XLSX.utils.book_append_sheet(wb,ws0,'Audit Plan');
+  const a=cur(),wb=XLSX.utils.book_new(),A=[[' '+a.title],['Scope',a.scope],[],['Type of Audit',a.type],['Standard',a.standard],[],['Team Number','Department','Team Leader','Leader E-mail','Auditee','Team Member 1','Team Member 2','Audit Date','Time','Venue']]
+   .concat(a.teams.map(t=>[t.no,t.dept,t.leader,t.leaderEmail||'',t.auditee||'',t.m1,t.m2,t.date,t.time,t.venue])).concat([[],['Audit Planning Meeting'],['Date',a.plan.meetDate],['Time',a.plan.meetTime],['Venue',a.plan.meetVenue],['Participants',a.plan.meetPart],[],['Audit Closing Meeting'],['Date',a.plan.closeDate],['Time',a.plan.closeTime],['Venue',a.plan.closeVenue],['Participants',a.plan.closePart]]);
+  const ws0=XLSX.utils.aoa_to_sheet(A);ws0['!cols']=[{wch:16},{wch:26},{wch:16},{wch:24},{wch:16},{wch:16},{wch:16},{wch:22},{wch:22},{wch:16}];XLSX.utils.book_append_sheet(wb,ws0,'Audit Plan');
   const M=[['Clause Number','Clause'].concat(a.matrix.depts.map(d=>d.label))].concat(a.matrix.clauses.map(c=>[c.no,c.name].concat(a.matrix.depts.map(d=>c.d.includes(d.key)?'y':''))));
   const wsM=XLSX.utils.aoa_to_sheet(M);wsM['!cols']=[{wch:14},{wch:56}].concat(a.matrix.depts.map(()=>({wch:14})));XLSX.utils.book_append_sheet(wb,wsM,'Audit Matrix');
   a.sheets.forEach(s=>{
     const R=[['QUALITY MANAGEMENT SYSTEM','','','','','Document No: '+s.docNo],['','','','','','Issue No: '+s.issue,'Revision No: '+s.rev],[s.title,'','','','','Issue Date: '+s.issueDate],[],['Section','Clause no','Audit Checklist Point','Responsibility','Evidence to be checked','Conformity','Observation','NC','Remarks']];
     s.rows.forEach(r=>R.push([r.section,r.clause,r.point,r.resp,r.evidence,r.status==='C'?true:'',r.status==='O'?true:'',r.status==='N'?true:'',r.remark]));
-    R.push([],['Date',s.auditDate,'','Auditor Name',s.auditor,'','','','Auditor Signature']);
+    R.push([],['Date',s.auditDate,'','Team Leader Name',s.auditor,'','','','Team Leader Signature']);
     const w=XLSX.utils.aoa_to_sheet(R);w['!cols']=[{wch:14},{wch:10},{wch:56},{wch:26},{wch:44},{wch:12},{wch:12},{wch:8},{wch:50}];XLSX.utils.book_append_sheet(wb,w,s.name.slice(0,31));
   });
   const F=[['No','Type','Department','Clause','Audit point','Finding / remark','Owner','Due date','Corrective action','State']].concat(allFindings(a).map(({s,r})=>[r.fno,ST[r.status],s.name,r.clause,r.point,r.remark,(r.fu||{}).owner||'',(r.fu||{}).due||'',(r.fu||{}).action||'',(r.fu||{}).state||'Open']));
   const wsF=XLSX.utils.aoa_to_sheet(F);wsF['!cols']=[{wch:9},{wch:12},{wch:22},{wch:10},{wch:50},{wch:50},{wch:16},{wch:12},{wch:44},{wch:9}];XLSX.utils.book_append_sheet(wb,wsF,'Findings');
-  const NR=[['Report no','Date','Department','Clause','Category','Requirement not met','Non-conformity found','Evidence','Correction','Root cause','Corrective action','Responsible','Target date','Status','Verified by','Date verified','Effectiveness','Closed on','Acknowledged by','Signature no. (ack.)','Signature no. (verif.)']].concat(ncrRows(a).map(({s,r})=>{const n=r.ncr,u=r.fu||{};return[n.no,n.date,s.name,r.clause,n.category,n.requirement,n.statement||r.remark,n.evidence,n.correction,n.rootCause,u.action||'',u.owner||'',u.due||'',u.state||'Open',n.verifiedBy,n.verifyDate,n.effective,n.closureDate,n.ackBy||'',n.ackSig?n.ackSig.id:'',n.verSig?n.verSig.id:'']}));
+  const NR=[['Report no','Date','Department','Clause','Category','Requirement not met','Non-conformity found','Evidence','Correction','Root cause','Corrective action','Responsible','Target date','Status','Verified by (Team Leader)','Date verified','Effectiveness','Closed on','Corrective action signed by (Auditee)','Signature no. (ack.)','Signature no. (verif.)']].concat(ncrRows(a).map(({s,r})=>{const n=r.ncr,u=r.fu||{};return[n.no,n.date,s.name,r.clause,n.category,n.requirement,n.statement||r.remark,n.evidence,n.correction,n.rootCause,u.action||'',u.owner||'',u.due||'',u.state||'Open',n.verifiedBy,n.verifyDate,n.effective,n.closureDate,n.ackBy||'',n.ackSig?n.ackSig.id:'',n.verSig?n.verSig.id:'']}));
   const wsN=XLSX.utils.aoa_to_sheet(NR);wsN['!cols']=[{wch:14},{wch:11},{wch:22},{wch:9},{wch:9},{wch:44},{wch:44},{wch:30},{wch:30},{wch:30},{wch:36},{wch:16},{wch:11},{wch:8},{wch:16},{wch:11},{wch:13},{wch:11}];XLSX.utils.book_append_sheet(wb,wsN,'NCR register');
   XLSX.writeFile(wb,a.title.replace(/[^\w ]+/g,'').trim().replace(/ +/g,'_')+'.xlsx');
 };

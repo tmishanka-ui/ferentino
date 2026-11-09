@@ -19,4 +19,6 @@ export const env = {
   // a page's records are one document, and a MongoDB document cannot be larger than 16 MB
   get maxDataMb() { return Math.min(num('MAX_DATA_MB', 15), 15.5); },
   get maxFileMb() { return num('MAX_FILE_MB', 200); },
+  get resendApiKey() { return str('RESEND_API_KEY', ''); },
+  get mailFrom() { return str('MAIL_FROM', ''); },
 };
