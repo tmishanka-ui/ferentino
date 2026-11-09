@@ -120,10 +120,6 @@
 
   /* ---- dashboard ---- */
   .dash-toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0;}
-  .backup-bar{padding-bottom:14px; border-bottom:1px solid var(--line); margin-top:16px;}
-  .storage-notice{margin-top:14px; padding:10px 14px; border-radius:6px; font-size:12.5px; line-height:1.5;}
-  .storage-notice.cloud{background:#e9f4ec; color:var(--ok); border:1px solid var(--ok);}
-  .storage-notice.local{background:#fff6e6; color:var(--warn); border:1px solid var(--warn);}
   .year-field{display:flex; align-items:center; gap:8px; border:2px solid var(--ink); border-radius:4px; padding:6px 12px; background:var(--panel);}
   .year-field label{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--steel); font-weight:700;}
   .year-field input{width:70px; border:none; font-size:14px; font-weight:700; color:var(--ink);}
@@ -277,15 +273,6 @@
   <div id="tab-dash" class="tabpanel">
 
     <div id="dash-content">
-
-      <div id="storage-mode-banner" class="storage-notice"></div>
-
-      <div class="dash-toolbar no-print backup-bar">
-        <button class="btn" onclick="downloadBackup()">⬇ Download Backup (All Data)</button>
-        <button class="btn" onclick="document.getElementById('restore-file-input').click()">⬆ Reload from Backup</button>
-        <input type="file" id="restore-file-input" accept="application/json" style="display:none;" onchange="restoreBackup(this)">
-        <span id="backup-status" style="font-size:12px;color:#777;"></span>
-      </div>
 
       <div class="subtabbar no-print" style="margin-top:14px;">
         <button id="sub-btn-r2" class="active" onclick="switchSub('r2')">Training Need Assessment Record · FIT/Q/FO-HR-08</button>
@@ -1038,15 +1025,9 @@ async function submitSurvey(){
     if(idx >= 0) list[idx] = submission; else list.push(submission);
     const result = await storageSet(SUBMISSIONS_KEY, JSON.stringify(list), true);
     if(!result) throw new Error('save failed');
-    if(HAS_CLOUD_STORAGE){
-      showBanner('survey-banner', lang==='en' ?
-        'Survey submitted. HR summary and department records have been updated automatically.' :
-        'ප්‍රශ්නාවලිය ඉදිරිපත් කරන ලදී. HR සාරාංශය ස්වයංක්‍රීයව යාවත්කාලීන කරන ලදී.', true);
-    }else{
-      showBanner('survey-banner', lang==='en' ?
-        'Survey saved on this device. This copy of the app is running in local storage mode — ask HR how submissions from this computer should reach them (e.g. via the Download Backup file, or a shared/hosted copy of this app).' :
-        'ප්‍රශ්නාවලිය මෙම උපකරණයේ සුරැකින ලදී. මෙම යෙදුම දේශීය ගබඩා ප්‍රකාරයේ ක්‍රියාත්මක වේ — මෙම පරිගණකයෙන් ලැබෙන ප්‍රතිචාර HR වෙත ලබා දෙන ආකාරය පිළිබඳව විමසන්න.', true);
-    }
+    showBanner('survey-banner', lang==='en' ?
+      'Survey submitted. HR summary and department records have been updated automatically.' :
+      'ප්‍රශ්නාවලිය ඉදිරිපත් කරන ලදී. HR සාරාංශය ස්වයංක්‍රීයව යාවත්කාලීන කරන ලදී.', true);
   }catch(err){
     console.error(err);
     showBanner('survey-banner', lang==='en' ?
@@ -1062,23 +1043,10 @@ let DASH_INITIALIZED = false;
 async function initDashboard(){
   if(DASH_INITIALIZED) return;
   DASH_INITIALIZED = true;
-  renderStorageModeBanner();
   buildTrDeptOptions();
   await loadAll();
   await loadRecord4();
   loadTrainingRecords();
-}
-
-function renderStorageModeBanner(){
-  const el = document.getElementById('storage-mode-banner');
-  if(!el) return;
-  if(HAS_CLOUD_STORAGE){
-    el.className = 'storage-notice cloud';
-    el.textContent = 'Connected to shared cloud storage — every submission from every device is visible here automatically.';
-  }else{
-    el.className = 'storage-notice local';
-    el.textContent = 'Local browser storage mode: this file was opened outside claude.ai, so data is only saved on this device/browser and does not sync automatically with other computers. Use "Download Backup" here and "Reload from Backup" on another device to move data between them (e.g. from an employee\'s PC to HR\'s).';
-  }
 }
 
 let ALL_SUBMISSIONS = [];
@@ -1812,138 +1780,6 @@ async function resetAllData(){
   }catch(e){
     alert('Could not clear data: ' + e.message);
   }
-}
-
-/* =========================================================================
-   FULL DATA BACKUP / RESTORE (JSON) — covers survey submissions, the
-   annual plan + its year, and every training record (incl. photos)
-   ========================================================================= */
-async function downloadBackup(){
-  const statusEl = document.getElementById('backup-status');
-  if(statusEl) statusEl.textContent = 'Preparing backup…';
-  try{
-    const submissionsRes = await storageGet(SUBMISSIONS_KEY, true);
-    const submissions = (submissionsRes && submissionsRes.value) ? JSON.parse(submissionsRes.value) : [];
-
-    const planRes = await storageGet(PLAN_KEY, true);
-    const plan = (planRes && planRes.value) ? JSON.parse(planRes.value) : buildDefaultPlanRows();
-
-    const planYearRes = await storageGet(PLAN_YEAR_KEY, true);
-    const planYear = (planYearRes && planYearRes.value) ? planYearRes.value : '';
-
-    const record4Res = await storageGet(RECORD4_KEY, true);
-    const record4 = (record4Res && record4Res.value) ? JSON.parse(record4Res.value) : [];
-
-    const overridesRes = await storageGet(SECTION_OVERRIDES_KEY, true);
-    const sectionOverrides = (overridesRes && overridesRes.value) ? JSON.parse(overridesRes.value) : {};
-
-    let trIndex = [];
-    try{
-      const idxRes = await storageGet(TR_INDEX_KEY, true);
-      if(idxRes && idxRes.value) trIndex = JSON.parse(idxRes.value);
-    }catch(e){ trIndex = []; }
-
-    const trainingRecords = [];
-    for(const id of trIndex){
-      try{
-        const r = await storageGet('training-record:'+id, true);
-        if(r && r.value) trainingRecords.push(JSON.parse(r.value));
-      }catch(e){ /* skip missing entry */ }
-    }
-
-    const backup = {
-      app: 'Training App — Ferentino Industrial Tyres',
-      backupVersion: 1,
-      exportedAt: new Date().toISOString(),
-      submissions,
-      plan,
-      planYear,
-      record4,
-      sectionOverrides,
-      trainingRecords
-    };
-
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const dateStamp = new Date().toISOString().slice(0,10);
-    a.href = url; a.download = 'training_app_backup_'+dateStamp+'.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    if(statusEl) statusEl.textContent = 'Backup downloaded.';
-  }catch(e){
-    console.error(e);
-    if(statusEl) statusEl.textContent = 'Backup failed: ' + e.message;
-  }
-}
-
-function restoreBackup(inputEl){
-  const file = inputEl.files && inputEl.files[0];
-  if(!file) return;
-  const statusEl = document.getElementById('backup-status');
-  const reader = new FileReader();
-  reader.onload = async () => {
-    let backup;
-    try{
-      backup = JSON.parse(reader.result);
-    }catch(e){
-      alert('That file is not valid backup JSON.');
-      inputEl.value = '';
-      return;
-    }
-    if(!backup || !Array.isArray(backup.submissions) || !Array.isArray(backup.plan)){
-      alert('This file does not look like a Training App backup.');
-      inputEl.value = '';
-      return;
-    }
-    const summary = `This backup contains:\n`+
-      `• ${backup.submissions.length} survey submission(s)\n`+
-      `• ${backup.plan.length} annual plan row(s)`+ (backup.planYear ? ' (year '+backup.planYear+')' : '') + `\n`+
-      `• ${(backup.record4||[]).length} Training Need Identification group(s)\n`+
-      `• ${(backup.trainingRecords||[]).length} training record(s)\n\n`+
-      `Restoring will REPLACE all current data for everyone. Continue?`;
-    if(!confirm(summary)){ inputEl.value=''; return; }
-
-    if(statusEl) statusEl.textContent = 'Restoring…';
-    try{
-      await storageSet(SUBMISSIONS_KEY, JSON.stringify(backup.submissions), true);
-      await storageSet(PLAN_KEY, JSON.stringify(backup.plan), true);
-      if(backup.planYear) await storageSet(PLAN_YEAR_KEY, backup.planYear, true);
-      if(Array.isArray(backup.record4)) await storageSet(RECORD4_KEY, JSON.stringify(backup.record4), true);
-      if(backup.sectionOverrides) await storageSet(SECTION_OVERRIDES_KEY, JSON.stringify(backup.sectionOverrides), true);
-
-      // clear existing training records, then write the restored set
-      let oldIndex = [];
-      try{
-        const idxRes = await storageGet(TR_INDEX_KEY, true);
-        if(idxRes && idxRes.value) oldIndex = JSON.parse(idxRes.value);
-      }catch(e){ oldIndex = []; }
-      for(const id of oldIndex){
-        try{ await storageDelete('training-record:'+id, true); }catch(e){}
-      }
-      const newIndex = [];
-      for(const entry of (backup.trainingRecords||[])){
-        if(!entry.id) continue;
-        await storageSet('training-record:'+entry.id, JSON.stringify(entry), true);
-        newIndex.push(entry.id);
-      }
-      await storageSet(TR_INDEX_KEY, JSON.stringify(newIndex), true);
-
-      await loadSectionOverrides();
-      refreshStaticText();
-      renderSections({});
-      await loadAll();
-      await loadRecord4();
-      await loadTrainingRecords();
-      if(statusEl) statusEl.textContent = 'Backup restored successfully.';
-    }catch(e){
-      console.error(e);
-      if(statusEl) statusEl.textContent = 'Restore failed: ' + e.message;
-      alert('Restore failed: ' + e.message);
-    }
-    inputEl.value = '';
-  };
-  reader.readAsText(file);
 }
 
 /* init */
