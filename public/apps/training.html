@@ -278,7 +278,7 @@
         <button id="sub-btn-r2" class="active" onclick="switchSub('r2')">Training Need Assessment Record · FIT/Q/FO-HR-08</button>
         <button id="sub-btn-plan" onclick="switchSub('plan')">Annual Training Plan · FIT/Q/RG-HR-06</button>
         <button id="sub-btn-r4" onclick="switchSub('r4')">Need Identification · FIT/Q/FO-HR-10</button>
-        <button id="sub-btn-tr" onclick="switchSub('tr')">Training Record · QMS/HR/05</button>
+        <button id="sub-btn-tr" onclick="switchSub('tr')">Training Record · FIT/Q/RG-HR-11</button>
       </div>
 
       <!-- ---- FIT/Q/FO-HR-08 ---- -->
@@ -356,11 +356,11 @@
         </div>
       </div>
 
-      <!-- ---- QMS/HR/05 ---- -->
+      <!-- ---- FIT/Q/RG-HR-11 ---- -->
       <div id="sub-tr" class="subpanel">
         <div class="doc-mini">
           <span class="doc-title">Training Record</span>
-          <span class="doc-meta">Doc No: <b>QMS/HR/05</b></span>
+          <span class="doc-meta">Doc No: <b>FIT/Q/RG-HR-11</b></span>
           <span class="doc-meta">Issue No: <b>01</b></span>
           <span class="doc-meta">Revision No: <b>00</b></span>
           <span class="doc-meta">Issue Date: <b>2026.04.20</b></span>
@@ -904,23 +904,19 @@ function showBanner(id, msg, ok){
 }
 
 /* =========================================================================
-   QUESTIONNAIRE EDITOR (FIT/Q/GL-HR-07) — System Coordinator only.
-   Edits a draft copy of the live SECTIONS; nothing is changed until Save,
-   and Save/Cancel/Delete-question all re-confirm with the Coordinator's
-   own password (the existing electronic-signature flow) before anything
-   is written. Only the English text is editable here; a new or renamed
-   question keeps a Sinhala line equal to the English one until someone
-   provides a translation by editing SECTION_OVERRIDES directly.
+   QUESTIONNAIRE EDITOR (FIT/Q/GL-HR-07)
+   Edits a draft copy of the live SECTIONS; nothing is changed until Save.
+   Only the English text is editable here; a new or renamed question keeps
+   a Sinhala line equal to the English one until someone provides a
+   translation by editing SECTION_OVERRIDES directly.
    ========================================================================= */
 let QE_DRAFT = null;
 
 function openQuestionnaireEditor(){
   if(QE_DRAFT){ document.getElementById('qe-panel').hidden = false; return; }
-  coordinatorGate('Edit the Training Needs Assessment Questionnaire', 'FIT/Q/GL-HR-07', async ()=>{
-    QE_DRAFT = JSON.parse(JSON.stringify(SECTIONS));
-    document.getElementById('qe-panel').hidden = false;
-    renderQuestionnaireEditor();
-  });
+  QE_DRAFT = JSON.parse(JSON.stringify(SECTIONS));
+  document.getElementById('qe-panel').hidden = false;
+  renderQuestionnaireEditor();
 }
 
 function qeCancel(){
@@ -949,9 +945,9 @@ function renderQuestionnaireEditor(){
   }).join('');
   panel.innerHTML =
     '<h3>Edit Training Needs Assessment Questionnaire</h3>'+
-    '<p class="hint">Section = one section of the questionnaire below; its questions become the "Training Need" choices offered in the Annual Training Plan. Nothing is changed until you choose Save, which asks you to confirm again with your password.</p>'+
+    '<p class="hint">Section = one section of the questionnaire below; its questions become the "Training Need" choices offered in the Annual Training Plan. Nothing is changed until you choose Save.</p>'+
     sectionsHtml+
-    '<div class="row" style="margin-top:16px;"><button class="btn" onclick="qeCancel()">Cancel</button><button class="btn primary" onclick="qeSave()">💾 Save (Coordinator)</button></div>';
+    '<div class="row" style="margin-top:16px;"><button class="btn" onclick="qeCancel()">Cancel</button><button class="btn primary" onclick="qeSave()">💾 Save</button></div>';
 }
 
 function qeTitleChange(el){ QE_DRAFT[el.dataset.sk].title = { en: el.value, si: QE_DRAFT[el.dataset.sk].title.si }; }
@@ -959,21 +955,19 @@ function qeItemChange(el){ const idx = Number(el.dataset.idx); const items = QE_
 function qeAddItem(sk){ QE_DRAFT[sk].items.push({en:'New question', si:'New question'}); renderQuestionnaireEditor(); }
 function qeDeleteItem(sk, idx){ QE_DRAFT[sk].items.splice(idx,1); renderQuestionnaireEditor(); }
 
-function qeSave(){
-  coordinatorGate('Save changes to the Training Needs Assessment Questionnaire', 'FIT/Q/GL-HR-07', async ()=>{
-    const overrides = {};
-    Object.keys(QE_DRAFT).forEach(sk=>{ overrides[sk] = { title: QE_DRAFT[sk].title, items: QE_DRAFT[sk].items }; });
-    SECTION_OVERRIDES = overrides;
-    applySectionOverrides(SECTION_OVERRIDES);
-    try{ await storageSet(SECTION_OVERRIDES_KEY, JSON.stringify(SECTION_OVERRIDES), true); }
-    catch(e){ alert('Could not save the questionnaire: ' + e.message); return; }
-    const prevDept = document.getElementById('dept-select').value;
-    refreshStaticText();
-    document.getElementById('dept-select').value = prevDept;
-    renderSections({});
-    qeCancel();
-    showBanner('survey-banner', 'Questionnaire updated. New Annual Training Plans will offer the updated questions as Training Need choices.', true);
-  });
+async function qeSave(){
+  const overrides = {};
+  Object.keys(QE_DRAFT).forEach(sk=>{ overrides[sk] = { title: QE_DRAFT[sk].title, items: QE_DRAFT[sk].items }; });
+  SECTION_OVERRIDES = overrides;
+  applySectionOverrides(SECTION_OVERRIDES);
+  try{ await storageSet(SECTION_OVERRIDES_KEY, JSON.stringify(SECTION_OVERRIDES), true); }
+  catch(e){ alert('Could not save the questionnaire: ' + e.message); return; }
+  const prevDept = document.getElementById('dept-select').value;
+  refreshStaticText();
+  document.getElementById('dept-select').value = prevDept;
+  renderSections({});
+  qeCancel();
+  showBanner('survey-banner', 'Questionnaire updated. New Annual Training Plans will offer the updated questions as Training Need choices.', true);
 }
 
 /* =========================================================================
@@ -1181,35 +1175,27 @@ function needLabel(id){
   return row ? row.need : '(removed from the plan)';
 }
 
-function addRecord4Group(){
-  coordinatorGate('Add a department/section to the Record for Training Need Identification', 'FIT/Q/FO-HR-10', async ()=>{
-    const name = prompt('Department / Section name (e.g. "Production Department"):');
-    if(!name || !name.trim()) return;
-    RECORD4_GROUPS.push({id:uid(), name:name.trim(), needIds:[], employees:[]});
-    renderRecord4(); await saveRecord4(true);
-  });
+async function addRecord4Group(){
+  const name = prompt('Department / Section name (e.g. "Production Department"):');
+  if(!name || !name.trim()) return;
+  RECORD4_GROUPS.push({id:uid(), name:name.trim(), needIds:[], employees:[]});
+  renderRecord4(); await saveRecord4(true);
 }
-function renameRecord4Group(gi){
-  coordinatorGate('Rename a department/section in the Record for Training Need Identification', RECORD4_GROUPS[gi].name, async ()=>{
-    const name = prompt('New name:', RECORD4_GROUPS[gi].name);
-    if(!name || !name.trim()) return;
-    RECORD4_GROUPS[gi].name = name.trim();
-    renderRecord4(); await saveRecord4(true);
-  });
+async function renameRecord4Group(gi){
+  const name = prompt('New name:', RECORD4_GROUPS[gi].name);
+  if(!name || !name.trim()) return;
+  RECORD4_GROUPS[gi].name = name.trim();
+  renderRecord4(); await saveRecord4(true);
 }
-function deleteRecord4Group(gi){
-  coordinatorGate('Remove a department/section from the Record for Training Need Identification', RECORD4_GROUPS[gi].name, async ()=>{
-    if(!confirm('Remove "'+RECORD4_GROUPS[gi].name+'" and everyone in it? This cannot be undone.')) return;
-    RECORD4_GROUPS.splice(gi,1);
-    renderRecord4(); await saveRecord4(true);
-  });
+async function deleteRecord4Group(gi){
+  if(!confirm('Remove "'+RECORD4_GROUPS[gi].name+'" and everyone in it? This cannot be undone.')) return;
+  RECORD4_GROUPS.splice(gi,1);
+  renderRecord4(); await saveRecord4(true);
 }
 
 function openConfigureNeeds(gi){
-  coordinatorGate('Choose the Training Needs tracked for a department/section', RECORD4_GROUPS[gi].name, async ()=>{
-    R4_CONFIGURING = gi;
-    renderRecord4();
-  });
+  R4_CONFIGURING = gi;
+  renderRecord4();
 }
 function closeConfigureNeeds(){ R4_CONFIGURING = null; renderRecord4(); }
 function toggleConfiguredNeed(gi, needId, checked){
@@ -1224,18 +1210,14 @@ async function saveConfiguredNeeds(){
   await saveRecord4(true);
 }
 
-function addRecord4Employee(gi){
-  coordinatorGate('Add an employee row to a Training Need Identification group', RECORD4_GROUPS[gi].name, async ()=>{
-    RECORD4_GROUPS[gi].employees.push({epf:'', name:'', marks:{}});
-    renderRecord4(); await saveRecord4(true);
-  });
+async function addRecord4Employee(gi){
+  RECORD4_GROUPS[gi].employees.push({epf:'', name:'', marks:{}});
+  renderRecord4(); await saveRecord4(true);
 }
-function deleteRecord4Employee(gi, ei){
+async function deleteRecord4Employee(gi, ei){
   const g = RECORD4_GROUPS[gi];
-  coordinatorGate('Remove an employee row from a Training Need Identification group', g.name+' — '+(g.employees[ei].name||g.employees[ei].epf||'(blank row)'), async ()=>{
-    g.employees.splice(ei,1);
-    renderRecord4(); await saveRecord4(true);
-  });
+  g.employees.splice(ei,1);
+  renderRecord4(); await saveRecord4(true);
 }
 function record4EmployeeFieldChange(el){
   RECORD4_GROUPS[Number(el.dataset.gi)].employees[Number(el.dataset.ei)][el.dataset.f] = el.value;
@@ -1348,7 +1330,6 @@ async function newAnnualPlan(){
     : 'No survey submissions with high/urgent-rated needs were found yet, so the new '+year+' plan will start empty. Continue?';
   if(!confirm(msg)) return;
 
-  await coordinatorGate('Replace the Annual Training Plan with a new ' + year + ' plan', 'FIT/Q/RG-HR-06', async ()=>{
   PLAN_ROWS = autoRows;
   PLAN_YEAR = year;
   const yearField = document.getElementById('plan-year');
@@ -1357,13 +1338,7 @@ async function newAnnualPlan(){
   renderPlanTable();
   renderRecord4();
 
-  try{
-    await storageSet(PLAN_KEY, JSON.stringify(PLAN_ROWS), true);
-    await storageSet(PLAN_YEAR_KEY, PLAN_YEAR, true);
-  }catch(e){
-    alert('The new plan was created but could not be saved: ' + e.message);
-  }
-  });
+  await savePlan(true);
 }
 
 /* =========================================================================
@@ -1445,32 +1420,31 @@ function planFieldChange(el){
 }
 
 function addPlanRow(){
-  coordinatorGate('Add a row to the Annual Training Plan', 'FIT/Q/RG-HR-06', async ()=>{
-    PLAN_ROWS.push({id: uid(), section:'', need:'', sectionKey:'', type:'Internal', resource:'', months:[], date:'', description:''});
-    renderPlanTable();
-    await savePlan(true);
-  });
+  PLAN_ROWS.push({id: uid(), section:'', need:'', sectionKey:'', type:'Internal', resource:'', months:[], date:'', description:''});
+  renderPlanTable();
 }
 function deletePlanRow(ri){
-  coordinatorGate('Remove a row from the Annual Training Plan', 'FIT/Q/RG-HR-06 — ' + (PLAN_ROWS[ri] ? PLAN_ROWS[ri].need : ''), async ()=>{
-    PLAN_ROWS.splice(ri,1);
-    renderPlanTable();
-    await savePlan(true);
-  });
+  PLAN_ROWS.splice(ri,1);
+  renderPlanTable();
 }
 
+/* Saving the Annual Training Plan is the single point in the Training Section
+   that asks for the Coordinator's password — editing rows/fields above does not. */
 async function savePlan(silent){
-  try{
-    const result = await storageSet(PLAN_KEY, JSON.stringify(PLAN_ROWS), true);
-    if(!result) throw new Error('save failed');
-    if(!silent) alert('Annual Training Plan saved.');
-  }catch(e){
-    alert('Could not save: '+e.message);
-  }
+  await coordinatorGate('Save the Annual Training Plan', 'FIT/Q/RG-HR-06', async ()=>{
+    try{
+      const result = await storageSet(PLAN_KEY, JSON.stringify(PLAN_ROWS), true);
+      if(!result) throw new Error('save failed');
+      await storageSet(PLAN_YEAR_KEY, PLAN_YEAR, true);
+      if(!silent) alert('Annual Training Plan saved.');
+    }catch(e){
+      alert('Could not save: '+e.message);
+    }
+  });
 }
 
 /* =========================================================================
-   TRAINING RECORD (QMS/HR/05) — log with photo upload
+   TRAINING RECORD (FIT/Q/RG-HR-11) — log with photo upload
    ========================================================================= */
 function buildTrDeptOptions(){
   const sel = document.getElementById('tr-dept');
