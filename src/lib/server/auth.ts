@@ -150,6 +150,15 @@ export async function users(c: Ctx) {
   return json(200, { users: list.map(userOut) });
 }
 
+/* a plain, trimmed people list any signed-in person can read — e.g. to assign a colleague
+   as Internal Audit Team Leader / Auditee using their real registered name and e-mail,
+   without exposing the account-management fields /api/users (administrator only) carries */
+export async function directory(c: Ctx) {
+  needUser(c);
+  const list = await c.s.users.find({ active: true }).sort({ name: 1 }).toArray();
+  return json(200, { people: list.map((u) => ({ id: u._id, name: u.name, email: u.email, designation: u.designation, department: u.department })) });
+}
+
 export async function addUser(c: Ctx) {
   const admin = needAdmin(c), b = await c.json();
   const email = clip(b.email, 200).toLowerCase(), name = clip(b.name, 120), role = str(b.role);

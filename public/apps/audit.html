@@ -1646,19 +1646,37 @@ function render(){
   const v={plan:viewPlan,matrix:viewMatrix,check:viewCheck,find:viewFind,ncr:viewNcr}[tab](a);$('main').innerHTML=v.h;if(v.after)v.after();
 }
 const inp=(path,val,ph)=>'<input type="text" data-b="'+path+'" value="'+esc(val)+'"'+(ph?' placeholder="'+ph+'"':'')+'>';
-const TEAMFLDS=['no','dept','leader','leaderEmail','auditee','m1','m2','date','time','venue'];
-const TEAMLBL={no:'Team',dept:'Department / process',leader:'Team leader',leaderEmail:'Leader e-mail',auditee:'Auditee',m1:'Member 1',m2:'Member 2',date:'Audit date',time:'Time',venue:'Venue'};
-const TEAMW={no:'46px',dept:'120px',leaderEmail:'170px',auditee:'125px',date:'120px',time:'120px'};
+const TEAMFLDS=['no','dept','leader','auditee','m1','m2','date','time','venue'];
+const TEAMLBL={no:'Team',dept:'Department / process',leader:'Team leader',auditee:'Auditee',m1:'Member 1',m2:'Member 2',date:'Audit date',time:'Time',venue:'Venue'};
+const TEAMW={no:'46px',dept:'120px',leader:'170px',auditee:'170px',date:'120px',time:'120px'};
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* ---------- people registered in the Ferentino management system — so the Team Leader and
+   Auditee are picked from real accounts instead of typed in, and the e-mail used to notify the
+   Team Leader is always the address they are actually registered under. ---------- */
+let PEOPLE=[];
+function loadPeople(){
+  return fetch('/api/directory',{credentials:'same-origin'}).then(r=>r.ok?r.json():{people:[]}).then(j=>{PEOPLE=j.people||[];if(D)render()}).catch(()=>{});
+}
+function personSelect(i,t,field,emailField,placeholder){
+  const cur=t[field]||'',match=PEOPLE.find(p=>p.name===cur),curEmail=t[emailField]||'';
+  const opts='<option value=""'+(!cur?' selected':'')+'>'+(placeholder||'— select —')+'</option>'+
+   (cur&&!match?'<option value="__keep__" selected>'+esc(cur)+' (not in system)</option>':'')+
+   PEOPLE.map(p=>'<option value="'+esc(p.id)+'"'+(match&&match.id===p.id?' selected':'')+'>'+esc(p.name)+(p.department?' — '+esc(p.department):'')+'</option>').join('');
+  return '<select data-team="'+i+'" data-person="'+field+'" data-email="'+emailField+'">'+opts+'</select>'+(curEmail?'<div class="note" style="margin-top:2px">'+esc(curEmail)+'</div>':(cur&&!match?'<div class="note">no e-mail on file for this name</div>':''));
+}
 function viewPlan(a){
   const p=a.plan;
   let h='<div class="card pn"><h2>Audit programme</h2><div class="g"><div class="w2"><label class="f">Audit title</label>'+inp('title',a.title)+'</div><div><label class="f">Type of audit</label>'+inp('type',a.type)+'</div><div><label class="f">Standard</label>'+inp('standard',a.standard)+'</div><div class="w2"><label class="f">Scope</label><textarea data-b="scope" rows="4">'+esc(a.scope)+'</textarea></div></div></div>';
   h+='<div class="g" style="margin-bottom:14px"><div class="card pn" style="margin:0"><h2>Audit planning meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.meetDate',p.meetDate)+'</div><div><label class="f">Time</label>'+inp('plan.meetTime',p.meetTime)+'</div><div><label class="f">Venue</label>'+inp('plan.meetVenue',p.meetVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.meetPart',p.meetPart)+'</div></div></div>'+
    '<div class="card pn" style="margin:0"><h2>Audit closing meeting</h2><div class="g"><div><label class="f">Date</label>'+inp('plan.closeDate',p.closeDate)+'</div><div><label class="f">Time</label>'+inp('plan.closeTime',p.closeTime)+'</div><div><label class="f">Venue</label>'+inp('plan.closeVenue',p.closeVenue)+'</div><div><label class="f">Participants</label>'+inp('plan.closePart',p.closePart)+'</div></div></div></div>';
   h+='<div class="card pn"><h2>Annual audit plan</h2><p class="note" style="margin:0 0 10px">Scheduled month for each team, read from its audit date below.</p><div class="cb" style="padding:0;height:'+Math.max(200,a.teams.length*32+60)+'px"><canvas id="c2"></canvas></div></div>';
-  h+='<div class="card pn"><h2>Audit teams and schedule</h2><p class="note" style="margin:0 0 10px">Assign the Team Leader and Auditee for each department. Give the Team Leader\'s e-mail to notify them that they have been assigned.</p><div class="tw"><table><thead><tr>'+TEAMFLDS.map(f=>'<th>'+TEAMLBL[f]+'</th>').join('')+'<th></th></tr></thead><tbody>'+
+  h+='<div class="card pn"><h2>Audit teams and schedule</h2><p class="note" style="margin:0 0 10px">Team Leader and Auditee are picked from people registered in the Ferentino management system, using the e-mail address they signed up with.</p><div class="tw"><table><thead><tr>'+TEAMFLDS.map(f=>'<th>'+TEAMLBL[f]+'</th>').join('')+'<th></th></tr></thead><tbody>'+
    a.teams.map((t,i)=>{
-     const cells=TEAMFLDS.map(f=>'<td><input type="'+(f==='leaderEmail'?'email':'text')+'" data-team="'+i+'" data-f="'+f+'" value="'+esc(t[f])+'"'+(f==='leaderEmail'?' placeholder="name@company.com"':f==='auditee'?' placeholder="Process owner"':'')+' style="'+(f==='no'?'width:48px':'min-width:'+(TEAMW[f]||'105px'))+'"></td>').join('');
+     const cells=TEAMFLDS.map(f=>{
+       if(f==='leader')return '<td>'+personSelect(i,t,'leader','leaderEmail','— select Team Leader —')+'</td>';
+       if(f==='auditee')return '<td>'+personSelect(i,t,'auditee','auditeeEmail','— select Auditee —')+'</td>';
+       return '<td><input type="text" data-team="'+i+'" data-f="'+f+'" value="'+esc(t[f])+'" style="'+(f==='no'?'width:48px':'min-width:'+(TEAMW[f]||'105px'))+'"></td>';
+     }).join('');
      const notified=t.leaderEmail&&t.notified&&t.notified.email===t.leaderEmail;
      const notifyBtn=t.leaderEmail?'<button class="btn sm'+(notified?'':' red')+'" data-act="notifyleader" data-i="'+i+'" title="E-mail the Team Leader that they have been assigned">'+(notified?'✓ Notified':'✉ Notify')+'</button> ':'';
      return '<tr>'+cells+'<td style="white-space:nowrap">'+notifyBtn+'<button class="btn sm ghost" data-act="delteam" data-i="'+i+'" title="Remove team">✕</button></td></tr>';
@@ -1778,7 +1796,7 @@ document.addEventListener('click',e=>{
   const nr=e.target.closest('[data-ncr]');if(nr){nk=nr.dataset.ncr;render();return}
   const st=e.target.closest('[data-st]');if(st){const a=cur(),{r}=findRow(st.dataset.rid);if(!r)return;r.status=r.status===st.dataset.st?'':st.dataset.st;number(a,r);ensureNcr(a,findRow(r.id).s,r);save();render();return}
   const ac=e.target.closest('[data-act]');if(!ac)return;const a=cur(),act=ac.dataset.act;
-  if(act==='addteam'){a.teams.push({no:a.teams.length+1,dept:'',leader:'',leaderEmail:'',auditee:'',m1:'',m2:'',date:'',time:'',venue:''});save();render()}
+  if(act==='addteam'){a.teams.push({no:a.teams.length+1,dept:'',leader:'',leaderEmail:'',auditee:'',auditeeEmail:'',m1:'',m2:'',date:'',time:'',venue:''});save();render()}
   else if(act==='delteam'){a.teams.splice(+ac.dataset.i,1);save();render()}
   else if(act==='delrow'){const {s,r}=findRow(ac.dataset.rid);if(r&&confirm('Remove this check point?')){s.rows=s.rows.filter(x=>x!==r);save();render()}}
   else if(act==='addrow'){const s=a.sheets.find(x=>x.key===sk);s.rows.push({id:'r'+uid(),g:Math.max(0,...s.rows.map(r=>r.g))+1,section:(s.rows[s.rows.length-1]||{}).section||'',clause:'',point:'New audit check point',resp:'',evidence:'',status:'',remark:''});save();render()}
@@ -1809,6 +1827,13 @@ document.addEventListener('change',e=>{const t=e.target,a=cur();
   if(t.id==='round'){D.cur=t.value;sk=null;save();render();return}
   if(t.dataset.act==='edit'){edit=t.checked;render();return}
   if(t.dataset.b){setPath(a,t.dataset.b,t.value);save();if(t.dataset.b==='title')render();return}
+  if(t.dataset.team!=null&&t.dataset.person){
+    const i=+t.dataset.team,field=t.dataset.person,emailField=t.dataset.email,v=t.value,team=a.teams[i];
+    if(v==='__keep__'){/* leave the existing name/e-mail as they are */}
+    else if(!v){team[field]='';team[emailField]=''}
+    else{const p=PEOPLE.find(x=>String(x.id)===v);if(p){team[field]=p.name;team[emailField]=p.email}}
+    save();render();return;
+  }
   if(t.dataset.team!=null){a.teams[+t.dataset.team][t.dataset.f]=t.value;save();return}
   if(t.dataset.mx!=null){const c=a.matrix.clauses[+t.dataset.mx],d=t.dataset.d;c.d=t.checked?Array.from(new Set(c.d.concat(d))):c.d.filter(x=>x!==d);save();render();return}
   if(t.dataset.r){const {s:sx,r}=findRow(t.dataset.r);if(r){r[t.dataset.f]=t.value;save();if(t.dataset.f==='clause'||sx.auditSig||(r.ncr&&(r.ncr.ackSig||r.ncr.verSig)))render()}return}
@@ -1830,9 +1855,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')$('host').innerHTML=
 /* ---------- Excel, laid out like the audit workbook ---------- */
 $('xl').onclick=()=>{
   if(typeof XLSX==='undefined'){toast('The Excel library did not load — check the internet connection.');return}
-  const a=cur(),wb=XLSX.utils.book_new(),A=[[' '+a.title],['Scope',a.scope],[],['Type of Audit',a.type],['Standard',a.standard],[],['Team Number','Department','Team Leader','Leader E-mail','Auditee','Team Member 1','Team Member 2','Audit Date','Time','Venue']]
-   .concat(a.teams.map(t=>[t.no,t.dept,t.leader,t.leaderEmail||'',t.auditee||'',t.m1,t.m2,t.date,t.time,t.venue])).concat([[],['Audit Planning Meeting'],['Date',a.plan.meetDate],['Time',a.plan.meetTime],['Venue',a.plan.meetVenue],['Participants',a.plan.meetPart],[],['Audit Closing Meeting'],['Date',a.plan.closeDate],['Time',a.plan.closeTime],['Venue',a.plan.closeVenue],['Participants',a.plan.closePart]]);
-  const ws0=XLSX.utils.aoa_to_sheet(A);ws0['!cols']=[{wch:16},{wch:26},{wch:16},{wch:24},{wch:16},{wch:16},{wch:16},{wch:22},{wch:22},{wch:16}];XLSX.utils.book_append_sheet(wb,ws0,'Audit Plan');
+  const a=cur(),wb=XLSX.utils.book_new(),A=[[' '+a.title],['Scope',a.scope],[],['Type of Audit',a.type],['Standard',a.standard],[],['Team Number','Department','Team Leader','Leader E-mail','Auditee','Auditee E-mail','Team Member 1','Team Member 2','Audit Date','Time','Venue']]
+   .concat(a.teams.map(t=>[t.no,t.dept,t.leader,t.leaderEmail||'',t.auditee||'',t.auditeeEmail||'',t.m1,t.m2,t.date,t.time,t.venue])).concat([[],['Audit Planning Meeting'],['Date',a.plan.meetDate],['Time',a.plan.meetTime],['Venue',a.plan.meetVenue],['Participants',a.plan.meetPart],[],['Audit Closing Meeting'],['Date',a.plan.closeDate],['Time',a.plan.closeTime],['Venue',a.plan.closeVenue],['Participants',a.plan.closePart]]);
+  const ws0=XLSX.utils.aoa_to_sheet(A);ws0['!cols']=[{wch:16},{wch:26},{wch:16},{wch:24},{wch:16},{wch:24},{wch:16},{wch:16},{wch:22},{wch:22},{wch:16}];XLSX.utils.book_append_sheet(wb,ws0,'Audit Plan');
   const M=[['Clause Number','Clause'].concat(a.matrix.depts.map(d=>d.label))].concat(a.matrix.clauses.map(c=>[c.no,c.name].concat(a.matrix.depts.map(d=>c.d.includes(d.key)?'y':''))));
   const wsM=XLSX.utils.aoa_to_sheet(M);wsM['!cols']=[{wch:14},{wch:56}].concat(a.matrix.depts.map(()=>({wch:14})));XLSX.utils.book_append_sheet(wb,wsM,'Audit Matrix');
   a.sheets.forEach(s=>{
@@ -1848,7 +1873,7 @@ $('xl').onclick=()=>{
   XLSX.writeFile(wb,a.title.replace(/[^\w ]+/g,'').trim().replace(/ +/g,'_')+'.xlsx');
 };
 
-D=load();render();
+D=load();render();loadPeople();
 })();
 </script>
 </body>
