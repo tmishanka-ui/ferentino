@@ -53,7 +53,7 @@
 </style>
 </head>
 <body>
-<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Internal Audit</h1><div class="sub" id="sub"></div></div><select id="round" title="Audit round"></select><button class="btn" id="newr">New audit round</button><button class="btn" id="xl">Download Excel</button></header>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Internal Audit</h1><div class="sub" id="sub"></div></div><select id="sys" title="Management system"><option value="QMS">QMS (ISO 9001:2015)</option><option value="EMS">EMS (ISO 14001:2026)</option></select><select id="year" title="Year"></select><button class="btn" id="xl">Download Excel</button></header>
 <nav id="nav"></nav>
 <main id="main"></main>
 <div id="host"></div><div id="toast"></div><div id="printArea"></div>
@@ -1586,6 +1586,52 @@ const LOGO='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICA
   }
  ]
 },KEY='fitl_audit_v1';
+/* ---------- EMS starter content ----------
+   Only the ISO 14001:2015 clause structure is real/public; the check-sheet points below are
+   generic ISO 14001 audit themes, not FIT's actual EMS procedures — meant as an editable
+   starting point, exactly like the existing QMS check points can be edited via "Edit check points". */
+const EMS_CLAUSES=[
+ ['4.1','Understanding the organization and its context'],['4.2','Understanding the needs and expectations of interested parties'],
+ ['4.3','Determining the scope of the environmental management system'],['4.4','Environmental management system'],
+ ['5.1','Leadership and commitment'],['5.2','Environmental policy'],['5.3','Organizational roles, responsibilities and authorities'],
+ ['6.1.2','Environmental aspects'],['6.1.3','Compliance obligations'],['6.1.4','Planning action'],['6.2','Environmental objectives and planning to achieve them'],
+ ['7.1','Resources'],['7.2','Competence'],['7.3','Awareness'],['7.4','Communication'],['7.5','Documented information'],
+ ['8.1','Operational planning and control'],['8.2','Emergency preparedness and response'],
+ ['9.1','Monitoring, measurement, analysis and evaluation'],['9.2','Internal audit'],['9.3','Management review'],
+ ['10.1','General (improvement)'],['10.2','Nonconformity and corrective action'],['10.3','Continual improvement']
+];
+const EMS_POINTS=[
+ ['6.1.2','Environmental aspects and impacts relevant to this area are identified and kept up to date'],
+ ['6.1.3','Applicable legal and other compliance obligations relevant to this area are identified and met'],
+ ['6.2','Environmental objectives and targets relevant to this area are known and being worked towards'],
+ ['8.1','Operational controls for significant environmental aspects (e.g. waste, emissions, energy, chemicals) are in place and followed'],
+ ['8.2','Emergency preparedness and response arrangements relevant to this area are in place and understood'],
+ ['7.5','Records / documented information required for this area\'s environmental activities are maintained']
+];
+function emsSheets(){
+ return SEED.sheets.map(sh=>({key:sh.key,name:sh.name,docNo:'EMS-CL-'+sh.key.toUpperCase(),issue:'01',rev:'00',issueDate:today(),title:sh.title.replace(/^QMS /,'EMS '),auditDate:'',auditor:'',
+  rows:EMS_POINTS.map((pt,j)=>({id:'r'+uid(),g:j+1,section:'',clause:pt[0],point:pt[1],resp:'',evidence:'',status:'',remark:''}))}));
+}
+function emsSeed(){
+ return{title:'Internal Audit EMS',type:'Internal',standard:'ISO 14001:2026',
+  scope:'The Environmental Management System (EMS) covers the environmental aspects and impacts of the company\'s industrial tyre manufacturing activities, in line with applicable legal and other compliance obligations.',
+  plan:{meetDate:'',meetTime:'',meetVenue:'',meetPart:'',closeDate:'',closeTime:'',closeVenue:'',closePart:''},
+  teams:SEED.teams.map((t,i)=>({no:i+1,dept:t.dept,leader:'',leaderEmail:'',auditee:'',auditeeEmail:'',m1:'',m2:'',date:'',time:'',venue:'Meeting Room'})),
+  matrix:{depts:JSON.parse(JSON.stringify(SEED.matrix.depts)),clauses:EMS_CLAUSES.map(c=>({no:c[0],name:c[1],d:[]}))},
+  sheets:emsSheets()};
+}
+/** builds a fresh round for {sys,year}: based on the latest existing round of that system (same
+    teams/matrix/sheets, dates and statuses cleared), or a starter seed if none exists yet. */
+function makeRound(sys,year){
+ const latest=(D?D.audits:[]).filter(x=>x.sys===sys).sort((x,y)=>y.year-x.year)[0];
+ const base=latest?JSON.parse(JSON.stringify(latest)):(sys==='QMS'?JSON.parse(JSON.stringify(SEED)):emsSeed());
+ base.id='a'+uid();base.sys=sys;base.year=year;base.title='Internal Audit '+sys+' '+year;
+ delete base.tag;base.fseq={NC:0,OBS:0};
+ base.teams.forEach(x=>{x.date='';x.time='';delete x.notified});
+ Object.assign(base.plan,{meetDate:'',meetTime:'',closeDate:'',closeTime:''});
+ base.sheets.forEach(s=>{s.auditDate='';s.auditor='';delete s.auditSig;s.rows.forEach(r=>{r.id='r'+uid();r.status='';r.remark='';delete r.fno;delete r.fu;delete r.ncr})});
+ return base;
+}
 document.getElementById('logo').src=LOGO;
 const $=id=>document.getElementById(id);
 
@@ -1603,8 +1649,8 @@ const dotDate=iso=>{const d=new Date(iso);return d.getFullYear()+'.'+pad(d.getMo
 function onAuthChange(){if(D)render()}
 const today=()=>{const d=new Date();return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())};
 const ST={C:'Conformity',O:'Observation',N:'NC'};
-let D=null,tab='plan',sk=null,nk=null,edit=false,CH=null;
-const TABS=[['plan','Audit plan'],['matrix','Audit matrix'],['check','Check sheets'],['find','Findings & report'],['ncr','Non-conformity reports']];
+let D=null,tab='plan',sk=null,nk=null,edit=false,CH=null,CHX=[];
+const TABS=[['annual','Annual Audit Plan'],['plan','Audit plan'],['matrix','Audit matrix'],['check','Check sheets'],['find','Findings & report'],['ncr','Non-conformity reports']];
 
 /* ---------- data ---------- */
 function number(a,r){
@@ -1619,16 +1665,18 @@ const teamDate=t=>{const m=t&&/\d{4}\.\d{2}\.\d{2}/.exec(t.date||'');return m?m[
 function ensureNcr(a,sh,r){
   if(r.status!=='N'||r.ncr)return;a.fseq.NCR=(a.fseq.NCR||0)+1;const t=teamFor(a,sh);
   r.ncr={no:'NCR-'+tagOf(a)+'-'+pad(a.fseq.NCR),date:sh.auditDate||teamDate(t)||today(),category:'Minor',auditors:t?[t.leader,t.m1,t.m2].filter(Boolean).join(', '):'',auditee:r.resp||'',
-    requirement:(r.clause?'ISO 9001:2015 clause '+r.clause+' — ':'')+r.point,statement:r.remark||'',evidence:r.evidence||'',correction:'',correctionDate:'',rootCause:'',ackBy:'',ackDate:'',verifiedBy:'',verifyDate:'',effective:'',closureDate:''};
+    requirement:(r.clause?(a.standard||'ISO 9001:2015')+' clause '+r.clause+' — ':'')+r.point,statement:r.remark||'',evidence:r.evidence||'',correction:'',correctionDate:'',rootCause:'',ackBy:'',ackDate:'',verifiedBy:'',verifyDate:'',effective:'',closureDate:''};
 }
 function seedState(){
-  const a=JSON.parse(JSON.stringify(SEED));a.id='a'+uid();a.fseq={NC:0,OBS:0};
+  const a=JSON.parse(JSON.stringify(SEED));a.id='a'+uid();a.fseq={NC:0,OBS:0};a.sys='QMS';a.year=2026;
   a.sheets.forEach(s=>s.rows.forEach(r=>{r.id='r'+uid();number(a,r);ensureNcr(a,s,r)}));
   return{audits:[a],cur:a.id};
 }
+/** a round saved before the System/Year selector existed gets a sensible guess so it stays reachable */
+function inferYear(a){const m=/(\d{4})\.(\d{2})/.exec((a.plan||{}).meetDate||'')||/(\d{4})/.exec(a.title||'');return m?+m[1]:new Date().getFullYear()}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.audits)&&s.audits.length){
     // audits saved before the reports existed: give every NC its report
-    s.audits.forEach(a=>{a.fseq=a.fseq||{NC:0,OBS:0};a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N'){number(a,r);ensureNcr(a,sh,r)}}))});return s}}catch(_){}return seedState()}
+    s.audits.forEach(a=>{a.fseq=a.fseq||{NC:0,OBS:0};a.sys=a.sys||(/EMS|14001/i.test((a.standard||'')+(a.title||''))?'EMS':'QMS');a.year=a.year||inferYear(a);a.sheets.forEach(sh=>sh.rows.forEach(r=>{if(r.status==='N'){number(a,r);ensureNcr(a,sh,r)}}))});return s}}catch(_){}return seedState()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(_){toast('Could not save — browser storage is full. Download a backup from the cover page.')}};
 const cur=()=>D.audits.find(a=>a.id===D.cur)||D.audits[0];
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3200)}
@@ -1638,13 +1686,22 @@ const covers=(rc,c)=>tokens(rc).some(t=>t===c||t.indexOf(c+'.')===0);
 function findRow(rid){const a=cur();for(const s of a.sheets){const r=s.rows.find(x=>x.id===rid);if(r)return{s,r}}return{}}
 
 /* ---------- screens ---------- */
+function yearsList(){const now=new Date().getFullYear(),ys=new Set((D?D.audits:[]).map(x=>x.year));for(let y=now-1;y<=now+3;y++)ys.add(y);return[...ys].sort((x,y)=>x-y)}
 function render(){
   const a=cur();$('sub').textContent=a.title+' · '+a.type+' · '+a.standard;
-  $('round').innerHTML=D.audits.map(x=>'<option value="'+x.id+'"'+(x.id===D.cur?' selected':'')+'>'+esc(x.title)+'</option>').join('');
+  $('sys').value=a.sys;$('year').innerHTML=yearsList().map(y=>'<option value="'+y+'"'+(y===a.year?' selected':'')+'>'+y+'</option>').join('');
   $('nav').innerHTML=TABS.map(t=>'<button class="tab'+(tab===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>').join('');
   if(CH){CH.destroy();CH=null}
-  const v={plan:viewPlan,matrix:viewMatrix,check:viewCheck,find:viewFind,ncr:viewNcr}[tab](a);$('main').innerHTML=v.h;if(v.after)v.after();
+  CHX.forEach(c=>{try{c.destroy()}catch(_){}});CHX=[];
+  const v={annual:viewAnnual,plan:viewPlan,matrix:viewMatrix,check:viewCheck,find:viewFind,ncr:viewNcr}[tab](a);$('main').innerHTML=v.h;if(v.after)v.after();
 }
+function selectRound(sys,year){
+  let r=D.audits.find(x=>x.sys===sys&&x.year===year);
+  if(!r){r=makeRound(sys,year);D.audits.push(r);toast('Created a new '+sys+' audit plan for '+year)}
+  D.cur=r.id;sk=null;save();render();
+}
+$('sys').onchange=()=>selectRound($('sys').value,+$('year').value);
+$('year').onchange=()=>selectRound($('sys').value,+$('year').value);
 const inp=(path,val,ph)=>'<input type="text" data-b="'+path+'" value="'+esc(val)+'"'+(ph?' placeholder="'+ph+'"':'')+'>';
 const TEAMFLDS=['no','dept','leader','auditee','m1','m2','date','time','venue'];
 const TEAMLBL={no:'Team',dept:'Department / process',leader:'Team leader',auditee:'Auditee',m1:'Member 1',m2:'Member 2',date:'Audit date',time:'Time',venue:'Venue'};
@@ -1663,6 +1720,26 @@ function personSelect(i,t,field,emailField,placeholder){
    (cur&&!match?'<option value="__keep__" selected>'+esc(cur)+' (not in system)</option>':'')+
    PEOPLE.map(p=>'<option value="'+esc(p.id)+'"'+(match&&match.id===p.id?' selected':'')+'>'+esc(p.name)+(p.department?' — '+esc(p.department):'')+'</option>').join('');
   return '<select data-team="'+i+'" data-person="'+field+'" data-email="'+emailField+'">'+opts+'</select>'+(curEmail?'<div class="note" style="margin-top:2px">'+esc(curEmail)+'</div>':(cur&&!match?'<div class="note">no e-mail on file for this name</div>':''));
+}
+/** Top-level overview, across both management systems, for the year the header's Year selector is set to. */
+function viewAnnual(a){
+  const year=a.year,qms=D.audits.find(x=>x.sys==='QMS'&&x.year===year),ems=D.audits.find(x=>x.sys==='EMS'&&x.year===year);
+  const card=(sys,r)=>{
+    if(!r)return '<div class="card pn" style="margin:0"><h3 style="margin:0 0 8px">'+sys+'</h3><div class="empty">No '+sys+' audit scheduled for '+year+' yet. Pick '+sys+' in the System selector above to create one.</div></div>';
+    const q={n:0,c:0,o:0,x:0,done:0};r.sheets.forEach(s=>{const z=stats(s);q.n+=z.n;q.c+=z.c;q.o+=z.o;q.x+=z.x;q.done+=z.done});
+    return '<div class="card pn" style="margin:0"><h3 style="margin:0 0 4px">'+sys+' — '+esc(r.title)+'</h3><div class="sub" style="margin-bottom:8px">'+esc(r.standard)+' · '+q.done+' of '+q.n+' points audited'+(q.x?' · <span style="color:var(--red-d)">'+q.x+' NC</span>':'')+'</div><div class="cb" style="padding:0;height:'+Math.max(180,r.teams.length*32+50)+'px"><canvas id="'+(sys==='QMS'?'aq':'ae')+'"></canvas></div></div>';
+  };
+  let h='<div class="card pn"><h2>Annual Audit Plan — '+year+'</h2><p class="note" style="margin:0 0 10px">All teams scheduled this year, QMS and EMS shown separately. Change the Year above to see another year.</p></div>';
+  h+='<div class="g">'+card('QMS',qms)+card('EMS',ems)+'</div>';
+  return {h,after:()=>{
+    if(typeof Chart==='undefined')return;Chart.defaults.font.family="Inter,system-ui,sans-serif";
+    const mk2=(id,r,color)=>{if(!r||!$(id))return;
+      const rows=r.teams.map(t=>{const m=/^(\d{4})\.(\d{2})\.(\d{2})/.exec((t.date||'').trim());return{label:t.dept||('Team '+t.no),month:m?(+m[2]-1):null}});
+      CHX.push(new Chart($(id),{type:'bar',data:{labels:rows.map(x=>x.label),datasets:[{label:'Scheduled month',data:rows.map(x=>x.month==null?null:[x.month,x.month+1]),backgroundColor:color,borderRadius:4,barThickness:18}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:12,ticks:{stepSize:1,callback:v=>MONTHS[v]||''}},y:{}}}}));
+    };
+    mk2('aq',qms,'#2B5A8C');mk2('ae',ems,'#DA1B22');
+  }};
 }
 function viewPlan(a){
   const p=a.plan;
@@ -1841,15 +1918,6 @@ document.addEventListener('change',e=>{const t=e.target,a=cur();
   if(t.dataset.n){const {r}=findRow(t.dataset.n);if(r&&r.ncr){r.ncr[t.dataset.f]=t.value;save();if(t.dataset.f==='category'||r.ncr.ackSig||r.ncr.verSig)render()}return}
   if(t.dataset.sf){const s=a.sheets.find(x=>x.key===sk);s[t.dataset.sf]=t.value;save()}
 });
-$('newr').onclick=()=>{
-  const a=cur(),n=new Date(),MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  $('host').innerHTML='<div class="veil"><div class="modal"><h2>New audit round</h2><p class="note" style="margin-top:0">The new round starts from the current one: same teams, matrix and check points, with every audit status, remark and finding cleared.</p><label class="f">Audit title</label><input type="text" id="nt" value="Internal Audit '+n.getFullYear()+' '+MON[n.getMonth()]+'"><div class="foot"><button class="btn" id="nc">Cancel</button><button class="btn red" id="ny">Create round</button></div></div></div>';
-  $('nc').onclick=()=>$('host').innerHTML='';
-  $('ny').onclick=()=>{const t=$('nt').value.trim();if(!t){toast('Give the new round a title');return}
-    const b=JSON.parse(JSON.stringify(a));b.id='a'+uid();b.title=t;b.fseq={NC:0,OBS:0};b.teams.forEach(x=>{x.date='';x.time='';delete x.notified});Object.assign(b.plan,{meetDate:'',meetTime:'',closeDate:'',closeTime:''});
-    delete b.tag;b.sheets.forEach(s=>{s.auditDate='';s.auditor='';s.rows.forEach(r=>{r.status='';r.remark='';delete r.fno;delete r.fu;delete r.ncr});delete s.auditSig});
-    D.audits.push(b);D.cur=b.id;sk=null;tab='plan';save();$('host').innerHTML='';render();toast('New audit round created')};
-};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('host').innerHTML=''});
 
 /* ---------- Excel, laid out like the audit workbook ---------- */
