@@ -117,39 +117,6 @@
   .upload-text .t1{font-size:14.5px;font-weight:500;margin:0 0 2px;}
   .upload-text .t2{font-size:12.5px;color:var(--text-muted);margin:0;}
 
-  /* network panel */
-  .network-panel{
-    border:1px solid var(--border);border-radius:var(--radius);
-    background:var(--bg-panel);padding:12px 16px;margin-bottom:20px;
-  }
-  .network-row{display:flex;align-items:center;gap:12px;}
-  .net-icon{
-    width:9px;height:9px;border-radius:50%;flex-shrink:0;
-    background:var(--text-muted);
-  }
-  .net-icon.connected{background:var(--success);box-shadow:0 0 0 3px var(--success-dim);}
-  .net-icon.error{background:var(--danger);box-shadow:0 0 0 3px var(--danger-dim);}
-  .network-info{flex:1;min-width:0;}
-  .net-title{font-size:13px;font-weight:500;margin:0 0 2px;color:var(--text-primary);}
-  .net-sub{font-size:12px;color:var(--text-muted);margin:0;}
-  .net-btn{
-    background:var(--bg-panel-alt);border:1px solid var(--border-strong);
-    color:var(--text-primary);border-radius:7px;padding:7px 14px;
-    font-size:12.5px;font-family:var(--font-body);cursor:pointer;flex-shrink:0;
-  }
-  .net-btn:hover{border-color:var(--accent-pressure);}
-  .net-btn.primary{background:var(--accent-pressure-dim);color:var(--accent-pressure);border-color:var(--accent-pressure);}
-  .network-connect-row{
-    display:flex;gap:8px;margin-top:10px;padding-top:10px;
-    border-top:1px solid var(--border);
-  }
-  .network-connect-row input{
-    flex:1;background:var(--bg-panel-alt);border:1px solid var(--border-strong);
-    color:var(--text-primary);border-radius:7px;padding:8px 12px;
-    font-family:var(--font-mono);font-size:13px;min-width:0;
-  }
-  .network-connect-row input:focus{outline:none;border-color:var(--accent-pressure);}
-
   /* controls */
   .controls-row{
     display:flex;align-items:center;gap:14px;flex-wrap:wrap;
@@ -309,8 +276,6 @@
     .gauge-row{grid-template-columns:1fr;}
     .controls-row{flex-direction:column;align-items:stretch;}
     select{min-width:0;width:100%;}
-    .network-row{flex-wrap:wrap;}
-    .network-row .net-btn{flex:1 1 auto;}
   }
 </style>
 </head>
@@ -339,38 +304,8 @@
     <div class="upload-text">
       <p class="t1">Drop one or more shift monitoring CSVs here, or click to upload</p>
       <p class="t2" id="uploadHint">Round-wise pressure and temperature readings are parsed and saved automatically — several files can be uploaded at once</p>
-      <p class="t2" id="storageModeHint" style="margin-top:2px;"></p>
     </div>
   </label>
-
-  <div class="network-panel" id="networkPanel">
-    <div class="network-row">
-      <i class="net-icon" id="netIcon"></i>
-      <div class="network-info">
-        <p class="net-title" id="netTitle">Not connected to a network server</p>
-        <p class="net-sub" id="netSub">Updates only save to this browser. Connect to a shared server so every computer sees the same data.</p>
-      </div>
-      <button type="button" class="net-btn" id="netToggleBtn">Connect&hellip;</button>
-    </div>
-    <div class="network-connect-row" id="networkConnectRow" style="display:none;">
-      <input type="text" id="serverUrlInput" placeholder="http://192.168.1.23:8787">
-      <button type="button" class="net-btn primary" id="netConnectBtn">Connect</button>
-      <button type="button" class="net-btn" id="netCancelBtn">Cancel</button>
-    </div>
-  </div>
-
-  <div class="network-panel" id="backupPanel">
-    <div class="network-row">
-      <i class="net-icon" id="backupIcon"></i>
-      <div class="network-info">
-        <p class="net-title">Move data between computers manually</p>
-        <p class="net-sub" id="backupSub">Download a backup file here, then import it on another computer to bring its dashboard up to date.</p>
-      </div>
-      <button type="button" class="net-btn" id="exportBtn">Download backup</button>
-      <button type="button" class="net-btn primary" id="importBtn">Import backup&hellip;</button>
-      <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;">
-    </div>
-  </div>
 
   <div class="controls-row">
     <div class="field-group">
@@ -718,80 +653,24 @@
 
   // ---------- storage ----------
   // Backends, tried in this priority order:
-  //  1. "server"  — a small LAN sync server (press-monitoring-server.js) the user has
-  //                 manually pointed this dashboard at. Shared across every computer on the network.
-  //  2. "mongo"   — the Ferentino Management System's own database, used automatically whenever
+  //  1. "mongo"   — the Ferentino Management System's own database, used automatically whenever
   //                 this dashboard is opened signed in (the normal case). Shared across every
   //                 computer, and the actual fix for the old "storage full"/localStorage-quota
   //                 problem: data no longer has to fit in, or even touch, the browser's own storage.
-  //  3. "claude"  — window.storage, only available inside Claude's artifact preview.
+  //  2. "claude"  — window.storage, only available inside Claude's artifact preview.
   //                 Shared across anyone viewing the artifact there.
-  //  4. "local"   — the browser's own localStorage. Only visible on this one device, and limited
+  //  3. "local"   — the browser's own localStorage. Only visible on this one device, and limited
   //                 to a few MB — kept only as a last-resort fallback when neither of the above
   //                 is reachable (e.g. the file opened standalone, outside the signed-in app).
 
   var LOCAL_PREFIX = 'fitl-press-dashboard::';
-  var SERVER_PREF_KEY = LOCAL_PREFIX + 'server-url';
 
   var usingClaudeStorage = (typeof window.storage !== 'undefined' && window.storage
     && typeof window.storage.get === 'function' && typeof window.storage.set === 'function');
 
-  var state_serverUrl = null; // set by initServerConnection()
   var state_mongoAvailable = false; // set by initMongoConnection()
 
-  function getServerUrlPref(){
-    try{ return localStorage.getItem(SERVER_PREF_KEY) || ''; } catch(e){ return ''; }
-  }
-  function setServerUrlPref(url){
-    try{ localStorage.setItem(SERVER_PREF_KEY, url); } catch(e){}
-  }
-  function clearServerUrlPref(){
-    try{ localStorage.removeItem(SERVER_PREF_KEY); } catch(e){}
-  }
-
-  function normalizeServerUrl(url){
-    var u = (url || '').trim();
-    if(!u) return '';
-    if(!/^https?:\/\//i.test(u)) u = 'http://' + u;
-    return u.replace(/\/+$/, '');
-  }
-
-  function pingServer(url, timeoutMs){
-    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timer = controller ? setTimeout(function(){ controller.abort(); }, timeoutMs || 4000) : null;
-    return fetch(url + '/health', { signal: controller ? controller.signal : undefined })
-      .then(function(r){ if(timer) clearTimeout(timer); if(!r.ok) throw new Error('Server responded with an error'); return r.json(); })
-      .then(function(j){ return !!(j && j.ok); })
-      .catch(function(){ if(timer) clearTimeout(timer); return false; });
-  }
-
-  function connectToServer(rawUrl){
-    var url = normalizeServerUrl(rawUrl);
-    if(!url) return Promise.resolve({ ok:false, error:'Enter a server address.' });
-    return pingServer(url, 4000).then(function(ok){
-      if(!ok) return { ok:false, error:'Could not reach a sync server at that address.' };
-      state_serverUrl = url;
-      setServerUrlPref(url);
-      return { ok:true };
-    });
-  }
-
-  function disconnectFromServer(){
-    state_serverUrl = null;
-    clearServerUrlPref();
-  }
-
-  function initServerConnection(){
-    var saved = getServerUrlPref();
-    if(!saved) return Promise.resolve(false);
-    return pingServer(normalizeServerUrl(saved), 3000).then(function(ok){
-      if(ok){ state_serverUrl = normalizeServerUrl(saved); return true; }
-      return false; // stored address unreachable right now — stay disconnected, keep the pref for next reload
-    });
-  }
-
   function currentStorageMode(){
-    if(state_serverUrl) return 'server';
     if(state_mongoAvailable) return 'mongo';
     if(usingClaudeStorage) return 'claude';
     return 'local';
@@ -804,11 +683,6 @@
   }
 
   function storageGet(key){
-    if(state_serverUrl){
-      return fetch(state_serverUrl + '/storage/' + encodeURIComponent(key))
-        .then(function(r){ if(!r.ok) throw new Error('Server error'); return r.json(); })
-        .then(function(j){ return j.value; });
-    }
     if(state_mongoAvailable){
       return fetch('/api/press/kv?key=' + encodeURIComponent(key), { credentials:'same-origin', headers:{'X-FIT-Request':'1'} })
         .then(function(r){ if(!r.ok) throw new Error('Server error'); return r.json(); })
@@ -826,13 +700,6 @@
   }
 
   function storageSet(key, value){
-    if(state_serverUrl){
-      return fetch(state_serverUrl + '/storage/' + encodeURIComponent(key), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: value })
-      }).then(function(r){ if(!r.ok) throw new Error('Server error'); return true; });
-    }
     if(state_mongoAvailable){
       return fetch('/api/press/kv', {
         method: 'PUT',
@@ -1352,174 +1219,6 @@
     loadAndRender(d, this.value);
   });
 
-  // ---------- network panel ----------
-
-  function refreshNetworkUI(){
-    var mode = currentStorageMode();
-    var icon = document.getElementById('netIcon');
-    var title = document.getElementById('netTitle');
-    var sub = document.getElementById('netSub');
-    var toggleBtn = document.getElementById('netToggleBtn');
-    var hint = document.getElementById('storageModeHint');
-
-    icon.className = 'net-icon' + ((mode === 'server' || mode === 'mongo') ? ' connected' : '');
-
-    if(mode === 'server'){
-      title.textContent = 'Connected \u2014 shared with your network';
-      sub.textContent = 'Synced with ' + state_serverUrl + '. Every computer pointed at this address sees the same updates.';
-      toggleBtn.textContent = 'Disconnect';
-      hint.textContent = 'Saved to your network server \u2014 visible to every connected computer';
-    } else if(mode === 'mongo'){
-      title.textContent = 'Saved to the Ferentino Management System';
-      sub.textContent = 'Shift data is saved straight to the main system database \u2014 every computer signed in sees the same updates.';
-      toggleBtn.textContent = 'Connect to LAN server\u2026';
-      hint.textContent = 'Saved to the Ferentino system \u2014 visible on every signed-in computer';
-    } else if(mode === 'claude'){
-      title.textContent = 'Using shared Claude storage';
-      sub.textContent = 'This preview syncs through Claude. Connect a network server instead if you want updates visible outside Claude too.';
-      toggleBtn.textContent = 'Connect\u2026';
-      hint.textContent = 'Saved to shared Claude storage for this dashboard';
-    } else {
-      title.textContent = 'Not connected to a network server';
-      sub.textContent = 'Updates only save to this browser. Connect to a shared server so every computer sees the same data.';
-      toggleBtn.textContent = 'Connect\u2026';
-      hint.textContent = 'Saved to this browser only \u2014 use the same browser/device to see past uploads';
-    }
-  }
-
-  var networkConnectRow = document.getElementById('networkConnectRow');
-  var serverUrlInput = document.getElementById('serverUrlInput');
-
-  document.getElementById('netToggleBtn').addEventListener('click', function(){
-    if(currentStorageMode() === 'server'){
-      disconnectFromServer();
-      refreshNetworkUI();
-      showToast('Disconnected from network server.');
-      return;
-    }
-    serverUrlInput.value = getServerUrlPref() || '';
-    networkConnectRow.style.display = 'flex';
-    serverUrlInput.focus();
-  });
-
-  document.getElementById('netCancelBtn').addEventListener('click', function(){
-    networkConnectRow.style.display = 'none';
-  });
-
-  function attemptConnect(){
-    var btn = document.getElementById('netConnectBtn');
-    var raw = serverUrlInput.value;
-    btn.textContent = 'Connecting\u2026';
-    btn.disabled = true;
-    connectToServer(raw).then(function(result){
-      btn.disabled = false;
-      btn.textContent = 'Connect';
-      if(!result.ok){
-        showToast(result.error || 'Could not connect.', true);
-        return;
-      }
-      networkConnectRow.style.display = 'none';
-      refreshNetworkUI();
-      showToast('Connected \u2014 loading shared shift data\u2026');
-      bootstrapDashboard();
-    });
-  }
-  document.getElementById('netConnectBtn').addEventListener('click', attemptConnect);
-  serverUrlInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') attemptConnect(); });
-
-  // ---------- backup: export / import ----------
-
-  function collectAllData(){
-    return loadIndex().then(function(entries){
-      return Promise.all(entries.map(function(e){
-        return getRecord(e.date, e.shiftCode);
-      })).then(function(records){
-        var validRecords = records.filter(function(r){ return !!r; });
-        return {
-          exportedAt: new Date().toISOString(),
-          source: 'FITL Press Monitoring Dashboard',
-          index: entries,
-          records: validRecords
-        };
-      });
-    });
-  }
-
-  function downloadBackup(){
-    var btn = document.getElementById('exportBtn');
-    btn.disabled = true;
-    btn.textContent = 'Preparing\u2026';
-    collectAllData().then(function(backup){
-      if(backup.records.length === 0){
-        showToast('Nothing to back up yet \u2014 upload a shift CSV first.', true);
-        return;
-      }
-      var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      var stamp = new Date().toISOString().slice(0,10);
-      a.href = url;
-      a.download = 'fitl-press-monitoring-backup-' + stamp + '.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-      showToast('Backup downloaded \u2014 ' + backup.records.length + ' shift record(s).');
-    }).catch(function(){
-      showToast('Could not prepare the backup.', true);
-    }).then(function(){
-      btn.disabled = false;
-      btn.textContent = 'Download backup';
-    });
-  }
-
-  function restoreBackup(file){
-    var btn = document.getElementById('importBtn');
-    var reader = new FileReader();
-    reader.onload = function(e){
-      var backup;
-      try{
-        backup = JSON.parse(e.target.result);
-      } catch(err){
-        showToast('That file is not valid JSON.', true);
-        return;
-      }
-      if(!backup || !Array.isArray(backup.records)){
-        showToast('This does not look like a dashboard backup file.', true);
-        return;
-      }
-      if(backup.records.length === 0){
-        showToast('That backup file has no shift records in it.', true);
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = 'Importing\u2026';
-      Promise.all(backup.records.map(function(rec){
-        return saveRecord(rec).then(function(merged){ return upsertIndexEntry(merged); });
-      })).then(function(){
-        btn.disabled = false;
-        btn.textContent = 'Import backup\u2026';
-        showToast('Imported ' + backup.records.length + ' shift record(s).');
-        bootstrapDashboard();
-      }).catch(function(){
-        btn.disabled = false;
-        btn.textContent = 'Import backup\u2026';
-        showToast('Something went wrong while importing that backup.', true);
-      });
-    };
-    reader.onerror = function(){ showToast('Could not read that file.', true); };
-    reader.readAsText(file);
-  }
-
-  document.getElementById('exportBtn').addEventListener('click', downloadBackup);
-  document.getElementById('importBtn').addEventListener('click', function(){
-    document.getElementById('importFileInput').click();
-  });
-  document.getElementById('importFileInput').addEventListener('change', function(){
-    if(this.files && this.files[0]) restoreBackup(this.files[0]);
-    this.value = '';
-  });
-
   // ---------- init ----------
 
   function bootstrapDashboard(){
@@ -1565,19 +1264,9 @@
     }, 600);
   }
 
-  refreshNetworkUI();
-  initServerConnection().then(function(serverConnected){
-    if(serverConnected){
-      refreshNetworkUI();
-      bootstrapDashboard();
-      publishRiskFlags();
-      return;
-    }
-    initMongoConnection().then(function(){
-      refreshNetworkUI();
-      bootstrapDashboard();
-      publishRiskFlags();
-    });
+  initMongoConnection().then(function(){
+    bootstrapDashboard();
+    publishRiskFlags();
   });
 
 })();
