@@ -332,13 +332,13 @@
   </div>
 
   <label class="upload-zone" id="uploadZone">
-    <input type="file" id="fileInput" accept=".csv,text/csv">
+    <input type="file" id="fileInput" accept=".csv,text/csv" multiple>
     <div class="upload-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     </div>
     <div class="upload-text">
-      <p class="t1">Drop a shift monitoring CSV here, or click to upload</p>
-      <p class="t2" id="uploadHint">Round-wise pressure and temperature readings are parsed and saved automatically</p>
+      <p class="t1">Drop one or more shift monitoring CSVs here, or click to upload</p>
+      <p class="t2" id="uploadHint">Round-wise pressure and temperature readings are parsed and saved automatically — several files can be uploaded at once</p>
       <p class="t2" id="storageModeHint" style="margin-top:2px;"></p>
     </div>
   </label>
@@ -1241,37 +1241,70 @@
 
   // ---------- file handling ----------
 
+  // reads and saves one file; resolves with the merged record, or rejects with {file, message}
   function handleFile(file){
-    if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e){
-      var text = e.target.result;
-      var rec;
-      try{
-        rec = parseShiftCSV(text);
-      } catch(err){
-        showToast(err.message || 'Could not parse this CSV.', true);
-        return;
-      }
-      saveRecord(rec).then(function(merged){
-        return upsertIndexEntry(merged).then(function(){ return merged; });
-      }).then(function(merged){
-        var d = populateDateSelect(merged.shiftDateISO);
-        var s = populateShiftSelect(d, merged.shiftCode);
-        loadAndRender(d, s);
-        showToast('Saved \u2014 ' + formatDateDisplay(merged.shiftDateISO) + ', shift ' + merged.shiftCode + ' updated automatically.');
-      }).catch(function(err){
-        showToast('Could not save this file: ' + (err && err.message ? err.message : 'unknown error'), true);
+    return new Promise(function(resolve, reject){
+      if(!file){ resolve(null); return; }
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var text = e.target.result;
+        var rec;
+        try{
+          rec = parseShiftCSV(text);
+        } catch(err){
+          reject({ file: file.name, message: err.message || 'Could not parse this CSV.' });
+          return;
+        }
+        saveRecord(rec).then(function(merged){
+          return upsertIndexEntry(merged).then(function(){ return merged; });
+        }).then(function(merged){
+          resolve(merged);
+        }).catch(function(err){
+          reject({ file: file.name, message: 'Could not save this file: ' + (err && err.message ? err.message : 'unknown error') });
+        });
+      };
+      reader.onerror = function(){ reject({ file: file.name, message: 'Could not read this file.' }); };
+      reader.readAsText(file);
+    });
+  }
+
+  // uploads one or more files, one at a time (so the saved shift index is never read-modify-written by two
+  // files at once), then shows the dashboard for the last one saved and reports any that failed
+  function handleFiles(fileList){
+    var files = Array.prototype.slice.call(fileList || []);
+    if(!files.length) return;
+    var saved = [], failed = [], lastMerged = null;
+    var chain = files.reduce(function(prev, file){
+      return prev.then(function(){
+        return handleFile(file).then(function(merged){
+          if(merged){ saved.push(file.name); lastMerged = merged; }
+        }).catch(function(err){
+          failed.push((err && err.file ? err.file + ': ' : '') + (err && err.message ? err.message : 'unknown error'));
+        });
       });
-    };
-    reader.onerror = function(){ showToast('Could not read this file.', true); };
-    reader.readAsText(file);
+    }, Promise.resolve());
+    chain.then(function(){
+      if(lastMerged){
+        var d = populateDateSelect(lastMerged.shiftDateISO);
+        var s = populateShiftSelect(d, lastMerged.shiftCode);
+        loadAndRender(d, s);
+      }
+      if(saved.length && !failed.length){
+        showToast(saved.length === 1
+          ? ('Saved \u2014 ' + formatDateDisplay(lastMerged.shiftDateISO) + ', shift ' + lastMerged.shiftCode + ' updated automatically.')
+          : ('Saved ' + saved.length + ' files \u2014 dashboard updated automatically.'));
+      } else if(saved.length && failed.length){
+        showToast('Saved ' + saved.length + ' of ' + files.length + ' files. Failed: ' + failed.join(' \u00b7 '), true);
+      } else {
+        showToast(failed.join(' \u00b7 ') || 'Could not read the selected files.', true);
+      }
+    });
   }
 
   var uploadZone = document.getElementById('uploadZone');
   var fileInput = document.getElementById('fileInput');
   fileInput.addEventListener('change', function(){
-    if(fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    if(fileInput.files && fileInput.files.length) handleFiles(fileInput.files);
     fileInput.value = '';
   });
   uploadZone.addEventListener('dragover', function(e){ e.preventDefault(); uploadZone.classList.add('dragover'); });
@@ -1279,7 +1312,7 @@
   uploadZone.addEventListener('drop', function(e){
     e.preventDefault();
     uploadZone.classList.remove('dragover');
-    if(e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    if(e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   });
 
   document.getElementById('dateSelect').addEventListener('change', function(){
