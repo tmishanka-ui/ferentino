@@ -5,7 +5,7 @@ import { log } from './auth';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 
-async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(to: string, subject: string, html: string) {
   if (!env.resendApiKey || !env.mailFrom) {
     throw new ApiError(503, 'E-mail is not configured on the server yet. Ask the administrator to set the RESEND_API_KEY and MAIL_FROM environment variables.');
   }

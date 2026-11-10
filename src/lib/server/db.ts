@@ -73,6 +73,13 @@ export interface CapaShift {
   risks: Record<string, unknown>[];
 }
 
+/* The Maintenance department's Waste Removing page (public/apps/waste.html) kept its one small
+   record of waste limits/entries purely in localStorage, with no server copy at all — fine for a
+   single browser, but it means nothing server-side (e.g. a daily cron job checking whether a waste
+   type has exceeded its critical limit) could ever see it. Small and bounded, so one meta document
+   is enough — same shape as downtimeMeta/capaMeta above. */
+export interface WasteMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -92,6 +99,7 @@ export interface Store {
   pressKv: Collection<PressKv>;
   capaMeta: Collection<CapaMeta>;
   capaShifts: Collection<CapaShift>;
+  wasteMeta: Collection<WasteMeta>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -126,6 +134,7 @@ async function connect(): Promise<Store> {
     pressKv: db.collection<PressKv>('press_kv'),
     capaMeta: db.collection<CapaMeta>('capa_meta'),
     capaShifts: db.collection<CapaShift>('capa_shifts'),
+    wasteMeta: db.collection<WasteMeta>('waste_meta'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),

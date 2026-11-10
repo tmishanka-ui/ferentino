@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/waste-alerts", "schedule": "30 1 * * *" }
+  ]
+}

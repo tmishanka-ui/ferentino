@@ -21,4 +21,7 @@ export const env = {
   get maxFileMb() { return num('MAX_FILE_MB', 200); },
   get resendApiKey() { return str('RESEND_API_KEY', ''); },
   get mailFrom() { return str('MAIL_FROM', ''); },
+  // shared secret Vercel Cron sends back as "Authorization: Bearer <value>" — set the same value
+  // here and in the Cron Job's settings so only Vercel's own scheduler can trigger it
+  get cronSecret() { return str('CRON_SECRET', ''); },
 };
