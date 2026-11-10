@@ -1,5 +1,5 @@
 import { rawFetch, api } from './api';
-import { getState, setState, Diff } from './store';
+import { getState, setState, Diff, toast } from './store';
 import { release } from './frames';
 import { itemName } from '../registry';
 
@@ -51,9 +51,18 @@ function pullAll(since: number): Promise<{ items: any[]; seq: number }> {
 
 const ask = (diffs: Diff[]) => new Promise<'server' | 'mine'>((res) => setState({ dialog: { type: 'ask', diffs, done: (c) => { setState({ dialog: null }); res(c); } } }));
 
+// A single oversized item (bigger than this browser's remaining localStorage quota) must never stop
+// every other item from loading and lock the whole system out — it just stays out of this browser's
+// local copy, and a toast tells the person which one, instead of hydrate() throwing.
+let quotaSkipped: string[] = [];
+function setItemSafe(key: string, value: string): boolean {
+  try { localStorage.setItem(key, value); return true; }
+  catch { quotaSkipped.push(key); return false; }
+}
+
 function hydrate(): Promise<number> {
   const force = localStorage.getItem('fitl_sync_force') === '1', had = loadMeta();
-  loadDirty(); chip('Loading data from the server…');
+  loadDirty(); chip('Loading data from the server…'); quotaSkipped = [];
   if (force) { localStorage.removeItem('fitl_sync_force'); return forceUpload(); }
   return pullAll(had ? SY.seq : 0).then((res) => {
     const diffs: Diff[] = [], seen: Record<string, 1> = {};
@@ -66,19 +75,20 @@ function hydrate(): Promise<number> {
         else { SY.ver[it.key] = it.version; if (loc !== null) SY.dirty[it.key] = 1; }
         return;
       }
-      if (loc === null) { localStorage.setItem(it.key, it.value); SY.ver[it.key] = it.version; applied++; }
+      if (loc === null) { if (setItemSafe(it.key, it.value)) { SY.ver[it.key] = it.version; applied++; } }
       else if (loc === it.value) { SY.ver[it.key] = it.version; delete SY.dirty[it.key]; }
-      else if (had && !SY.dirty[it.key]) { localStorage.setItem(it.key, it.value); SY.ver[it.key] = it.version; applied++; }
+      else if (had && !SY.dirty[it.key]) { if (setItemSafe(it.key, it.value)) { SY.ver[it.key] = it.version; applied++; } }
       else diffs.push(it);
     });
     localKeys().forEach((k) => { if (!seen[k] && !(k in SY.ver)) SY.dirty[k] = 1; });     // items the server has never seen are uploaded
     return (diffs.length ? ask(diffs) : Promise.resolve('' as '')).then((choice) => {
       diffs.forEach((it) => {
         SY.ver[it.key] = it.version;
-        if (choice === 'server') { localStorage.setItem(it.key, it.value); delete SY.dirty[it.key]; applied++; }
+        if (choice === 'server') { if (setItemSafe(it.key, it.value)) { delete SY.dirty[it.key]; applied++; } }
         else SY.dirty[it.key] = 1;
       });
       SY.seq = res.seq; SY.pollSeq = res.seq; saveMeta(); saveDirty();
+      if (quotaSkipped.length) toast(`This browser's storage is full — could not load: ${quotaSkipped.map(itemName).join(', ')}`);
       return applied;
     });
   });
