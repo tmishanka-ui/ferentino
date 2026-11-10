@@ -61,6 +61,18 @@ export interface DowntimeRecord {
    of its own — same idea as downtimeMeta/downtimeRecords above. */
 export interface PressKv { _id: string; v: string; updated_at: string; updated_by_name: string | null }
 
+/* The CAPA platform kept everything — issues, action plans, preventive forms, and every shift ever
+   received from Press Monitoring — in one JSON blob in localStorage, re-saved whole on every edit.
+   The shifts part grows without bound (one entry per shift, forever), so that blob eventually grew
+   past what a browser's localStorage can hold. Same split as Downtime/Press above: a small meta
+   document for everything except shifts, and one row per shift in its own collection. */
+export interface CapaMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+export interface CapaShift {
+  _id: string; // the shift's key, e.g. "2026-08-21:A"
+  date: string; shiftCode: string; shiftLabel: string; controller: string;
+  risks: Record<string, unknown>[];
+}
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -78,6 +90,8 @@ export interface Store {
   downtimeMeta: Collection<DowntimeMeta>;
   downtimeRecords: Collection<DowntimeRecord>;
   pressKv: Collection<PressKv>;
+  capaMeta: Collection<CapaMeta>;
+  capaShifts: Collection<CapaShift>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -110,6 +124,8 @@ async function connect(): Promise<Store> {
     downtimeMeta: db.collection<DowntimeMeta>('downtime_meta'),
     downtimeRecords: db.collection<DowntimeRecord>('downtime_records'),
     pressKv: db.collection<PressKv>('press_kv'),
+    capaMeta: db.collection<CapaMeta>('capa_meta'),
+    capaShifts: db.collection<CapaShift>('capa_shifts'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),

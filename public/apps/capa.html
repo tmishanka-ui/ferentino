@@ -428,7 +428,6 @@ const SEED={
   }
  ]
 };
-const KEY='fitl_capa_v1';
 const ISSUE_NO='02', REV_NO='00', ISSUE_DATE='2026.04.20';
 const FORMS={
   p09:{no:'FIT/Q/RG-QA-09',title:'Summary Record for process Controlling',orient:'landscape',file:'FIT_Q_RG-QA-09_Summary_Record_for_Process_Controlling'},
@@ -473,13 +472,63 @@ function shape(s){
   ['shifts','issues','actions','prevent'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=[];});
   return s;
 }
+/* ---------- storage ----------
+   Issues, action plans, preventive forms and numbering are small and bounded, so they stay in one
+   meta document. Shifts (received automatically from Press Monitoring, forever) are the part that
+   grows without bound, so each one is its own row, saved only when it actually changes. */
+let metaVersion=0, shiftsDirty={}, shiftsReplaceAll=false;
+function markShiftDirty(k){if(k)shiftsDirty[k]=1;}
+function normalizeShiftDoc(d){return{key:d._id,date:d.date||'',shiftCode:d.shiftCode||'',shiftLabel:d.shiftLabel||'',controller:d.controller||'',risks:Array.isArray(d.risks)?d.risks:[]};}
+function loadShiftsAll(){
+  let shifts=[];
+  function page(skip){
+    return fetch('/api/capa/shifts?skip='+skip+'&limit=1000',{credentials:'same-origin',headers:{'X-FIT-Request':'1'}})
+      .then(r=>r.json()).then(j=>{const rows=j.shifts||[];shifts=shifts.concat(rows);return j.more?page(skip+rows.length):shifts;});
+  }
+  return page(0).then(rows=>rows.map(normalizeShiftDoc));
+}
 function load(){
-  try{const raw=localStorage.getItem(KEY);if(raw){const s=JSON.parse(raw);if(s&&typeof s==='object')return shape(s);}}catch(e){}
-  return seedState();
+  return Promise.all([
+    fetch('/api/capa/meta',{credentials:'same-origin',headers:{'X-FIT-Request':'1'}}).then(r=>r.json()),
+    loadShiftsAll()
+  ]).then(([m,shifts])=>{
+    metaVersion=m.version||0;
+    const s=shape((m.data&&typeof m.data==='object')?m.data:seedState());
+    s.shifts=shifts;
+    return s;
+  }).catch(()=>{toast('Could not load CAPA data from the server — try reloading the page.');return shape(seedState());});
 }
 let saveFailed=false;
+function saveMeta(){
+  const meta=Object.assign({},S);delete meta.shifts;
+  return fetch('/api/capa/meta',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1','X-Force':'1'},body:JSON.stringify({data:meta})})
+    .then(r=>{if(!r.ok)throw 0;return r.json();}).then(j=>{metaVersion=j.version;saveFailed=false;})
+    .catch(()=>{if(!saveFailed)toast('Could not save — the server could not be reached.');saveFailed=true;});
+}
+function putShiftsBatches(rows,replace){
+  const BATCH=500;
+  if(!rows.length)return replace?fetch('/api/capa/shifts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1'},body:JSON.stringify({shifts:[],replace:true})}):Promise.resolve();
+  let p=Promise.resolve();
+  for(let i=0;i<rows.length;i+=BATCH){
+    const chunk=rows.slice(i,i+BATCH),isFirst=i===0;
+    p=p.then(()=>fetch('/api/capa/shifts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-FIT-Request':'1'},body:JSON.stringify({shifts:chunk,replace:replace&&isFirst})}));
+  }
+  return p;
+}
+function saveShiftsIfDirty(){
+  if(shiftsReplaceAll){
+    shiftsReplaceAll=false;shiftsDirty={};
+    return putShiftsBatches(S.shifts.slice(),true).catch(()=>{if(!saveFailed)toast('Could not save shift data to the server.');saveFailed=true;});
+  }
+  const keys=Object.keys(shiftsDirty);
+  if(!keys.length)return;
+  shiftsDirty={};
+  const rows=keys.map(findShift).filter(Boolean);
+  return putShiftsBatches(rows,false).catch(()=>{if(!saveFailed)toast('Could not save shift data to the server.');saveFailed=true;});
+}
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify(S));saveFailed=false;}catch(e){if(!saveFailed)toast('Could not save — browser storage is full or blocked. Download a backup from Settings.');saveFailed=true;}
+  saveMeta();
+  saveShiftsIfDirty();
   publishRca();
 }
 function nextCode(kind,dateISO){const y=yy(dateISO);const n=(S.max[kind][y]||0)+1;S.max[kind][y]=n;return kind+'/'+pad(n)+y;}
@@ -516,20 +565,21 @@ function ingestShifts(items){
   let changed=false;
   items.forEach(it=>{
     if(!it||!it.key)return;
-    let sh=findShift(it.key);
-    if(!sh){sh={key:it.key,date:it.date,shiftCode:it.shiftCode,shiftLabel:it.shiftLabel||'',controller:it.controller||'',risks:[]};S.shifts.push(sh);changed=true;}
-    else if(sh.controller!==(it.controller||'')||sh.shiftLabel!==(it.shiftLabel||'')){sh.controller=it.controller||'';sh.shiftLabel=it.shiftLabel||'';changed=true;}
+    let sh=findShift(it.key),shDirty=false;
+    if(!sh){sh={key:it.key,date:it.date,shiftCode:it.shiftCode,shiftLabel:it.shiftLabel||'',controller:it.controller||'',risks:[]};S.shifts.push(sh);changed=true;shDirty=true;}
+    else if(sh.controller!==(it.controller||'')||sh.shiftLabel!==(it.shiftLabel||'')){sh.controller=it.controller||'';sh.shiftLabel=it.shiftLabel||'';changed=true;shDirty=true;}
     const seen={};
     (it.risks||[]).forEach(r=>{
       const k=riskKey(r);seen[k]=1;
       if(!sh.risks.some(x=>x.k===k)){
         sh.risks.push({id:uid(),k,round:r.round==null?null:r.round,recordedAt:r.recordedAt||'',stage:r.stage||'',subStep:r.subStep||'',failureMode:r.failureMode||'',cause:r.cause||'',ap:r.ap||'',
-          rca:false,training:false,instruction:false,none:false,issueCode:''});changed=true;
+          rca:false,training:false,instruction:false,none:false,issueCode:''});changed=true;shDirty=true;
       }
     });
     const before=sh.risks.length;
     sh.risks=sh.risks.filter(x=>seen[x.k]||decided(x)||x.issueCode);   // drop vanished risks only if nothing was decided on them
-    if(sh.risks.length!==before)changed=true;
+    if(sh.risks.length!==before){changed=true;shDirty=true;}
+    if(shDirty)markShiftDirty(sh.key);
   });
   if(changed){save();render();}
 }
@@ -577,7 +627,7 @@ function ingestMeeting(items){
       const link=riskByAutoKey(it.autoKey);
       iss=newIssue({date:String(it.date||todayISO()).replace(/\./g,'-'),issue:it.text||'Issue from the weekly management meeting',source:'meeting',ref:link?{sk:link.sh.key,rid:link.r.id}:null,rca:false});
       S.meet[it.key]=iss.code;created.push(iss.code);changed=true;
-      if(link){link.r.issueCode=iss.code;}
+      if(link){link.r.issueCode=iss.code;markShiftDirty(link.sh.key);}
     }
     // the root causes found by the RCA Workbench
     (it.causes||[]).forEach((cz,i)=>{
@@ -605,8 +655,10 @@ function onMeetingStatus(items){
     S.mstat[it.key]=it;
     const link=riskByAutoKey(it.key);
     if(link){
-      if(!!link.r.rca!==!!it.rca){link.r.rca=!!it.rca;if(it.rca)link.r.none=false;changed=true;}
-      if(it.code&&link.r.issueCode!==it.code){link.r.issueCode=it.code;changed=true;}
+      let linkDirty=false;
+      if(!!link.r.rca!==!!it.rca){link.r.rca=!!it.rca;if(it.rca)link.r.none=false;changed=true;linkDirty=true;}
+      if(it.code&&link.r.issueCode!==it.code){link.r.issueCode=it.code;changed=true;linkDirty=true;}
+      if(linkDirty)markShiftDirty(link.sh.key);
     }
   });
   if(changed)save();
@@ -628,7 +680,7 @@ function setTick(sk,rid,f,val){
       if(iss){iss.rca=false;toast(iss.code+' stays in RG-QA-10 but is no longer sent to the RCA Workbench');}
     }
   }
-  save();render();
+  markShiftDirty(sk);save();render();
 }
 function setNone(sk,rid){
   const sh=findShift(sk);const r=sh&&sh.risks.find(x=>x.id===rid);if(!r)return;
@@ -636,7 +688,7 @@ function setNone(sk,rid){
     if(r.rca){const iss=r.issueCode&&findIssue(r.issueCode);if(iss)iss.rca=false;}
     r.rca=r.training=r.instruction=false;r.none=true;
   }else r.none=false;
-  save();render();
+  markShiftDirty(sk);save();render();
 }
 
 /* ---------- RCA ----------
@@ -995,7 +1047,7 @@ function onClick(e){
     const i=byId(S.issues,el.dataset.id);if(!i)return;const n=S.actions.filter(x=>x.issueCode===i.code).length;
     if(!confirm('Delete issue '+i.code+(n?' and its '+n+' action plan'+(n===1?'':'s')+' (with their follow-ups)':'')+'?\nThis cannot be undone. A case already in the RCA Workbench is not removed.'))return;
     S.actions=S.actions.filter(x=>x.issueCode!==i.code);
-    S.shifts.forEach(s=>s.risks.forEach(r=>{if(r.issueCode===i.code){r.issueCode='';r.rca=false;}}));
+    S.shifts.forEach(s=>s.risks.forEach(r=>{if(r.issueCode===i.code){r.issueCode='';r.rca=false;markShiftDirty(s.key);}}));
     S.prevent.forEach(p=>{if(p.issueCode===i.code)p.issueCode='';});
     S.issues=S.issues.filter(x=>x!==i);save();render();return;}
   if(a==='addCause'){const i=byId(S.issues,el.dataset.id);if(i){i.causes.push({id:uid(),cause:'',root:'',r:null});save();render();}return;}
@@ -1023,8 +1075,8 @@ function onClick(e){
       $('#mYes',h).onclick=()=>{const t=$('#mText',h).value.trim();if(!t){toast('Write the issue statement');return;}
         const it=newIssue({date:p.dateObserved||todayISO(),issue:t,source:'preventive',rca:false});p.issueCode=it.code;closeModal();save();render();toast('Logged as '+it.code);};});return;}
   if(a==='backup'){downloadBlob(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),'CAPA_backup_'+todayISO()+'.json');return;}
-  if(a==='reseed'){if(confirm('Reset to the existing registers?\nShifts received and every decision made here will be removed.')){S=seedState();save();render();toast('Reset');}return;}
-  if(a==='wipe'){if(confirm('Delete ALL CAPA data, including the existing registers?\nThis cannot be undone.')){S=shape({max:{I:{},A:{}}});save();render();toast('All data deleted');}return;}
+  if(a==='reseed'){if(confirm('Reset to the existing registers?\nShifts received and every decision made here will be removed.')){S=seedState();shiftsReplaceAll=true;save();render();toast('Reset');}return;}
+  if(a==='wipe'){if(confirm('Delete ALL CAPA data, including the existing registers?\nThis cannot be undone.')){S=shape({max:{I:{},A:{}}});shiftsReplaceAll=true;save();render();toast('All data deleted');}return;}
 }
 function onChange(e){
   const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
@@ -1053,7 +1105,7 @@ function onChange(e){
   if(a==='restore'){
     const f=el.files[0];if(!f)return;const rd=new FileReader();
     rd.onload=()=>{try{const s=JSON.parse(rd.result);if(!s||!Array.isArray(s.issues)||!Array.isArray(s.actions))throw 0;
-      if(!confirm('Restoring replaces everything currently in CAPA. Continue?'))return;S=shape(s);save();render();toast('Backup restored');}catch(err){toast('That file is not a CAPA backup');}};
+      if(!confirm('Restoring replaces everything currently in CAPA. Continue?'))return;S=shape(s);shiftsReplaceAll=true;save();render();toast('Backup restored');}catch(err){toast('That file is not a CAPA backup');}};
     rd.readAsText(f);el.value='';return;}
 }
 function onInput(e){
@@ -1077,10 +1129,11 @@ document.addEventListener('click',onClick);
 document.addEventListener('change',onChange);
 document.addEventListener('input',onInput);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-S=load();
-render();
-publishRca();
-try{window.parent.postMessage({type:'fitl-capa-ready'},'*');}catch(e){}
+$('#app').innerHTML='<div style="padding:60px;text-align:center;color:#8a8f98">Loading CAPA data…</div>';
+load().then(s=>{
+  S=s;render();publishRca();
+  try{window.parent.postMessage({type:'fitl-capa-ready'},'*');}catch(e){}
+});
 })();
 </script>
 </body>
