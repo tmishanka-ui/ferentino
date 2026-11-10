@@ -53,6 +53,14 @@ export interface DowntimeRecord {
   c: string; r: string; l: string; p: string; sh: string; n: number; tab: string;
 }
 
+/* The Press Monitoring Dashboard previously saved every shift straight into the browser's
+   localStorage, which is per-device (so other computers never saw an upload) and quota-limited
+   (uploads eventually started failing with "storage full"). It keeps its own simple key/value
+   shape (one small "index" document plus one small document per shift), so rather than forcing it
+   through the generic data_items/localStorage sync, it gets a small dedicated key/value collection
+   of its own — same idea as downtimeMeta/downtimeRecords above. */
+export interface PressKv { _id: string; v: string; updated_at: string; updated_by_name: string | null }
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -69,6 +77,7 @@ export interface Store {
   storesTxns: Collection<StoreTxn>;
   downtimeMeta: Collection<DowntimeMeta>;
   downtimeRecords: Collection<DowntimeRecord>;
+  pressKv: Collection<PressKv>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -100,6 +109,7 @@ async function connect(): Promise<Store> {
     storesTxns: db.collection<StoreTxn>('stores_txns'),
     downtimeMeta: db.collection<DowntimeMeta>('downtime_meta'),
     downtimeRecords: db.collection<DowntimeRecord>('downtime_records'),
+    pressKv: db.collection<PressKv>('press_kv'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),

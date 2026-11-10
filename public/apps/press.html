@@ -717,12 +717,18 @@
   }
 
   // ---------- storage ----------
-  // Three possible backends, tried in this priority order:
+  // Backends, tried in this priority order:
   //  1. "server"  — a small LAN sync server (press-monitoring-server.js) the user has
-  //                 pointed this dashboard at. Shared across every computer on the network.
-  //  2. "claude"  — window.storage, only available inside Claude's artifact preview.
+  //                 manually pointed this dashboard at. Shared across every computer on the network.
+  //  2. "mongo"   — the Ferentino Management System's own database, used automatically whenever
+  //                 this dashboard is opened signed in (the normal case). Shared across every
+  //                 computer, and the actual fix for the old "storage full"/localStorage-quota
+  //                 problem: data no longer has to fit in, or even touch, the browser's own storage.
+  //  3. "claude"  — window.storage, only available inside Claude's artifact preview.
   //                 Shared across anyone viewing the artifact there.
-  //  3. "local"   — the browser's own localStorage. Only visible on this one device.
+  //  4. "local"   — the browser's own localStorage. Only visible on this one device, and limited
+  //                 to a few MB — kept only as a last-resort fallback when neither of the above
+  //                 is reachable (e.g. the file opened standalone, outside the signed-in app).
 
   var LOCAL_PREFIX = 'fitl-press-dashboard::';
   var SERVER_PREF_KEY = LOCAL_PREFIX + 'server-url';
@@ -731,6 +737,7 @@
     && typeof window.storage.get === 'function' && typeof window.storage.set === 'function');
 
   var state_serverUrl = null; // set by initServerConnection()
+  var state_mongoAvailable = false; // set by initMongoConnection()
 
   function getServerUrlPref(){
     try{ return localStorage.getItem(SERVER_PREF_KEY) || ''; } catch(e){ return ''; }
@@ -785,13 +792,25 @@
 
   function currentStorageMode(){
     if(state_serverUrl) return 'server';
+    if(state_mongoAvailable) return 'mongo';
     if(usingClaudeStorage) return 'claude';
     return 'local';
+  }
+
+  function initMongoConnection(){
+    return fetch('/api/press/kv?key=index', { credentials:'same-origin', headers:{'X-FIT-Request':'1'} })
+      .then(function(r){ state_mongoAvailable = r.ok; return state_mongoAvailable; })
+      .catch(function(){ state_mongoAvailable = false; return false; });
   }
 
   function storageGet(key){
     if(state_serverUrl){
       return fetch(state_serverUrl + '/storage/' + encodeURIComponent(key))
+        .then(function(r){ if(!r.ok) throw new Error('Server error'); return r.json(); })
+        .then(function(j){ return j.value; });
+    }
+    if(state_mongoAvailable){
+      return fetch('/api/press/kv?key=' + encodeURIComponent(key), { credentials:'same-origin', headers:{'X-FIT-Request':'1'} })
         .then(function(r){ if(!r.ok) throw new Error('Server error'); return r.json(); })
         .then(function(j){ return j.value; });
     }
@@ -812,6 +831,14 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: value })
+      }).then(function(r){ if(!r.ok) throw new Error('Server error'); return true; });
+    }
+    if(state_mongoAvailable){
+      return fetch('/api/press/kv', {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-FIT-Request': '1' },
+        body: JSON.stringify({ key: key, value: value })
       }).then(function(r){ if(!r.ok) throw new Error('Server error'); return true; });
     }
     if(usingClaudeStorage){
@@ -1335,13 +1362,18 @@
     var toggleBtn = document.getElementById('netToggleBtn');
     var hint = document.getElementById('storageModeHint');
 
-    icon.className = 'net-icon' + (mode === 'server' ? ' connected' : '');
+    icon.className = 'net-icon' + ((mode === 'server' || mode === 'mongo') ? ' connected' : '');
 
     if(mode === 'server'){
       title.textContent = 'Connected \u2014 shared with your network';
       sub.textContent = 'Synced with ' + state_serverUrl + '. Every computer pointed at this address sees the same updates.';
       toggleBtn.textContent = 'Disconnect';
       hint.textContent = 'Saved to your network server \u2014 visible to every connected computer';
+    } else if(mode === 'mongo'){
+      title.textContent = 'Saved to the Ferentino Management System';
+      sub.textContent = 'Shift data is saved straight to the main system database \u2014 every computer signed in sees the same updates.';
+      toggleBtn.textContent = 'Connect to LAN server\u2026';
+      hint.textContent = 'Saved to the Ferentino system \u2014 visible on every signed-in computer';
     } else if(mode === 'claude'){
       title.textContent = 'Using shared Claude storage';
       sub.textContent = 'This preview syncs through Claude. Connect a network server instead if you want updates visible outside Claude too.';
@@ -1534,10 +1566,18 @@
   }
 
   refreshNetworkUI();
-  initServerConnection().then(function(connected){
-    refreshNetworkUI();
-    bootstrapDashboard();
-    publishRiskFlags();
+  initServerConnection().then(function(serverConnected){
+    if(serverConnected){
+      refreshNetworkUI();
+      bootstrapDashboard();
+      publishRiskFlags();
+      return;
+    }
+    initMongoConnection().then(function(){
+      refreshNetworkUI();
+      bootstrapDashboard();
+      publishRiskFlags();
+    });
   });
 
 })();
