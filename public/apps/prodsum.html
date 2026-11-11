@@ -203,11 +203,16 @@ async function core(XLSX,file){
   return{kind:'slim',buf:x instanceof ArrayBuffer?x:x.buffer.slice(x.byteOffset,x.byteOffset+x.byteLength),info:info}
 }
 const WSRC='importScripts("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");'+core.toString()+';onmessage=function(e){core(self.XLSX,e.data.file).then(function(r){postMessage({kind:r.kind,buf:r.buf,info:r.info},[r.buf])}).catch(function(x){postMessage({err:String(x&&x.message||x)})})};';
-function extract(file){return new Promise((res,rej)=>{
+const flaky=m=>/could not be read|notreadableerror/i.test(m);
+function extract(file,tries){tries=tries||0;return new Promise((res,rej)=>{
+  // the file is read in many separate chunks over up to a minute (OS/network/antivirus can briefly
+  // lock a huge report mid-read, e.g. while it's still open in Excel or syncing in OneDrive) — that
+  // shows up as a "could not be read" error partway through, and almost always clears up on its own
+  const retry=x=>{const m=String(x&&x.message||x);if(tries<2&&flaky(m)){setTimeout(()=>extract(file,tries+1).then(res,rej),800);return true}return false};
   let w=null;try{w=new Worker(URL.createObjectURL(new Blob([WSRC],{type:'text/javascript'})))}catch(_){}
-  const here=()=>core(XLSX,file).then(res,rej);
+  const here=()=>core(XLSX,file).then(res,x=>{if(!retry(x))rej(x)});
   if(!w)return here();
-  w.onmessage=e=>{w.terminate();e.data.err?rej(new Error(e.data.err)):res(e.data)};
+  w.onmessage=e=>{w.terminate();if(!e.data.err)return res(e.data);const x=new Error(e.data.err);if(!retry(x))rej(x)};
   w.onerror=()=>{w.terminate();here()};
   w.postMessage({file:file})})}
 $('rf').onchange=async e=>{
@@ -223,7 +228,8 @@ $('rf').onchange=async e=>{
     const m={type:'fitl-workbook',files:out};
     if(parent!==window)parent.postMessage(m,'*',out.map(o=>o.buffer));else incoming(m);
     up.textContent='Report read in '+Math.round((Date.now()-t0)/1000)+' s'+(notes.length?' — '+notes.join(' · '):'')+'. Sent to this page, the QC Department (Tyre QC and Defect Analyser) and the Production KPI Dashboard.';
-  }catch(x){clearInterval(tick);up.textContent='The report could not be read: '+(x&&x.message||x)}};
+  }catch(x){clearInterval(tick);const m=String(x&&x.message||x);
+    up.textContent='The report could not be read: '+m+(flaky(m)?' — this already retried a few times on its own. Make sure the file is closed in Excel and fully synced (not still uploading/downloading in OneDrive or a network drive), then choose it again.':'')}};
 
 /* ---------- deciding the production group of every shift ---------- */
 function pattern(){
