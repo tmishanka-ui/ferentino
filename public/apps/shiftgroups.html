@@ -22,6 +22,8 @@
   .pn{padding:14px 16px}.pn h2{font-size:20px;text-transform:uppercase;margin-bottom:8px}
   .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
   .bar select,.bar input,td select,.add input{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 8px}
+  td input.einp{border:1px solid transparent;background:transparent;border-radius:4px;padding:4px 6px;width:100%}
+  td input.einp:hover,td input.einp:focus{border-color:var(--line);background:#fff}
   .tw{max-height:560px;overflow:auto;border:1px solid var(--line2);border-radius:8px}
   table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 9px;border-bottom:1px solid var(--line2);text-align:left}
   th{position:sticky;top:0;background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);z-index:1}
@@ -40,7 +42,7 @@
  <section class="card pn"><h2>Employees</h2>
   <div class="bar"><input id="q" placeholder="Search name or number" style="min-width:190px"><select id="lf"></select><label style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="un" checked> not yet in a group</label></div>
   <div class="bar"><span class="note" style="margin:0" id="sel">0 selected</span><button class="btn sm A" data-to="A">→ Group A</button><button class="btn sm B" data-to="B">→ Group B</button><button class="btn sm C" data-to="C">→ Group C</button><button class="btn sm MIX" data-to="MIX">→ Mixing</button><button class="btn sm BASE" data-to="BASE">→ Base Building</button><button class="btn sm" data-to="">Remove from group</button></div>
-  <div class="tw"><table><thead><tr><th><input type="checkbox" id="all"></th><th>No</th><th>Name</th><th>Location</th><th>Group</th></tr></thead><tbody id="pool"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th><input type="checkbox" id="all"></th><th>No</th><th>Name</th><th>Location</th><th>Group</th><th></th></tr></thead><tbody id="pool"></tbody></table></div>
   <p class="note" id="src">Employees come from the attendance reports uploaded on the HR Department · Attendance tab. You can also add someone by hand.</p>
   <div class="add"><input id="mn" placeholder="Employee no" style="width:120px"><input id="mm" placeholder="Name" style="min-width:160px"><button class="btn sm" id="ma">Add employee</button></div>
  </section>
@@ -61,6 +63,20 @@ function publish(){try{if(parent!==window){const a={};Object.keys(ASSIGN).forEac
 const nm=no=>(POOL[no]||{}).name||no;
 function setGroup(no,g){if(!g){delete ASSIGN[no];return}ASSIGN[no]={g,role:(ASSIGN[no]&&ASSIGN[no].g===g)?ASSIGN[no].role:'member'}}
 function setRole(no,role){const a=ASSIGN[no];if(!a)return;if(role==='executive')Object.keys(ASSIGN).forEach(k=>{if(k!==no&&ASSIGN[k].g===a.g&&ASSIGN[k].role==='executive')ASSIGN[k].role='member'});a.role=role}
+function renameEmployee(oldNo,newVal){
+  const newNo=(newVal||'').trim().toUpperCase();
+  if(!newNo||newNo===oldNo){render();return}
+  if(POOL[newNo]){toast('Employee '+newNo+' already exists');render();return}
+  POOL[newNo]=POOL[oldNo];delete POOL[oldNo];
+  if(ASSIGN[oldNo]){ASSIGN[newNo]=ASSIGN[oldNo];delete ASSIGN[oldNo]}
+  if(PICK.has(oldNo)){PICK.delete(oldNo);PICK.add(newNo)}
+  save();render();toast('Renamed to '+newNo)
+}
+function deleteEmployee(no){
+  const n=(POOL[no]||{}).name||no;
+  if(!confirm('Delete employee '+no+' ('+n+')? This also removes them from their group if assigned.'))return;
+  delete POOL[no];delete ASSIGN[no];PICK.delete(no);save();render()
+}
 
 function allTableHtml(){
   const rows=Object.keys(ASSIGN).sort((a,b)=>GS.indexOf(ASSIGN[a].g)-GS.indexOf(ASSIGN[b].g)||({executive:0,supervisor:1,member:2}[ASSIGN[a].role]-{executive:0,supervisor:1,member:2}[ASSIGN[b].role])||nm(a).localeCompare(nm(b)));
@@ -79,7 +95,11 @@ function render(){
   $('lf').innerHTML='<option value="">All locations</option>'+locs.map(l=>'<option'+(l===F.loc?' selected':'')+'>'+esc(l)+'</option>').join('');
   const q=F.q.trim().toLowerCase();
   const rows=Object.keys(POOL).filter(no=>(!F.un||!ASSIGN[no])&&(!F.loc||POOL[no].loc===F.loc)&&(!q||(no+' '+POOL[no].name).toLowerCase().includes(q))).sort((a,b)=>(POOL[a].loc||'').localeCompare(POOL[b].loc||'')||POOL[a].name.localeCompare(POOL[b].name));
-  $('pool').innerHTML=rows.slice(0,700).map(no=>'<tr><td><input type="checkbox" data-pick="'+no+'"'+(PICK.has(no)?' checked':'')+'></td><td>'+no+'</td><td>'+esc(POOL[no].name)+'</td><td>'+esc(POOL[no].loc||'')+'</td><td>'+(ASSIGN[no]?'<span class="chip" style="background:'+COL[ASSIGN[no].g]+';color:#fff">'+GL[ASSIGN[no].g]+'</span>':'–')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">'+(Object.keys(POOL).length?'Nobody matches these filters.':'No employees yet — upload an attendance report on the HR Department · Attendance tab, or add someone by hand below.')+'</td></tr>';
+  $('pool').innerHTML=rows.slice(0,700).map(no=>'<tr><td><input type="checkbox" data-pick="'+no+'"'+(PICK.has(no)?' checked':'')+'></td>'+
+    '<td><input class="einp" data-eno="'+esc(no)+'" value="'+esc(no)+'" style="width:76px"></td>'+
+    '<td><input class="einp" data-ename="'+esc(no)+'" value="'+esc(POOL[no].name)+'" style="min-width:150px"></td>'+
+    '<td>'+esc(POOL[no].loc||'')+'</td><td>'+(ASSIGN[no]?'<span class="chip" style="background:'+COL[ASSIGN[no].g]+';color:#fff">'+GL[ASSIGN[no].g]+'</span>':'–')+'</td>'+
+    '<td><button class="btn sm" data-del="'+esc(no)+'">Delete</button></td></tr>').join('')||'<tr><td colspan="6" class="empty">'+(Object.keys(POOL).length?'Nobody matches these filters.':'No employees yet — upload an attendance report on the HR Department · Attendance tab, or add someone by hand below.')+'</td></tr>';
   $('sel').textContent=PICK.size+' selected · '+rows.length+' shown';$('all').checked=false;
   $('groups').innerHTML=allTableHtml()+GS.map(g=>{
     const m=Object.keys(ASSIGN).filter(no=>ASSIGN[no].g===g).sort((a,b)=>({executive:0,supervisor:1,member:2}[ASSIGN[a].role]-{executive:0,supervisor:1,member:2}[ASSIGN[b].role])||nm(a).localeCompare(nm(b)));
@@ -92,11 +112,14 @@ document.addEventListener('change',e=>{const t=e.target;
   else if(t.id==='all'){document.querySelectorAll('[data-pick]').forEach(c=>{c.checked=t.checked;t.checked?PICK.add(c.dataset.pick):PICK.delete(c.dataset.pick)});$('sel').textContent=PICK.size+' selected'}
   else if(t.dataset.role){setRole(t.dataset.role,t.value);save();render()}
   else if(t.dataset.group){setGroup(t.dataset.group,t.value);save();render()}
+  else if(t.dataset.eno){renameEmployee(t.dataset.eno,t.value)}
+  else if(t.dataset.ename){const no=t.dataset.ename,v=t.value.trim();if(!v){toast('Name cannot be empty');render();return}POOL[no].name=v;POOL[no].manual=true;save();render()}
   else if(t.id==='lf'){F.loc=t.value;render()}else if(t.id==='un'){F.un=t.checked;render()}});
 document.addEventListener('input',e=>{if(e.target.id==='q'){F.q=e.target.value;const p=e.target.selectionStart;render();const n=$('q');n.focus();try{n.setSelectionRange(p,p)}catch(_){}}});
 document.addEventListener('click',e=>{
   const to=e.target.closest('[data-to]');if(to){if(!PICK.size){toast('Tick the employees first');return}PICK.forEach(no=>setGroup(no,to.dataset.to));const n=PICK.size;PICK.clear();save();render();toast(n+' employee'+(n===1?'':'s')+(to.dataset.to?' → '+GN[to.dataset.to]:' removed from their group'));return}
-  const out=e.target.closest('[data-out]');if(out){delete ASSIGN[out.dataset.out];save();render()}});
+  const out=e.target.closest('[data-out]');if(out){delete ASSIGN[out.dataset.out];save();render();return}
+  const del=e.target.closest('[data-del]');if(del){deleteEmployee(del.dataset.del)}});
 $('ma').onclick=()=>{const no=$('mn').value.trim().toUpperCase(),n=$('mm').value.trim();if(!no||!n){toast('Enter the employee number and name');return}POOL[no]={name:n,loc:'',manual:true};$('mn').value=$('mm').value='';save();render();toast(n+' added')};
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
 $('bk').onclick=()=>dl(new Blob([JSON.stringify({POOL,ASSIGN})],{type:'application/json'}),'Shift_groups_backup_'+new Date().toISOString().slice(0,10)+'.json');
