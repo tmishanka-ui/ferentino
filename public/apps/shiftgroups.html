@@ -62,6 +62,18 @@ const nm=no=>(POOL[no]||{}).name||no;
 function setGroup(no,g){if(!g){delete ASSIGN[no];return}ASSIGN[no]={g,role:(ASSIGN[no]&&ASSIGN[no].g===g)?ASSIGN[no].role:'member'}}
 function setRole(no,role){const a=ASSIGN[no];if(!a)return;if(role==='executive')Object.keys(ASSIGN).forEach(k=>{if(k!==no&&ASSIGN[k].g===a.g&&ASSIGN[k].role==='executive')ASSIGN[k].role='member'});a.role=role}
 
+function allTableHtml(){
+  const rows=Object.keys(ASSIGN).sort((a,b)=>GS.indexOf(ASSIGN[a].g)-GS.indexOf(ASSIGN[b].g)||({executive:0,supervisor:1,member:2}[ASSIGN[a].role]-{executive:0,supervisor:1,member:2}[ASSIGN[b].role])||nm(a).localeCompare(nm(b)));
+  if(!rows.length)return'';
+  return '<div class="card g" style="--c:#8A8378"><div class="gh"><h2>All assigned employees</h2><span class="who">'+rows.length+' in total</span></div>'+
+    '<div class="tw" style="border:0;border-radius:0;max-height:420px"><table><thead><tr><th>No</th><th>Name</th><th>Location</th><th>Group</th><th>Role</th><th></th></tr></thead><tbody>'+
+    rows.map(no=>{const a=ASSIGN[no];
+      return'<tr class="role-'+a.role+'"><td>'+no+'</td><td>'+esc(nm(no))+'</td><td>'+esc((POOL[no]||{}).loc||'')+'</td>'+
+        '<td><select data-group="'+no+'">'+GS.map(g=>'<option value="'+g+'"'+(a.g===g?' selected':'')+'>'+GN[g]+'</option>').join('')+'</select></td>'+
+        '<td><select data-role="'+no+'">'+[['member','Member'],['supervisor','Shift Supervisor']].concat(SHIFT_GROUP(a.g)?[['executive','Shift Executive']]:[]).map(r=>'<option value="'+r[0]+'"'+(a.role===r[0]?' selected':'')+'>'+r[1]+'</option>').join('')+'</select></td>'+
+        '<td><button class="btn sm" data-out="'+no+'">Remove</button></td></tr>';
+    }).join('')+'</tbody></table></div></div>';
+}
 function render(){
   const locs=[...new Set(Object.values(POOL).map(p=>p.loc).filter(Boolean))].sort();
   $('lf').innerHTML='<option value="">All locations</option>'+locs.map(l=>'<option'+(l===F.loc?' selected':'')+'>'+esc(l)+'</option>').join('');
@@ -69,7 +81,7 @@ function render(){
   const rows=Object.keys(POOL).filter(no=>(!F.un||!ASSIGN[no])&&(!F.loc||POOL[no].loc===F.loc)&&(!q||(no+' '+POOL[no].name).toLowerCase().includes(q))).sort((a,b)=>(POOL[a].loc||'').localeCompare(POOL[b].loc||'')||POOL[a].name.localeCompare(POOL[b].name));
   $('pool').innerHTML=rows.slice(0,700).map(no=>'<tr><td><input type="checkbox" data-pick="'+no+'"'+(PICK.has(no)?' checked':'')+'></td><td>'+no+'</td><td>'+esc(POOL[no].name)+'</td><td>'+esc(POOL[no].loc||'')+'</td><td>'+(ASSIGN[no]?'<span class="chip" style="background:'+COL[ASSIGN[no].g]+';color:#fff">'+GL[ASSIGN[no].g]+'</span>':'–')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">'+(Object.keys(POOL).length?'Nobody matches these filters.':'No employees yet — upload an attendance report on the HR Department · Attendance tab, or add someone by hand below.')+'</td></tr>';
   $('sel').textContent=PICK.size+' selected · '+rows.length+' shown';$('all').checked=false;
-  $('groups').innerHTML=GS.map(g=>{
+  $('groups').innerHTML=allTableHtml()+GS.map(g=>{
     const m=Object.keys(ASSIGN).filter(no=>ASSIGN[no].g===g).sort((a,b)=>({executive:0,supervisor:1,member:2}[ASSIGN[a].role]-{executive:0,supervisor:1,member:2}[ASSIGN[b].role])||nm(a).localeCompare(nm(b)));
     const ex=m.filter(n=>ASSIGN[n].role==='executive').map(nm),su=m.filter(n=>ASSIGN[n].role==='supervisor').map(nm);
     return'<div class="card g" style="--c:'+COL[g]+'"><div class="gh"><h2>'+GN[g]+'</h2>'+(SHIFT_GROUP(g)?'<span class="who">Shift Executive: <b>'+(ex.length?esc(ex[0]):'not set')+'</b></span>':'')+'<span class="who">'+(SHIFT_GROUP(g)?'Shift ':'')+'Supervisor'+(su.length===1?'':'s')+': <b>'+(su.length?esc(su.join(', ')):'not set')+'</b></span><span class="who">'+m.length+' in group</span></div>'+
@@ -79,6 +91,7 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.dataset.pick){t.checked?PICK.add(t.dataset.pick):PICK.delete(t.dataset.pick);$('sel').textContent=PICK.size+' selected'}
   else if(t.id==='all'){document.querySelectorAll('[data-pick]').forEach(c=>{c.checked=t.checked;t.checked?PICK.add(c.dataset.pick):PICK.delete(c.dataset.pick)});$('sel').textContent=PICK.size+' selected'}
   else if(t.dataset.role){setRole(t.dataset.role,t.value);save();render()}
+  else if(t.dataset.group){setGroup(t.dataset.group,t.value);save();render()}
   else if(t.id==='lf'){F.loc=t.value;render()}else if(t.id==='un'){F.un=t.checked;render()}});
 document.addEventListener('input',e=>{if(e.target.id==='q'){F.q=e.target.value;const p=e.target.selectionStart;render();const n=$('q');n.focus();try{n.setSelectionRange(p,p)}catch(_){}}});
 document.addEventListener('click',e=>{
