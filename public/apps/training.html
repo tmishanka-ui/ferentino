@@ -457,6 +457,31 @@ async function storageDelete(key, shared){
 }
 
 /* ---------------------------------------------------------------------
+   SURVEY SUBMISSIONS — one row per employee on the server (not the
+   storageGet/storageSet blob above), so a growing number of submissions
+   never has to be re-saved whole on every new one. Saving the whole
+   list as a single localStorage value used to work until that value
+   grew past what the browser would hold, at which point every new
+   submission silently stopped saving — this keeps each submission
+   small and independent instead.
+   --------------------------------------------------------------------- */
+async function fetchSubmissions(){
+  const r = await fetch('/api/training/submissions', {credentials:'same-origin', headers:{'X-FIT-Request':'1'}});
+  if(!r.ok) throw new Error('Could not load the submitted surveys.');
+  const j = await r.json();
+  return j.submissions || [];
+}
+async function saveSubmissionsToServer(list){
+  const r = await fetch('/api/training/submissions', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-FIT-Request':'1'}, body: JSON.stringify({submissions:list})});
+  if(!r.ok) throw new Error((await r.json().catch(()=>({})) ).error || 'Could not save the survey.');
+  return r.json();
+}
+async function clearSubmissionsOnServer(){
+  const r = await fetch('/api/training/submissions', {method:'DELETE', credentials:'same-origin', headers:{'X-FIT-Request':'1'}});
+  if(!r.ok) throw new Error('Could not clear the submitted surveys.');
+}
+
+/* ---------------------------------------------------------------------
    SYSTEM COORDINATOR APPROVAL — protected changes (editing the survey
    questionnaire, adding/removing Annual Training Plan rows, and
    restructuring the Record for Training Need Identification) ask
@@ -1010,15 +1035,7 @@ async function submitSurvey(){
   };
 
   try{
-    let list = [];
-    try{
-      const existing = await storageGet(SUBMISSIONS_KEY, true);
-      if(existing && existing.value) list = JSON.parse(existing.value);
-    }catch(e){ list = []; }
-    const idx = list.findIndex(s => s.epf === epf);
-    if(idx >= 0) list[idx] = submission; else list.push(submission);
-    const result = await storageSet(SUBMISSIONS_KEY, JSON.stringify(list), true);
-    if(!result) throw new Error('save failed');
+    await saveSubmissionsToServer([submission]);
     showBanner('survey-banner', lang==='en' ?
       'Survey submitted. HR summary and department records have been updated automatically.' :
       'ප්‍රශ්නාවලිය ඉදිරිපත් කරන ලදී. HR සාරාංශය ස්වයංක්‍රීයව යාවත්කාලීන කරන ලදී.', true);
@@ -1053,8 +1070,18 @@ async function loadAll(){
 
 async function loadSubmissions(){
   try{
-    const existing = await storageGet(SUBMISSIONS_KEY, true);
-    ALL_SUBMISSIONS = (existing && existing.value) ? JSON.parse(existing.value) : [];
+    ALL_SUBMISSIONS = await fetchSubmissions();
+    if(!ALL_SUBMISSIONS.length){
+      // this browser may still have the old blob (from before submissions moved to the server) — push it up once
+      try{
+        const legacy = await storageGet(SUBMISSIONS_KEY, true);
+        const old = (legacy && legacy.value) ? JSON.parse(legacy.value) : [];
+        if(Array.isArray(old) && old.length){
+          await saveSubmissionsToServer(old);
+          ALL_SUBMISSIONS = await fetchSubmissions();
+        }
+      }catch(e){ /* no legacy data on this browser, or it was already migrated */ }
+    }
   }catch(e){ ALL_SUBMISSIONS = []; }
   renderStats();
   renderRecord2();
@@ -1736,6 +1763,7 @@ function downloadPlanPdf(){
 async function resetAllData(){
   if(!confirm('This will permanently delete all submitted surveys, the annual plan, the Training Need Identification record, and every training record photo log for everyone. The questionnaire (and any Coordinator edits to it) is not affected. Continue?')) return;
   try{
+    await clearSubmissionsOnServer();
     await storageSet(SUBMISSIONS_KEY, JSON.stringify([]), true);
     await storageSet(PLAN_KEY, JSON.stringify(buildDefaultPlanRows()), true);
     await storageSet(RECORD4_KEY, JSON.stringify([]), true);

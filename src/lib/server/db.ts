@@ -93,6 +93,19 @@ export interface HrkpiMeta { _id: string; v: string; version: number; updated_at
    one tiny document is enough. */
 export interface ShiftgroupsEditors { _id: string; people: { id: number; name: string; email: string }[]; updated_at: string; updated_by_name: string | null }
 
+/* The Training Section's Employee Survey (public/apps/training.html) used to keep every submission —
+   one grows-forever JSON array, one entry per employee, each carrying the full set of questionnaire
+   answers — in a single localStorage key, re-saved whole on every new submission. That blob eventually
+   grew past what a browser's localStorage can hold, so new submissions silently stopped saving once it
+   did. One row per submission (keyed by EPF number) avoids re-saving everyone else's answers just to
+   add one. */
+export interface TrainingSubmission {
+  _id: string; // EPF number
+  name: string; deptIndex: number; deptName: string; designation: string; years: string;
+  qualification: string; supervisor: string; date: string; year: string;
+  answers: Record<string, unknown>; submittedAt: string; updated_at: string;
+}
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -115,6 +128,7 @@ export interface Store {
   wasteMeta: Collection<WasteMeta>;
   hrkpiMeta: Collection<HrkpiMeta>;
   shiftgroupsEditors: Collection<ShiftgroupsEditors>;
+  trainingSubmissions: Collection<TrainingSubmission>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -152,6 +166,7 @@ async function connect(): Promise<Store> {
     wasteMeta: db.collection<WasteMeta>('waste_meta'),
     hrkpiMeta: db.collection<HrkpiMeta>('hrkpi_meta'),
     shiftgroupsEditors: db.collection<ShiftgroupsEditors>('shiftgroups_editors'),
+    trainingSubmissions: db.collection<TrainingSubmission>('training_submissions'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),
