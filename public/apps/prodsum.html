@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
 <style>
   :root{--bg:#F3F4F7;--card:#fff;--ink:#1B2230;--soft:#5F6B7B;--line:#DCE0E7;--navy:#1F3A5F;--A:#2B6CB0;--B:#D69E2E;--C:#2E9E6B;--U:#9AA3AF;--day:#E0A526;--night:#1F3A5F;--scrap:#C53030;--head:'Barlow Condensed','Arial Narrow',sans-serif}
   *{box-sizing:border-box}[hidden]{display:none!important}
@@ -31,6 +32,9 @@
   .k{padding:12px 14px}.k small{display:block;color:var(--soft);font-size:12px}.k b{font:600 30px/1.1 var(--head)}.k b.red{color:var(--scrap)}
   .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}
   .cb{padding:12px 14px;height:340px;position:relative}.cb.tall{grid-column:1/-1;height:360px}
+  .cdl{position:absolute;top:8px;right:8px;z-index:2;border:1px solid var(--line);background:#fff;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--soft)}
+  .cdl:hover{border-color:#aab3c0;color:var(--ink)}
+  header select{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 9px}
   .tw{max-height:560px;overflow:auto;border-radius:10px;margin-bottom:14px}
   table{border-collapse:collapse;width:100%;font-size:13px}
   th,td{padding:7px 10px;border-bottom:1px solid #EEF0F4;text-align:right;white-space:nowrap}
@@ -45,7 +49,7 @@
 </style>
 </head>
 <body>
-<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Production Summary</h1><div class="sub">Production and scrap tyre weight — daily, weekly and monthly, by production group and by shift</div></div><label class="btn" style="margin:0;background:#DA1B22;border-color:#DA1B22;color:#fff;cursor:pointer">Upload report<input id="rf" type="file" accept=".xlsx,.xls" multiple hidden></label><button class="btn" id="xl" disabled>Download Excel</button></header>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Production Summary</h1><div class="sub">Production and scrap tyre weight — daily, weekly and monthly, by production group and by shift</div></div><label class="btn" style="margin:0;background:#DA1B22;border-color:#DA1B22;color:#fff;cursor:pointer">Upload report<input id="rf" type="file" accept=".xlsx,.xls" multiple hidden></label><button class="btn" id="xl" disabled>Download Excel</button><span style="display:flex;gap:6px;align-items:center"><select id="pptY" title="Year"></select><select id="pptM" title="Month"></select><button class="btn" id="ppt" disabled>Download PPT</button></span></header>
 <main>
 <div class="src"><div class="s"><small>1 · Production summary report (Daily Tyres Production + Daily Quality)</small><div class="v wait" id="s1">Waiting: press “Upload report” above and choose the production summary report</div></div>
 <div class="s"><small>2 · Shift roster (SHIFT_CHANGE)</small><div class="v wait" id="s2">Optional: choose SHIFT_CHANGE.xlsx together with the report</div></div>
@@ -276,7 +280,7 @@ const val=(o,m)=>m==='spct'?(o.pw>0?o.sw/o.pw*100:null):o[m];
 const fmt=(v,m)=>v==null?'–':m==='spct'?v.toFixed(2)+' %':nf(v);
 
 /* ---------- screen ---------- */
-let CH=[];
+let CH=[],EXPORTING=false;
 function srcLine(){
   const set=(id,t,ok)=>{$(id).textContent=t;$(id).className='v '+(ok?'ok':'wait')};
   set('s1',SRC.p||'Waiting: press “Upload report” above and choose the production summary report',!!SRC.p);
@@ -285,8 +289,9 @@ function srcLine(){
 }
 function render(){
   srcLine();
-  if(!DATES.length){$('app').hidden=true;$('em').hidden=false;$('xl').disabled=true;return}
+  if(!DATES.length){$('app').hidden=true;$('em').hidden=false;$('xl').disabled=true;$('ppt').disabled=true;$('pptY').innerHTML='';$('pptM').innerHTML='';return}
   $('em').hidden=true;$('app').hidden=false;$('xl').disabled=false;
+  pptFillYears();
   const rows=aggregate(),tot=rows.reduce((a,r)=>{['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=r.tot[k]);return a},z());
   const hasU=rows.some(r=>r.g.U.pq||r.g.U.pw||r.g.U.sq||r.g.U.sw);
   const dims=[['tot','Total','tT'],['A','Group A','gA'],['B','Group B','gB'],['C','Group C','gC']].concat(hasU?[['U','Unmatched','gU']]:[]).concat([['DAY','Day shift','sD'],['NIGHT','Night shift','sN']]);
@@ -297,7 +302,7 @@ function render(){
     '<label>From <select id="sf">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.from?' selected':'')+'>'+dl(d)+'</option>').join('')+'</select></label><label>To <select id="st">'+DATES.map(d=>'<option value="'+d+'"'+(d===V.to?' selected':'')+'>'+dl(d)+'</option>').join('')+'</select></label>'+
     '<span class="seg" id="sr"><button data-r="all">Whole range</button><button data-r="month">Latest month</button><button data-r="4w">Latest 4 weeks</button></span><label>Scrap KPI target <input id="tg" type="number" min="0" step="0.05" value="'+TG+'" style="width:76px;border:1px solid var(--line);border-radius:6px;padding:6px 8px"> % of production weight</label></div>';
   h+='<div class="kpis"><div class="card k"><small>Production (tyres)</small><b>'+nf(tot.pq)+'</b></div><div class="card k"><small>Production weight (kg)</small><b>'+nf(tot.pw)+'</b></div><div class="card k"><small>Scrap tyres</small><b class="red">'+nf(tot.sq)+'</b></div><div class="card k"><small>Scrap tyre weight (kg)</small><b class="red">'+nf(tot.sw)+'</b></div><div class="card k"><small>Scrap % of production weight</small><b class="red">'+(tot.pw>0?(tot.sw/tot.pw*100).toFixed(2)+' %':'–')+'</b></div>'+(SRC.d?'<div class="card k"><small>Down time (press-hours)</small><b>'+(tot.dm/60).toFixed(0)+'</b></div>':'')+'</div>';
-  h+='<div class="grid2"><div class="card cb tall"><canvas id="c1"></canvas></div><div class="card cb"><canvas id="c2"></canvas></div><div class="card cb"><canvas id="c3"></canvas></div></div>';
+  h+='<div class="grid2"><div class="card cb tall"><button class="cdl" data-c="c1" title="Download chart as image">&#8595;</button><canvas id="c1"></canvas></div><div class="card cb"><button class="cdl" data-c="c2" title="Download chart as image">&#8595;</button><canvas id="c2"></canvas></div><div class="card cb"><button class="cdl" data-c="c3" title="Download chart as image">&#8595;</button><canvas id="c3"></canvas></div></div>';
   h+='<div class="card tw"><table><thead><tr><th>'+(V.period==='day'?'Day':V.period==='week'?'Week':'Month')+' · '+esc(METRICS.find(m=>m[0]===V.metric)[1])+'</th>'+dims.map(d=>'<th class="'+d[2]+'">'+d[1]+'</th>').join('')+'</tr></thead><tbody>'+
     rows.map(r=>'<tr><td>'+esc(r.label)+'</td>'+dims.map(d=>'<td>'+fmt(val(get(r,d[0]),V.metric),V.metric)+'</td>').join('')+'</tr>').join('')+
     '<tr class="tot"><td>Total</td>'+dims.map(d=>{const a=z();rows.forEach(r=>{const o=get(r,d[0]);['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=o[k])});return'<td>'+fmt(val(a,V.metric),V.metric)+'</td>'}).join('')+'</tr></tbody></table></div>';
@@ -311,14 +316,19 @@ function charts(rows,dims,get){
   CH.forEach(c=>c.destroy());CH=[];if(typeof Chart==='undefined'||!$('c1'))return;
   Chart.defaults.font.family="Inter,system-ui,sans-serif";
   const COL={A:'#2B6CB0',B:'#D69E2E',C:'#2E9E6B',U:'#9AA3AF',DAY:'#E0A526',NIGHT:'#1F3A5F'},lab=rows.map(r=>r.label),M=V.metric,mt=METRICS.find(m=>m[0]===M)[1];
-  const mk=(id,type,ds,title,opt)=>CH.push(new Chart($(id),{type,data:{labels:lab,datasets:ds},options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:title,font:{size:14}},legend:{position:'bottom'}}},opt||{})}));
+  const mk=(id,type,ds,title,opt)=>CH.push(new Chart($(id),{type,data:{labels:lab,datasets:ds},options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:title,font:{size:14}},legend:{position:'bottom'}}},EXPORTING?{animation:false}:{},opt||{})}));
   const pct=M==='spct',gs=['A','B','C'].concat(rows.some(r=>r.g.U.pw||r.g.U.pq||r.g.U.sw||r.g.U.sq)?['U']:[]);
   mk('c1',pct?'line':'bar',(pct?[{label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0}]:[]).concat(gs.map(g=>({label:g==='U'?'Unmatched':'Group '+g,data:rows.map(r=>val(r.g[g],M)),backgroundColor:COL[g],borderColor:COL[g],stack:'g',tension:.25,spanGaps:true}))),mt+' — by production group',pct?{}:{scales:{x:{stacked:true},y:{stacked:true}}});
   mk('c2',pct?'line':'bar',(pct?[{label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0}]:[]).concat(['DAY','NIGHT'].map(s=>({label:s==='DAY'?'Day shift':'Night shift',data:rows.map(r=>val(r.s[s],M)),backgroundColor:COL[s],borderColor:COL[s],tension:.25,spanGaps:true}))),mt+' — Day vs Night');
   CH.push(new Chart($('c3'),{data:{labels:lab,datasets:[{type:'bar',label:'Production weight (kg)',data:rows.map(r=>r.tot.pw),backgroundColor:'#9CB4D6',yAxisID:'y'},{type:'line',label:'Scrap % of production weight',data:rows.map(r=>val(r.tot,'spct')),borderColor:'#C53030',backgroundColor:'#C53030',yAxisID:'y1',tension:.25,spanGaps:true},{type:'line',label:'KPI target '+TG+' %',data:lab.map(()=>TG),borderColor:'#6B7280',backgroundColor:'#6B7280',borderDash:[6,4],pointRadius:0,yAxisID:'y1'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Production weight and scrap % — total',font:{size:14}},legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'kg'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'scrap %'},suggestedMin:0}}}}));
+    options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Production weight and scrap % — total',font:{size:14}},legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'kg'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'scrap %'},suggestedMin:0}}},EXPORTING?{animation:false}:{})}));
 }
 document.addEventListener('click',e=>{
+  const dl=e.target.closest('.cdl');if(dl){const ch=CH.find(c=>c.canvas&&c.canvas.id===dl.dataset.c);
+    if(ch){const a=document.createElement('a');a.href=ch.toBase64Image('image/png',1);
+      a.download=((ch.options.plugins.title&&ch.options.plugins.title.text)||dl.dataset.c).replace(/[^\w\- ]+/g,'').trim()+'.png';
+      document.body.appendChild(a);a.click();a.remove()}
+    return}
   const p=e.target.closest('#sp button');if(p){V.period=p.dataset.p;render();return}
   const r=e.target.closest('#sr button');if(r&&DATES.length){const last=DATES[DATES.length-1];
     V.touched=r.dataset.r!=='all';
@@ -332,6 +342,7 @@ document.addEventListener('change',e=>{
   else if(e.target.id==='sm'){V.metric=e.target.value;render()}
   else if(e.target.id==='sf'){V.touched=true;V.from=+e.target.value;if(V.to<V.from)V.to=V.from;render()}
   else if(e.target.id==='st'){V.touched=true;V.to=+e.target.value;if(V.from>V.to)V.from=V.to;render()}
+  else if(e.target.id==='pptY'){pptFillMonths()}
 });
 
 /* ---------- Excel ---------- */
@@ -345,6 +356,79 @@ $('xl').onclick=()=>{
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tidy),'Date x shift x group');if(chk.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(chk),'Group source check');
   XLSX.writeFile(wb,'Production_Summary_'+iso(V.from)+'_to_'+iso(V.to)+'.xlsx');
 };
+
+/* ---------- PowerPoint (month-wise) ---------- */
+function pptFillYears(){
+  const years=[...new Set(DATES.map(d=>dt(d).getUTCFullYear()))].sort((a,b)=>b-a),sel=$('pptY'),cur=sel.value;
+  sel.innerHTML=years.map(y=>'<option value="'+y+'"'+(String(y)===cur?' selected':'')+'>'+y+'</option>').join('');
+  pptFillMonths();
+}
+function pptFillMonths(){
+  const y=+$('pptY').value,months=[...new Set(DATES.filter(d=>dt(d).getUTCFullYear()===y).map(d=>dt(d).getUTCMonth()))].sort((a,b)=>a-b);
+  const sel=$('pptM'),cur=sel.value;
+  sel.innerHTML=months.map(m=>'<option value="'+(m+1)+'"'+(String(m+1)===cur?' selected':'')+'>'+MONS[m]+'</option>').join('');
+  if(!EXPORTING)$('ppt').disabled=!months.length; // a render() mid-export must not re-enable the button it just disabled
+}
+async function downloadPPT(){
+  if($('ppt').disabled||typeof PptxGenJS==='undefined')return;
+  const y=+$('pptY').value,mo=+$('pptM').value;
+  const first=Date.UTC(y,mo-1,1)/864e5+25569,last=Date.UTC(y,mo,0)/864e5+25569;
+  const inMonth=DATES.filter(d=>d>=first&&d<=last);
+  if(!inMonth.length){alert('No data for '+MONS[mo-1]+' '+y+'.');return}
+  const btn=$('ppt'),label=btn.textContent;btn.disabled=true;btn.textContent='Building…';
+  const saved={period:V.period,from:V.from,to:V.to,touched:V.touched};
+  try{
+    EXPORTING=true; // skip Chart.js's ~1s draw-in animation so the captured image is fully painted
+    // daily-period charts and totals for the chosen month
+    V.period='day';V.from=inMonth[0];V.to=inMonth[inMonth.length-1];V.touched=true;render();
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const rows=aggregate(),tot=rows.reduce((a,r)=>{['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=r.tot[k]);return a},z());
+    const charts=CH.map(c=>({title:(c.options.plugins.title&&c.options.plugins.title.text)||'',img:c.toBase64Image('image/png',1),ar:c.canvas.width/c.canvas.height}));
+    // week-period rows for a compact table that fits one slide
+    V.period='week';render();
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const wrows=aggregate(),tdims=[['tot','Total'],['A','Grp A'],['B','Grp B'],['C','Grp C'],['DAY','Day'],['NIGHT','Night']],get=(r,k)=>k==='tot'?r.tot:(k==='DAY'||k==='NIGHT')?r.s[k]:r.g[k];
+
+    const NAVY='1F3A5F',SOFT='5F6B7B',LINE='DCE0E7',HEAD='F7F8FA',monthLbl=MONS[mo-1]+' '+y;
+    const PX=new PptxGenJS();PX.layout='LAYOUT_WIDE';
+
+    let s=PX.addSlide();s.background={color:'F3F4F7'};
+    s.addShape(PX.ShapeType.rect,{x:0,y:0,w:13.33,h:0.16,fill:{color:'DA1B22'}});
+    s.addImage({data:LOGO,x:0.6,y:0.55,sizing:{type:'contain',w:1.2,h:1.2}});
+    s.addText('PRODUCTION REPORT',{x:0.6,y:2.9,w:12,h:1,fontSize:40,bold:true,color:NAVY,fontFace:'Arial'});
+    s.addText(monthLbl.toUpperCase(),{x:0.6,y:3.85,w:12,h:0.6,fontSize:20,color:SOFT,fontFace:'Arial'});
+    s.addText('BIYAGAMA',{x:0.6,y:4.4,w:12,h:0.5,fontSize:13,color:SOFT,fontFace:'Arial',charSpacing:2});
+
+    s=PX.addSlide();
+    s.addText('Production summary — '+monthLbl,{x:0.4,y:0.3,w:12.5,h:0.6,fontSize:22,bold:true,color:NAVY,fontFace:'Arial'});
+    const kpis=[['Production (tyres)',nf(tot.pq)],['Production weight (kg)',nf(tot.pw)],['Scrap tyres',nf(tot.sq)],['Scrap tyre weight (kg)',nf(tot.sw)],['Scrap % of production weight',tot.pw>0?(tot.sw/tot.pw*100).toFixed(2)+' %':'–']];
+    if(SRC.d)kpis.push(['Down time (press-hours)',(tot.dm/60).toFixed(0)]);
+    kpis.forEach((k,i)=>{const x=0.4+(i%3)*4.2,yy=1.25+Math.floor(i/3)*2.0;
+      s.addShape(PX.ShapeType.roundRect,{x,y:yy,w:3.9,h:1.7,fill:{color:'FFFFFF'},line:{color:LINE,width:1},rectRadius:0.08});
+      s.addText(k[0],{x:x+0.2,y:yy+0.15,w:3.5,h:0.5,fontSize:12,color:SOFT,fontFace:'Arial'});
+      s.addText(String(k[1]),{x:x+0.2,y:yy+0.55,w:3.5,h:0.9,fontSize:26,bold:true,color:NAVY,fontFace:'Arial'});
+    });
+
+    charts.forEach(c=>{if(!c.img)return;const sl=PX.addSlide();
+      sl.addShape(PX.ShapeType.rect,{x:0,y:0,w:13.33,h:0.6,fill:{color:NAVY}});
+      sl.addText(c.title,{x:0.4,y:0.08,w:12.5,h:0.45,fontSize:18,bold:true,color:'FFFFFF',fontFace:'Arial'});
+      let w=12.0,h=c.ar?w/c.ar:6.0;if(h>6.3){h=6.3;w=h*c.ar}
+      sl.addImage({data:c.img,x:(13.33-w)/2,y:0.6+(6.9-h)/2,w,h});
+    });
+
+    const ts=PX.addSlide();
+    ts.addText('Weekly summary — '+METRICS.find(m=>m[0]===V.metric)[1]+' — '+monthLbl,{x:0.4,y:0.25,w:12.5,h:0.5,fontSize:18,bold:true,color:NAVY,fontFace:'Arial'});
+    const theader=['Week'].concat(tdims.map(d=>d[1])).map(h=>({text:h,options:{bold:true,fill:{color:HEAD},color:SOFT,fontSize:11}}));
+    const tbody=wrows.map(r=>[r.label].concat(tdims.map(d=>fmt(val(get(r,d[0]),V.metric),V.metric))).map(c=>({text:String(c),options:{fontSize:11}})));
+    const totRow=['Total'].concat(tdims.map(d=>{const a=z();wrows.forEach(r=>{const o=get(r,d[0]);['pq','pw','sq','sw','dm'].forEach(k=>a[k]+=o[k])});return fmt(val(a,V.metric),V.metric)})).map(c=>({text:String(c),options:{bold:true,fontSize:11,fill:{color:HEAD}}}));
+    ts.addTable([theader].concat(tbody).concat([totRow]),{x:0.4,y:1.0,w:12.5,colW:[2.84,1.61,1.61,1.61,1.61,1.61,1.61],border:{type:'solid',color:LINE,pt:.5},valign:'middle'});
+
+    await PX.writeFile({fileName:'Production_Report_'+monthLbl.replace(' ','_')+'.pptx'});
+  }finally{
+    EXPORTING=false;Object.assign(V,saved);render();btn.textContent=label;
+  }
+}
+$('ppt').onclick=downloadPPT;
 
 /* ---------- keep what was received ---------- */
 function save(){try{localStorage.setItem(KEY,JSON.stringify({P,S,QG,DX,ROS,SRC}))}catch(_){}}
