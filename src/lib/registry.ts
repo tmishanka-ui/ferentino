@@ -21,6 +21,7 @@ export const APP_TITLES: Record<string, string> = {
   housekeeping: 'Housekeeping and Safety Check List', mixingdash: 'Mixing Department', library: 'Document Library', planner: 'Production Planner',
   firewood: 'Firewood Ledger', custsat: 'Customer Satisfaction', wastedisp: 'Waste Disposal', qckpi: 'QC KPI Dashboard', mkpi: 'Maintenance KPI',
   accidents: 'Accident Registry', attendance: 'Daily Attendance', shiftgroups: 'Shift Groups', audit: 'Internal Audit',
+  hrkpi: 'HR KPI Dashboard',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -42,8 +43,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Production planner — tyre building press allocation and cycle times',
     tabs: [['planner', 'Production Planner']] },
   { id: 'hr', title: 'HR Department', color: '#DB2777', icon: 'users',
-    blurb: 'Training records and reports, housekeeping checklist, accident registry, attendance, waste disposal',
-    tabs: [['training', 'Training Section'], ['housekeeping', 'Housekeeping Checklist'], ['accidents', 'Accident Registry'], ['attendance', 'Attendance'], ['wastedisp', 'Waste Disposal']] },
+    blurb: 'Training records and reports, housekeeping checklist, accident registry, attendance, waste disposal, KPI dashboard',
+    tabs: [['training', 'Training Section'], ['housekeeping', 'Housekeeping Checklist'], ['accidents', 'Accident Registry'], ['attendance', 'Attendance'], ['wastedisp', 'Waste Disposal'], ['hrkpi', 'KPI Dashboard']] },
   { id: 'finance', title: 'Finance Department', color: '#0D9488', icon: 'coins',
     blurb: 'Firewood receiving ledger — gate, boiler check, accounts, exit',
     tabs: [['firewood', 'Firewood Ledger']] },

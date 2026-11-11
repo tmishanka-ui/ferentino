@@ -80,6 +80,12 @@ export interface CapaShift {
    is enough — same shape as downtimeMeta/capaMeta above. */
 export interface WasteMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
 
+/* The HR Department's KPI Dashboard (public/apps/hrkpi.html) keeps one month's attendance-summary
+   upload (OT hours, leave, nopay, late minutes per employee) per month, plus a couple of editable
+   settings (the absenteeism baseline). All of it together across a year is still tiny, so one meta
+   document is enough — same shape as waste/capa/downtime above. */
+export interface HrkpiMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -100,6 +106,7 @@ export interface Store {
   capaMeta: Collection<CapaMeta>;
   capaShifts: Collection<CapaShift>;
   wasteMeta: Collection<WasteMeta>;
+  hrkpiMeta: Collection<HrkpiMeta>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -135,6 +142,7 @@ async function connect(): Promise<Store> {
     capaMeta: db.collection<CapaMeta>('capa_meta'),
     capaShifts: db.collection<CapaShift>('capa_shifts'),
     wasteMeta: db.collection<WasteMeta>('waste_meta'),
+    hrkpiMeta: db.collection<HrkpiMeta>('hrkpi_meta'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),

@@ -36,7 +36,8 @@ const sendShifts = () => { if (capaReady && shiftItems && win('capa')) post('cap
 
 /* ---- Production Summary workbook -> QC, Defect Analyser, KPI dashboards; downtime / attendance / accidents -> KPI, Mixing ---- */
 let lastWorkbook: Msg | null = null, qcReady = false, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
-  lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false;
+  lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
+  hrkpiReady = false;
 function sendMix() {
   if (!mixReady || !win('mixingdash')) return;
   if (lastDowntimeWb) post('mixingdash', lastDowntimeWb);
@@ -55,6 +56,9 @@ function sendKpi() {
   if (lastAttendance) post('kpi', lastAttendance);
   if (lastDowntimeWb) post('kpi', lastDowntimeWb);
   if (lastAccidents) post('kpi', lastAccidents);
+}
+function sendHrKpi() {    // Accident Registry -> HR KPI Dashboard (KPI 2.1, all departments)
+  if (hrkpiReady && lastAccidents && win('hrkpi')) post('hrkpi', lastAccidents);
 }
 
 /* ---- Press Trace reports: whichever Production dashboard they are imported on, the other one gets them ---- */
@@ -144,6 +148,9 @@ function onApp(ev: MessageEvent) {
   } else if (m.type === 'fitl-accidents' && from === 'accidents' && items) {
     lastAccidents = m;
     if (kpiReady) sendKpi(); else ensureLoaded('kpi');
+    if (hrkpiReady) sendHrKpi(); else ensureLoaded('hrkpi');
+  } else if (m.type === 'fitl-hrkpi-ready' && from === 'hrkpi') {
+    hrkpiReady = true; sendHrKpi();
   } else if (m.type === 'fitl-attendance' && from === 'attendance') {
     lastAttendance = m;                                    // daily headcount -> Mixing KPI 3.4, group attendance -> KPI 4.3
     if (mixReady) sendMix(); else ensureLoaded('mixingdash');
@@ -219,5 +226,5 @@ export function initBridge() {
   window.addEventListener('message', onApp);
   // Quietly load the apps that feed each other, so flagged risks and RCA-required issues reach their targets
   // even before those tabs have been opened.
-  setTimeout(() => ['press', 'agenda', 'capa', 'rca', 'kpi', 'prodsum', 'accidents', 'mixingdash'].forEach(ensureLoaded), 1500);
+  setTimeout(() => ['press', 'agenda', 'capa', 'rca', 'kpi', 'prodsum', 'accidents', 'mixingdash', 'hrkpi'].forEach(ensureLoaded), 1500);
 }
