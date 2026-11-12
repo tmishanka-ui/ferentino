@@ -97,11 +97,12 @@ export interface ShiftgroupsEditors { _id: string; people: { id: number; name: s
    one grows-forever JSON array, one entry per employee, each carrying the full set of questionnaire
    answers — in a single localStorage key, re-saved whole on every new submission. That blob eventually
    grew past what a browser's localStorage can hold, so new submissions silently stopped saving once it
-   did. One row per submission (keyed by EPF number) avoids re-saving everyone else's answers just to
-   add one. */
+   did. One row per submission, keyed by EPF number + assessment year, avoids re-saving everyone else's
+   answers just to add one, and keeps an employee's past years' surveys instead of overwriting them when
+   the same EPF resubmits for a new year. */
 export interface TrainingSubmission {
-  _id: string; // EPF number
-  name: string; deptIndex: number; deptName: string; designation: string; years: string;
+  _id: string; // `${epf}:${year}`
+  epf: string; name: string; deptIndex: number; deptName: string; designation: string; years: string;
   qualification: string; supervisor: string; date: string; year: string;
   answers: Record<string, unknown>; submittedAt: string; updated_at: string;
 }

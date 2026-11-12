@@ -9,11 +9,13 @@ const MAX_VALUE = 200 * 1024; // one person's answers across the whole questionn
 export async function listSubmissions(c: Ctx) {
   needUser(c);
   const rows = await c.s.trainingSubmissions.find().toArray();
-  return json(200, { submissions: rows.map(({ _id, updated_at: _u, ...rest }) => ({ epf: _id, ...rest })) });
+  return json(200, { submissions: rows.map(({ _id, updated_at: _u, epf, ...rest }) => ({ epf: epf || _id, ...rest })) });
 }
 
-/** Upserts one or more submissions by EPF number — used both for a single new submission and for
- *  migrating a browser's old localStorage blob up in one go the first time this loads. */
+/** Upserts one or more submissions by EPF number + assessment year — used both for a single new
+ *  submission and for migrating a browser's old localStorage blob up in one go the first time this
+ *  loads. Keying by EPF+year (rather than EPF alone) means the same employee resubmitting for a new
+ *  year adds a new record instead of overwriting their previous year's survey. */
 export async function putSubmissions(c: Ctx) {
   needUser(c);
   const b = await c.json();
@@ -26,14 +28,16 @@ export async function putSubmissions(c: Ctx) {
     if (!epf || !name) throw new ApiError(400, 'Each submission needs an EPF No and Employee Name.');
     const val = JSON.stringify(s);
     if (val.length > MAX_VALUE) throw new ApiError(413, 'One of the submissions is too large to save.');
+    const year = String(s.year || '').trim();
+    const id = year ? `${epf}:${year}` : epf;
     const doc: TrainingSubmission = {
-      _id: epf, name, deptIndex: Number(s.deptIndex) || 0, deptName: String(s.deptName || ''),
+      _id: id, epf, name, deptIndex: Number(s.deptIndex) || 0, deptName: String(s.deptName || ''),
       designation: String(s.designation || ''), years: String(s.years || ''), qualification: String(s.qualification || ''),
-      supervisor: String(s.supervisor || ''), date: String(s.date || ''), year: String(s.year || ''),
+      supervisor: String(s.supervisor || ''), date: String(s.date || ''), year,
       answers: (s.answers && typeof s.answers === 'object') ? s.answers as Record<string, unknown> : {},
       submittedAt: String(s.submittedAt || iso()), updated_at: iso(),
     };
-    return { replaceOne: { filter: { _id: epf }, replacement: doc, upsert: true } };
+    return { replaceOne: { filter: { _id: id }, replacement: doc, upsert: true } };
   });
   await c.s.trainingSubmissions.bulkWrite(ops);
   return json(200, { ok: true, count: ops.length });

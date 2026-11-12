@@ -46,7 +46,7 @@
 </style>
 </head>
 <body>
-<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Waste Disposal</h1><div class="sub">EMS records FIT/E/RG-HR-01 to FIT/E/FO-HR-11 — approved collectors, monitoring, evaluation and waste issue records</div></div><button class="btn" id="xl">Download Excel</button></header>
+<header><img id="logo" alt="Ferentino"><div class="grow"><h1>Waste Disposal</h1><div class="sub">EMS records FIT/E/RG-HR-02 to FIT/E/FO-HR-12 — approved collectors, monitoring, evaluation and waste issue records</div></div><button class="btn" id="xl">Download Excel</button></header>
 <nav id="nav"></nav>
 <main id="main"></main>
 <div id="host"></div><div id="toast"></div><div id="printArea"></div><style id="pgstyle"></style>
@@ -65,18 +65,18 @@ const num=v=>{const n=parseFloat(v);return isFinite(n)?n:0};
 
 /* ---------- the eleven forms ---------- */
 const DOCS={
- col:{no:'FIT/E/RG-HR-01',title:'APPROVED LIST OF WASTE COLLECTORS',land:1},
- mon:{no:'FIT/E/RG-HR-02',title:'WASTE COLLECTOR PERFORMANCE MONITORING RECORD',land:1},
- ev:{no:'FIT/E/RG-HR-03',title:'WASTE COLLECTORS EVALUATION RECORD',land:0},
- food:{no:'FIT/E/FO-HR-04',title:'FOOD WASTE COLLECTION RECORD',land:1},
- board:{no:'FIT/E/FO-HR-05',title:'RECORD FOR ISSUING WASTE CARDBOARD/ POLYTHENE AND CONTAMINATED COTTON WASTE',land:1},
- cans:{no:'FIT/E/FO-HR-06',title:'RECORD FOR ISSUING PLASTIC CANS',land:1},
- metal:{no:'FIT/E/FO-HR-07',title:'RECORD FOR ISSUING WASTE METALS',land:1},
- oil:{no:'FIT/E/FO-HR-08',title:'RECORD FOR ISSUING WASTE OIL',land:1},
- ewaste:{no:'FIT/E/FO-HR-09',title:'RECORD FOR ISSUING E - WASTE',land:1},
- rubber:{no:'FIT/E/FO-HR-10',title:'RECORD FOR ISSUING RUBBER WASTE',land:1},
- hazard:{no:'FIT/E/FO-HR-11',title:'RECORD FOR ISSUING HAZARDOUS WASTE',land:1}};
-const TYPES=['food','board','cans','metal','oil','ewaste','rubber','hazard'];
+ col:{no:'FIT/E/RG-HR-02',title:'APPROVED LIST OF WASTE COLLECTORS',land:1},
+ mon:{no:'FIT/E/RG-HR-03',title:'WASTE COLLECTOR PERFORMANCE MONITORING RECORD',land:1},
+ ev:{no:'FIT/E/RG-HR-04',title:'WASTE COLLECTOR EVALUATION RECORD',land:0},
+ food:{no:'FIT/E/FO-HR-05',title:'FOOD WASTE COLLECTION RECORD',land:1},
+ board:{no:'FIT/E/FO-HR-06',title:'RECORD FOR ISSUING WASTE CARDBOARD/ POLYTHENE AND CONTAMINATED COTTON WASTE',land:1},
+ oil:{no:'FIT/E/FO-HR-07',title:'RECORD FOR ISSUING WASTE OIL',land:1},
+ cans:{no:'FIT/E/FO-HR-08',title:'RECORD FOR ISSUING EMPTY PLASTIC CANS',land:1},
+ metal:{no:'FIT/E/FO-HR-09',title:'RECORD FOR ISSUING WASTE METALS',land:1},
+ ewaste:{no:'FIT/E/FO-HR-10',title:'RECORD FOR ISSUING E - WASTE',land:1},
+ rubber:{no:'FIT/E/FO-HR-11',title:'RECORD FOR ISSUING RUBBER WASTE',land:1},
+ hazard:{no:'FIT/E/FO-HR-12',title:'RECORD FOR ISSUING HAZARDOUS SOLID WASTE',land:1}};
+const TYPES=['food','board','oil','cans','metal','ewaste','rubber','hazard'];
 const SCH={
  food:{label:'Food waste',qty:[],amount:false,rem:true},
  board:{label:'Cardboard, polythene, contaminated cotton',qty:[['board','Card Board'],['poly','Polythene'],['cotton','Contaminated Cotton Waste']],unit:'kg'},
@@ -88,7 +88,7 @@ const SCH={
  hazard:{label:'Hazardous waste',qty:[['csi','C and Si Dust'],['carb','Waste Carbon'],['sand','Sand Blaster Si dust'],['grease','Waste Grease'],['chem','Waste Chemical']],unit:'kg'}};
 TYPES.forEach(t=>{SCH[t].qty=SCH[t].qty||[];SCH[t].amount=!!SCH[t].amount;SCH[t].rem=!!SCH[t].rem});
 const UNITS=['kg','nos','litres','tonnes'];
-/* collector monitoring: the marks of FIT/E/RG-HR-02 */
+/* collector monitoring: the marks of FIT/E/RG-HR-03 */
 const CRIT=[['rt','Response Time',[['Response for first call',5],['Response after few try',4],['Call back to missed call',3],['Need a huge effort to contact',0]]],
  ['up','Station Up Time',[['Come to collection on given date',5],['Delays from 1 day to 3 days',4],['Delays from 3 days to 7 days',3],['Delay more than one week',0]]],
  ['pr','Price',[['At market price for cheque',5],['At market price for cash',4],['More than market price for cheque',3],['More than market price for cash',0]]],
@@ -353,9 +353,9 @@ function printForm(k){
 
 /* ---------- Excel ---------- */
 function sheetFor(k){
-  if(k==='col')return{n:'RG-HR-01 Collectors',a:[['ID','Waste category','Name of Waste Collector','Contact Details','Registration / BR no','EPL','Schedule Waste Management License','Trade License']].concat(D.collectors.map((c,i)=>[pad(i+1),c.cat,c.name,c.contact,c.br,lg(c,'epl'),lg(c,'swm'),lg(c,'trade')]))};
-  if(k==='mon')return{n:'RG-HR-02 Monitoring',a:[['Waste collector','Date','Gate pass Number','Response Time','Station Up Time','Price','Severity','%']].concat(D.mon.slice().sort((a,b)=>colName(a.col).localeCompare(colName(b.col))||String(a.date).localeCompare(b.date)).map(r=>[colName(r.col),r.date,r.gp,r.rt,r.up,r.pr,r.sv,pct(r)==null?'':Math.round(pct(r)*10)/10]))};
-  if(k==='ev'){const y=F.evy,ev=D.ev[y]||{};return{n:'RG-HR-03 Evaluation '+y,a:[['No','Waste Collector Name','Achievement %','Scored collections','Reasons for Deviation']].concat(D.collectors.map((c,i)=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null);return[pad(i+1),c.name,rs.length?Math.round(rs.reduce((s,r)=>s+pct(r),0)/rs.length*10)/10:'',rs.length,(ev[c.id]||{}).why||'']}))}}
+  if(k==='col')return{n:'RG-HR-02 Collectors',a:[['ID','Waste category','Name of Waste Collector','Contact Details','Registration / BR no','EPL','Schedule Waste Management License','Trade License']].concat(D.collectors.map((c,i)=>[pad(i+1),c.cat,c.name,c.contact,c.br,lg(c,'epl'),lg(c,'swm'),lg(c,'trade')]))};
+  if(k==='mon')return{n:'RG-HR-03 Monitoring',a:[['Waste collector','Date','Gate pass Number','Response Time','Station Up Time','Price','Severity','%']].concat(D.mon.slice().sort((a,b)=>colName(a.col).localeCompare(colName(b.col))||String(a.date).localeCompare(b.date)).map(r=>[colName(r.col),r.date,r.gp,r.rt,r.up,r.pr,r.sv,pct(r)==null?'':Math.round(pct(r)*10)/10]))};
+  if(k==='ev'){const y=F.evy,ev=D.ev[y]||{};return{n:'RG-HR-04 Evaluation '+y,a:[['No','Waste Collector Name','Achievement %','Scored collections','Reasons for Deviation']].concat(D.collectors.map((c,i)=>{const rs=D.mon.filter(r=>r.col===c.id&&inP(r.date,y,0)&&pct(r)!=null);return[pad(i+1),c.name,rs.length?Math.round(rs.reduce((s,r)=>s+pct(r),0)/rs.length*10)/10:'',rs.length,(ev[c.id]||{}).why||'']}))}}
   const s=SCH[k];return{n:DOCS[k].no.replace('FIT/E/','')+' '+s.label.slice(0,14),a:[['No','Date','Waste Collector Name','Gate Pass Number'].concat(s.qty.map(q=>q[1]+' (kg)')).concat(s.amount?['Amount','Unit']:[]).concat(s.rem?['Remarks']:[])].concat(D.recs[k].slice().sort((a,b)=>a.no-b.no).map(r=>[r.no,r.date,colName(r.col),r.gp].concat(s.qty.map(q=>(r.q||{})[q[0]]||'')).concat(s.amount?[r.amt,r.unit||s.unit]:[]).concat(s.rem?[r.rem||'']:[])))};
 }
 function xl(only){
