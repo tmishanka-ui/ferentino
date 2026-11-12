@@ -167,7 +167,7 @@ function addDoc(){const s=$('#fs').value,t=$('#ft').value,d=T[t][2]?'':$('#fd').
  if(ff)libAttach(nd,ff).then(()=>{$('#am').innerHTML+=`<div class="msg">File “${esc(ff.name)}” attached — the document is in the Library (${LIBF[libOf(nd).f]}${libOf(nd).f=='sectional'?' › '+esc(libDeptName(libOf(nd).dept)):''}).</div>`;$('#ffile').value=''}).catch(e=>alert('The file could not be stored: '+e));
  save();serEd=false;$('#ftl').value='';$('#fo').value='';ref();$('#am').innerHTML=`<div class="msg">Added <b>${no}</b> – ${esc(ti)} (Issue 01, Rev 00) to the ${$('#fl').value=='R'?'Master List of Records':'Master List of Documents'}.</div>`}
 /* ---------- REGISTRY ---------- */
-const sorted=a=>a.slice().sort((x,y)=>'QEG'.indexOf(x.sys)-'QEG'.indexOf(y.sys)||x.no.localeCompare(y.no));
+const sorted=a=>a.slice().sort((x,y)=>'QEG'.indexOf(x.sys)-'QEG'.indexOf(y.sys)||x.no.localeCompare(y.no,undefined,{numeric:true}));
 function libCell(d){const c=libCur(d),o=libOf(d),stale=c&&(c.iss+c.rev)!=(pad(d.issue)+pad(d.rev));
  return (c?`<span class="tag" style="background:var(--ac2);color:var(--ac)">${LIBF[o.f]}${o.f=='sectional'?' › '+esc(libDeptName(o.dept)):''}</span><div class="sub">${esc(c.name)} · Issue ${c.iss} / Rev ${c.rev}${stale?' <b style="color:var(--wr)">⚠ earlier revision</b>':''}</div>`:`<span class="sub">no file — not in the Library</span>`)+` <button class="b s" onclick="fileDlg('${d.id}')">File…</button>`}
 function fileDlg(id){cur=S.docs.find(x=>x.id==id);const d=cur,o=libOf(d),fs=(d.files||[]).slice().sort((a,b)=>(b.iss+b.rev+b.at).localeCompare(a.iss+a.rev+a.at));
