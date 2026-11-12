@@ -1325,6 +1325,111 @@ function shiftToCsv(shift){
   }
   return lines.join('\n');
 }
+/* ---------- push this shift to the Press Monitoring Dashboard (QC Department) ----------
+   The dashboard used to need someone to download this shift's CSV here and upload it there
+   by hand. It keeps its shift records in a small key/value store this app can reach directly
+   (/api/press/kv), so ending a shift here now saves it there automatically too — the CSV
+   download below still happens as a paper/offline backup. If this fails (e.g. offline), the
+   shift is still saved and downloaded as before; it just won't show up on the dashboard until
+   someone uploads the CSV there manually. */
+function pressRecordKey(date, shiftCode){ return 'record:' + date + ':' + shiftCode; }
+
+function pressKvGet(key){
+  return fetch('/api/press/kv?key=' + encodeURIComponent(key), {credentials:'same-origin', headers:{'X-FIT-Request':'1'}})
+    .then(r => { if(!r.ok) throw new Error('Server error'); return r.json(); })
+    .then(j => j.value ? JSON.parse(j.value) : null);
+}
+function pressKvSet(key, value){
+  return fetch('/api/press/kv', {method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json','X-FIT-Request':'1'}, body: JSON.stringify({key, value: JSON.stringify(value)})})
+    .then(r => { if(!r.ok) throw new Error('Server error'); });
+}
+function normalizePressureToBarForDashboard(pressId, rawValue){
+  const m = (pressId || '').match(/^(\d+)/);
+  const bankNum = m ? parseInt(m[1], 10) : null;
+  if (bankNum !== null && bankNum >= 5 && bankNum <= 7) return { value: rawValue * 10, originalUnit: 'MPa' };
+  return { value: rawValue, originalUnit: 'bar' };
+}
+function buildPressDashboardRecord(shift){
+  const readings = [];
+  shift.rounds.forEach((round, i) => {
+    PRESSES.forEach(code => {
+      const r = round.readings[code];
+      const pressureRaw = parseFloat(r.pressure);
+      const temperatures = (r.temps || []).map(t => parseFloat(t)).filter(n => !isNaN(n));
+      if (isNaN(pressureRaw) || !temperatures.length) return;
+      const converted = normalizePressureToBarForDashboard(code, pressureRaw);
+      readings.push({
+        round: i + 1, press: code, pressure: converted.value, pressureUnitOriginal: converted.originalUnit,
+        temperature: temperatures.reduce((s,n) => s + n, 0) / temperatures.length,
+        temperatures, temperatureRaw: (r.temps || []).filter(t => t !== '').join('; '),
+        recordedAt: round.savedAt ? fmtDateTime(round.savedAt) : 'not saved',
+      });
+    });
+  });
+  const riskFlags = flaggedItemsForShift(shift).map(f => ({
+    round: f.round, recordedAt: f.savedAt ? fmtDateTime(f.savedAt) : 'not saved',
+    stage: f.stage, subStep: f.substep, failureMode: f.mode, cause: f.cause, ap: f.ap,
+  }));
+  const stageSignoffs = [];
+  shift.rounds.forEach((round, i) => {
+    activeStages().forEach((stage, si) => {
+      const scan = round.stageScans && round.stageScans[si];
+      if (!scan) return;
+      stageSignoffs.push({ round: i + 1, stage: stage.title, signedOffAt: fmtDateTime(scan.scannedAt), code: scan.code });
+    });
+  });
+  return {
+    shiftDateISO: (shift.startedAt || '').slice(0, 10),
+    shiftCode: shift.shiftCode || '', shiftLabel: shift.shift || '', processController: shift.controller || '',
+    shiftStartedDisplay: fmtDateTime(shift.startedAt), shiftEndedDisplay: shift.endedAt ? fmtDateTime(shift.endedAt) : '—',
+    readings, riskFlags, stageSignoffs,
+  };
+}
+function pressRiskKey(rf){ return [rf.round, rf.stage, rf.subStep, rf.failureMode, rf.cause].join('||'); }
+function pressMergeRiskFlags(existing, fresh){
+  const map = {};
+  (existing || []).forEach(rf => map[pressRiskKey(rf)] = rf);
+  (fresh || []).forEach(rf => map[pressRiskKey(rf)] = rf);
+  return Object.values(map).sort((a,b) => (a.round||0) - (b.round||0));
+}
+function pressSignoffKey(s){ return [s.round, s.stage, s.signedOffAt, s.code].join('||'); }
+function pressMergeSignoffs(existing, fresh){
+  const map = {};
+  (existing || []).forEach(s => map[pressSignoffKey(s)] = s);
+  (fresh || []).forEach(s => map[pressSignoffKey(s)] = s);
+  return Object.values(map).sort((a,b) => (a.round||0) - (b.round||0));
+}
+async function pushShiftToDashboard(shift){
+  const rec = buildPressDashboardRecord(shift);
+  if (!rec.shiftDateISO || !rec.shiftCode || !rec.readings.length) return; // nothing a dashboard could use
+  const key = pressRecordKey(rec.shiftDateISO, rec.shiftCode);
+  const existing = await pressKvGet(key);
+  let merged;
+  if (existing){
+    const map = {};
+    existing.readings.forEach(r => map[r.round + '_' + r.press] = r);
+    rec.readings.forEach(r => map[r.round + '_' + r.press] = r);
+    merged = {
+      shiftDateISO: rec.shiftDateISO, shiftCode: rec.shiftCode,
+      shiftLabel: rec.shiftLabel || existing.shiftLabel, processController: rec.processController || existing.processController,
+      shiftStartedDisplay: existing.shiftStartedDisplay, shiftEndedDisplay: rec.shiftEndedDisplay || existing.shiftEndedDisplay,
+      readings: Object.values(map).sort((a,b) => a.round - b.round || a.press.localeCompare(b.press, undefined, {numeric:true})),
+      riskFlags: pressMergeRiskFlags(existing.riskFlags, rec.riskFlags),
+      stageSignoffs: pressMergeSignoffs(existing.stageSignoffs, rec.stageSignoffs),
+    };
+  } else {
+    rec.readings.sort((a,b) => a.round - b.round || a.press.localeCompare(b.press, undefined, {numeric:true}));
+    rec.riskFlags = pressMergeRiskFlags([], rec.riskFlags);
+    rec.stageSignoffs = pressMergeSignoffs([], rec.stageSignoffs);
+    merged = rec;
+  }
+  await pressKvSet(key, merged);
+  const index = (await pressKvGet('index')) || [];
+  const entryIdx = index.findIndex(e => e.date === merged.shiftDateISO && e.shiftCode === merged.shiftCode);
+  const entry = { date: merged.shiftDateISO, shiftCode: merged.shiftCode, shiftLabel: merged.shiftLabel, processController: merged.processController, uploadedAt: new Date().toISOString() };
+  if (entryIdx === -1) index.push(entry); else index[entryIdx] = entry;
+  await pressKvSet('index', index);
+}
 function downloadShiftCsv(shift){
   const blob = new Blob([shiftToCsv(shift)], {type:'text/csv'});
   const a = document.createElement('a');
@@ -1487,6 +1592,7 @@ function endShift(){
   if (!confirm(msg)) return;
   state.currentShift.endedAt = new Date().toISOString();
   downloadShiftCsv(state.currentShift);
+  pushShiftToDashboard(state.currentShift).catch(e => console.error('Could not auto-update the Press Monitoring Dashboard; upload the downloaded CSV there manually.', e));
   state.history.unshift(state.currentShift);
   if (state.history.length > 100) state.history = state.history.slice(0,100);
   state.currentShift = blankShift();
