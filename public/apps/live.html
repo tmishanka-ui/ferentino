@@ -240,6 +240,9 @@
 <div class="wrap" id="local-mode-banner-wrap" style="display:none;">
   <div class="insecure-banner" style="margin-top:14px;">Running outside Claude — data is being saved to this phone/browser only and won't sync with other devices. For a shared, multi-device version, host this file on a server your team can all reach.</div>
 </div>
+<div class="wrap" id="save-fail-banner-wrap" style="display:none;">
+  <div class="insecure-banner" style="margin-top:14px;">Could not reach the server to save — what you're entering is only being kept on this screen for now. It will be saved as soon as the connection comes back; don't close this tab until then.</div>
+</div>
 
 <div class="wrap" id="shift-context">
   <div class="panel">
@@ -483,25 +486,62 @@ function migrateShift(shift){
   (shift.rounds || []).forEach(migrateRound);
 }
 
+/* ---------- storage: the server is the real copy, not this browser ----------
+   This app used to keep the current shift and shift history purely in this browser's own
+   storage — the exact same "shared quota, silently fails once full" problem the Press Monitoring
+   Dashboard itself used to have before it moved off localStorage (see pressKv). The server now
+   holds the real copy (one small document, /api/live/meta); this browser's own copy is kept only
+   as a fast local cache and an offline fallback, never the thing data loss depends on. */
+let liveVersion = 0, saveFailing = false, savePending = null;
+function liveMetaGet(){ return fetch('/api/live/meta', {credentials:'same-origin', headers:{'X-FIT-Request':'1'}}).then(r => r.json()); }
+function liveMetaPut(data){
+  return fetch('/api/live/meta', {method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json','X-FIT-Request':'1','X-Force':'1'}, body: JSON.stringify({data})})
+    .then(r => { if (!r.ok) throw new Error('save failed'); return r.json(); })
+    .then(j => { liveVersion = j.version; });
+}
+function applyLoadedState(parsed){
+  state = Object.assign({ currentShift: blankShift(), history: [], customStages: null }, parsed);
+  if (!state.currentShift) state.currentShift = blankShift();
+}
+async function legacyLocalState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    return (res && res.value) ? JSON.parse(res.value) : null;
+  }catch(e){ return null; }
+}
 async function loadState(){
   if (window.__usingLocalStorageFallback){
     document.getElementById('local-mode-banner-wrap').style.display = '';
   }
   try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    if (res && res.value){
-      const parsed = JSON.parse(res.value);
-      state = Object.assign({ currentShift: blankShift(), history: [], customStages: null }, parsed);
-      if (!state.currentShift) state.currentShift = blankShift();
+    const m = await liveMetaGet();
+    liveVersion = m.version || 0;
+    if (m.data && typeof m.data === 'object'){
+      applyLoadedState(m.data);
+    } else {
+      const legacy = await legacyLocalState(); // this browser's copy from before this moved to the server
+      if (legacy){ applyLoadedState(legacy); liveMetaPut(state).catch(() => {}); }
     }
-  }catch(e){}
+  }catch(e){
+    const legacy = await legacyLocalState(); // offline / server unreachable — show this device's last saved copy
+    if (legacy) applyLoadedState(legacy);
+  }
   migrateShift(state.currentShift);
   (state.history||[]).forEach(migrateShift);
   fillFormFromState();
   renderAll();
 }
-async function saveState(){
-  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), true); }catch(e){}
+function showSaveFailing(bad){
+  if (bad === saveFailing) return;
+  saveFailing = bad;
+  document.getElementById('save-fail-banner-wrap').style.display = bad ? '' : 'none';
+}
+function saveState(){
+  try{ window.storage.set(STORAGE_KEY, JSON.stringify(state), true); }catch(e){}
+  clearTimeout(savePending);
+  savePending = setTimeout(() => {
+    liveMetaPut(state).then(() => showSaveFailing(false)).catch(() => showSaveFailing(true));
+  }, 800);
 }
 
 function fillFormFromState(){

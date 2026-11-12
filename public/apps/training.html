@@ -1071,7 +1071,12 @@ async function loadAll(){
 async function loadSubmissions(){
   try{
     ALL_SUBMISSIONS = await fetchSubmissions();
-    if(!ALL_SUBMISSIONS.length){
+    if(ALL_SUBMISSIONS.length){
+      // already on the server (just migrated, or migrated in an earlier session) — the old local
+      // blob, if this browser still has one, is now dead weight that only crowds out this browser's
+      // storage for every other app on this site. No-op if it was already removed or never existed.
+      try{ await storageDelete(SUBMISSIONS_KEY, true); }catch(e){}
+    } else {
       // this browser may still have the old blob (from before submissions moved to the server) — push it up once
       try{
         const legacy = await storageGet(SUBMISSIONS_KEY, true);
@@ -1079,6 +1084,7 @@ async function loadSubmissions(){
         if(Array.isArray(old) && old.length){
           await saveSubmissionsToServer(old);
           ALL_SUBMISSIONS = await fetchSubmissions();
+          try{ await storageDelete(SUBMISSIONS_KEY, true); }catch(e){}
         }
       }catch(e){ /* no legacy data on this browser, or it was already migrated */ }
     }

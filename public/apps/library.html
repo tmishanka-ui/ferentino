@@ -67,9 +67,19 @@ const FLIB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{cons
   async get(k){const r0=await this.getLocal(k);return r0||this.fromServer(k)},async getLocal(k){const db=await this.open();return new Promise((res,rej)=>{const r=db.transaction('files','readonly').objectStore('files').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
   async fromServer(k){try{const r=await fetch('/api/files/'+encodeURIComponent(k),{credentials:'same-origin'});if(!r.ok)return null;const data=await r.arrayBuffer();let nm=k;try{nm=decodeURIComponent(r.headers.get('X-File-Name')||k)}catch(_){}const rec={k,docId:k.split('|')[0],name:nm,type:r.headers.get('Content-Type')||'',size:data.byteLength,at:new Date().toISOString(),data};const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('files','readwrite');t.objectStore('files').put(rec);t.oncomplete=res;t.onerror=()=>rej(t.error)});return rec}catch(_){return null}}};
 
-let S={docs:[]},raw=null,V={f:'all',dept:'',q:'',type:'',all:false},urls=[];
-function load(){let r='';try{r=localStorage.getItem('fitl_dc')||''}catch(e){}if(r===raw)return;raw=r;try{S=JSON.parse(r)||{docs:[]}}catch(e){S={docs:[]}}if(!S.docs)S.docs=[];if(!$('#host').firstChild)render()}
-setInterval(load,1500);addEventListener('storage',load);addEventListener('focus',load);
+/* documents are added through the Document Control System, which saves them on the server (not
+   just in that app's own browser) — this page polls the same small document instead of reading a
+   localStorage key, so it works regardless of which browser or device the document was added from. */
+let S={docs:[]},rawVer=-1,V={f:'all',dept:'',q:'',type:'',all:false},urls=[];
+function load(){
+  return fetch('/api/doccontrol/meta',{credentials:'same-origin',headers:{'X-FIT-Request':'1'}}).then(r=>r.json()).then(j=>{
+    if(j.version===rawVer)return;
+    rawVer=j.version;
+    S=(j.data&&typeof j.data==='object'&&Array.isArray(j.data.docs))?j.data:{docs:[]};
+    if(!$('#host').firstChild)render();
+  }).catch(()=>{});
+}
+setInterval(load,5000);addEventListener('focus',load);
 
 /* which documents are shown: current, approved and with a file — or everything registered, when asked */
 const shown=d=>d.status==='A'&&(V.all||(libCur(d)&&!d.draft));

@@ -107,6 +107,23 @@ export interface TrainingSubmission {
   answers: Record<string, unknown>; submittedAt: string; updated_at: string;
 }
 
+/* The Document Control System (public/apps/doccontrol.html) and the read-only Document Library
+   view beside it (public/apps/library.html) both kept the whole document register — every document
+   and record, each with its full revision history — as one JSON value in a plain localStorage key,
+   with no server copy at all. Attached file content lives separately already (IndexedDB/GridFS), so
+   this value itself is small, but a browser's total localStorage is one shared pool across every app
+   on this site: once something else fills it, saving here starts silently failing too, even though
+   this page's own data is tiny. One small meta document, same shape as waste/capa/hrkpi above, makes
+   the server (not this browser) the real copy. */
+export interface DocControlMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+
+/* Live & Tyre Production Monitoring (public/apps/live.html) kept its in-progress shift and up to 100
+   finished shifts' full round-by-round readings purely in this browser's localStorage — the same
+   "shared quota, silently fails once full" risk as above, and the exact problem the Press Monitoring
+   Dashboard itself used to have before it moved to pressKv (see the PressKv comment above). Same fix,
+   own small collection so the two apps' saves can never collide. */
+export interface LiveMonitorMeta { _id: string; v: string; version: number; updated_at: string; updated_by_name: string | null }
+
 export interface Store {
   client: MongoClient;
   db: Db;
@@ -130,6 +147,8 @@ export interface Store {
   hrkpiMeta: Collection<HrkpiMeta>;
   shiftgroupsEditors: Collection<ShiftgroupsEditors>;
   trainingSubmissions: Collection<TrainingSubmission>;
+  docControlMeta: Collection<DocControlMeta>;
+  liveMonitorMeta: Collection<LiveMonitorMeta>;
 }
 
 const g = globalThis as unknown as { __ferStore?: Promise<Store> };
@@ -168,6 +187,8 @@ async function connect(): Promise<Store> {
     hrkpiMeta: db.collection<HrkpiMeta>('hrkpi_meta'),
     shiftgroupsEditors: db.collection<ShiftgroupsEditors>('shiftgroups_editors'),
     trainingSubmissions: db.collection<TrainingSubmission>('training_submissions'),
+    docControlMeta: db.collection<DocControlMeta>('doccontrol_meta'),
+    liveMonitorMeta: db.collection<LiveMonitorMeta>('live_monitor_meta'),
   };
   await Promise.all([
     s.users.createIndex({ email: 1 }, { unique: true }),
