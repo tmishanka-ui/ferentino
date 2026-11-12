@@ -1,7 +1,7 @@
 /** The departments and the working apps inside them (each app is a page in public/apps/<key>.html). */
 
 export type IconName =
-  | 'shield' | 'wrench' | 'cog' | 'factory' | 'calendar' | 'users' | 'coins' | 'globe' | 'compass' | 'flask' | 'book';
+  | 'shield' | 'wrench' | 'cog' | 'factory' | 'calendar' | 'users' | 'coins' | 'globe' | 'compass' | 'flask' | 'book' | 'db';
 
 export interface Section {
   id: string;
@@ -21,7 +21,7 @@ export const APP_TITLES: Record<string, string> = {
   housekeeping: 'Housekeeping and Safety Check List', mixingdash: 'Mixing Department', library: 'Document Library', planner: 'Production Planner',
   firewood: 'Firewood Ledger', custsat: 'Customer Satisfaction', wastedisp: 'Waste Disposal', qckpi: 'QC KPI Dashboard', mkpi: 'Maintenance KPI',
   accidents: 'Accident Registry', attendance: 'Daily Attendance', shiftgroups: 'Shift Groups', audit: 'Internal Audit',
-  hrkpi: 'HR KPI Dashboard',
+  hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -60,6 +60,9 @@ export const SECTIONS: Section[] = [
   { id: 'library', title: 'Library', color: '#A16207', icon: 'book',
     blurb: 'Manuals, policy, SOPs, work instructions and sectional documents — view and download',
     tabs: [['library', 'Document Library']] },
+  { id: 'technical', title: 'Technical Department', color: '#4F46E5', icon: 'db',
+    blurb: 'Customer claim records — claim log, effectiveness of corrective actions, KPIs and production figures',
+    tabs: [['claimdb', 'Claim Record DB']] },
 ];
 
 export const sectionById = (id: string) => SECTIONS.find((s) => s.id === id);
