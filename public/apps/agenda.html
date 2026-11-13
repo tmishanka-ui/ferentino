@@ -1095,6 +1095,7 @@
           <button class="rca-btn ${r.rcaRequired?'on':''}" data-action="toggle-rca" data-id="${r.issueId}" title="Tick when a Root Cause Analysis is required"><span class="box">${r.rcaRequired?'✓':''}</span>RCA required</button>
           <button class="linklike" data-action="edit-requirement" data-id="${r.issueId}">Edit</button>
           <button class="linklike" data-action="add-followup-for" data-id="${r.issueId}">Log follow-up</button>
+          <button class="linklike" data-action="delete-requirement" data-id="${r.issueId}" style="color:var(--red);" title="Requires System Coordinator sign-off (your account password)">Delete</button>
         </div>
       </div>
     `;
@@ -1265,6 +1266,7 @@
         }
         else if(action==='close-modal'){ state.modal=null; render(); }
         else if(action==='save-requirement'){ saveRequirement(id); }
+        else if(action==='delete-requirement'){ deleteRequirement(id); }
         else if(action==='edit-action-plan'){
           const r = state.requirements.find(x=>String(x.issueId)===String(id));
           if(r){ state.modal = {type:'actionPlan', editing:r}; render(); }
@@ -1343,6 +1345,63 @@
     state.modal = null;
     saveState();
     render();
+  }
+
+  /* ---------------------------------------------------------------------
+     Deleting an issue needs sign-off from whoever is signed in — it reuses
+     the main system's real "electronic signature" feature (same as signing
+     a document elsewhere in the system). The password is checked on the
+     server, never by this page, and the confirmation is recorded with the
+     person's real name, time and the issue it applies to in the system's
+     Signature log, as a "System Coordinator" approval — a genuine audit
+     trail, no shared password to manage. If this page is opened outside
+     the main system (no parent to ask), the request simply times out and
+     nothing is deleted.
+     --------------------------------------------------------------------- */
+  function requestCoordinatorApproval(purpose, ref, content){
+    return new Promise(resolve=>{
+      const id = 'coord_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      let done = false;
+      function onMsg(ev){
+        const m = ev.data;
+        if(!m || m.type!=='fitl-sign-result' || m.id!==id) return;
+        if(done) return; done = true;
+        window.removeEventListener('message', onMsg);
+        resolve(m);
+      }
+      window.addEventListener('message', onMsg);
+      try{ window.parent.postMessage({type:'fitl-sign-request', id, purpose, ref, content}, '*'); }catch(e){ /* no parent */ }
+      setTimeout(()=>{
+        if(done) return; done = true;
+        window.removeEventListener('message', onMsg);
+        resolve({ok:false, reason:'timeout'});
+      }, 120000);
+    });
+  }
+
+  /** Asks for System Coordinator sign-off (the signed-in person's own password) before running `action`. */
+  async function coordinatorGate(purpose, ref, content, action){
+    const r = await requestCoordinatorApproval(purpose, ref, content);
+    if(!r.ok){
+      if(r.reason==='timeout') alert('No response from the sign-in screen. Open this page inside the Ferentino management system and sign in, then try again.');
+      else if(r.reason!=='cancelled') alert('Could not confirm: ' + (r.reason||'please try again.'));
+      return false;
+    }
+    await action(r.sig);
+    return true;
+  }
+
+  function deleteRequirement(id){
+    const r = state.requirements.find(x=>String(x.issueId)===String(id));
+    if(!r) return;
+    const desc = r.issueDescription || '(no description)';
+    coordinatorGate('Delete agenda issue #'+id, 'Agenda issue #'+id, desc, async ()=>{
+      state.requirements = state.requirements.filter(x=>String(x.issueId)!==String(id));
+      state.followups = state.followups.filter(f=>String(f.issueId)!==String(id));
+      state.expandedIssues.delete(String(id));
+      saveState();
+      render();
+    });
   }
 
   function saveActionPlan(id){

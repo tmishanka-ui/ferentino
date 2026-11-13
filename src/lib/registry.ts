@@ -21,15 +21,17 @@ export const APP_TITLES: Record<string, string> = {
   housekeeping: 'Housekeeping and Safety Check List', mixingdash: 'Mixing Department', library: 'Document Library', planner: 'Production Planner',
   firewood: 'Firewood Ledger', custsat: 'Customer Satisfaction', wastedisp: 'Waste Disposal', qckpi: 'QC KPI Dashboard', mkpi: 'Maintenance KPI',
   accidents: 'Accident Registry', attendance: 'Daily Attendance', shiftgroups: 'Shift Groups', audit: 'Internal Audit',
-  hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB',
+  hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB', compoundspec: 'Compound Properties — Spec & QC Dashboard',
+  compoundtag: 'Compound Approval Tag', beadringtag: 'Bead Ring Lot Tag', holdcompound: 'Hold Compound Control',
+  planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
 
 export const SECTIONS: Section[] = [
   { id: 'qc', title: 'QC Department', color: '#DA1B22', icon: 'shield',
-    blurb: 'Press monitoring, tyre QC, defect analyser, CAPA control, internal audit',
-    tabs: [['press', 'Press Monitoring'], ['qc', 'Tyre QC — Scrap & Repair'], ['defect', 'Defect Analyser'], ['qckpi', 'KPI Dashboard'], ['capa', 'CAPA Control'], ['audit', 'Internal Audit']] },
+    blurb: 'Press monitoring, tyre QC, defect analyser, CAPA control, internal audit, process FMEA control',
+    tabs: [['press', 'Press Monitoring'], ['qc', 'Tyre QC — Scrap & Repair'], ['defect', 'Defect Analyser'], ['qckpi', 'KPI Dashboard'], ['capa', 'CAPA Control'], ['audit', 'Internal Audit'], ['processcontrol', 'Process Control — FMEA']] },
   { id: 'apps', title: 'Working Apps', color: '#2563EB', icon: 'cog',
     blurb: 'Live monitoring, loading, pallet labels, press trace, gauge calibration',
     tabs: [['live', 'Live & Tyre Production Monitoring'], ['loading', 'Loading Report'], ['pallet', 'Pallet Label Generator'], ['trace', 'Press Trace'], ['calib', 'Temperature Gauge Calibration']] },
@@ -40,8 +42,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups',
     tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups']] },
   { id: 'planning', title: 'Planning Department', color: '#7C3AED', icon: 'calendar',
-    blurb: 'Production planner — tyre building press allocation and cycle times',
-    tabs: [['planner', 'Production Planner']] },
+    blurb: 'Production planner — tyre building press allocation and cycle times, planned vs actual production and shipment load',
+    tabs: [['planner', 'Production Planner'], ['planproduction', 'Planned vs Actual Production']] },
   { id: 'hr', title: 'HR Department', color: '#DB2777', icon: 'users',
     blurb: 'Training records and reports, housekeeping checklist, accident registry, attendance, waste disposal, KPI dashboard',
     tabs: [['training', 'Training Section'], ['housekeeping', 'Housekeeping Checklist'], ['accidents', 'Accident Registry'], ['attendance', 'Attendance'], ['wastedisp', 'Waste Disposal'], ['hrkpi', 'KPI Dashboard']] },
@@ -61,8 +63,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Manuals, policy, SOPs, work instructions and sectional documents — view and download',
     tabs: [['library', 'Document Library']] },
   { id: 'technical', title: 'Technical Department', color: '#4F46E5', icon: 'db',
-    blurb: 'Customer claim records — claim log, effectiveness of corrective actions, KPIs and production figures',
-    tabs: [['claimdb', 'Claim Record DB']] },
+    blurb: 'Customer claim records, compound properties, QC spec management, lot/approval tags and hold compound control',
+    tabs: [['claimdb', 'Claim Record DB'], ['compoundspec', 'Compound Spec & QC'], ['compoundtag', 'Compound Approval Tag'], ['beadringtag', 'Bead Ring Lot Tag'], ['holdcompound', 'Hold Compound Control']] },
 ];
 
 export const sectionById = (id: string) => SECTIONS.find((s) => s.id === id);

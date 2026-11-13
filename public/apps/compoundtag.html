@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compound Approval Tag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --paper:        #ECE2C6;
+    --paper-shadow: #D9CB9E;
+    --ink:          #211C13;
+    --ink-soft:     #6b6248;
+    --rule:         #C7B98A;
+    --approve:      #2F6B3E;
+    --approve-ink:  #1d4527;
+    --expired:      #A9402B;
+    --bg:           #121210;
+    --panel:        #1B1A16;
+    --panel-line:   #322E22;
+    --panel-text:   #E7E1D0;
+    --panel-sub:    #8B8570;
+    --field-bg:     #100F0C;
+    --focus:        #C7A24A;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--panel-text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 860px){
+    .app{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- FORM PANEL ---------- */
+  .panel{
+    background:var(--panel);
+    border-right:1px solid var(--panel-line);
+    padding:28px 26px 32px;
+  }
+  .panel-eyebrow{
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+    margin:0 0 4px;
+  }
+  .panel h1{
+    font-family:'Oswald',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:.01em;
+    margin:0 0 22px;
+    color:var(--panel-text);
+  }
+  .field{
+    margin-bottom:16px;
+  }
+  .field label{
+    display:block;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--field-bg);
+    border:1px solid var(--panel-line);
+    color:var(--panel-text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:3px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{
+    border-color:var(--focus);
+  }
+  .field input:read-only{
+    opacity:.6;
+    cursor:not-allowed;
+    background:#0a0a08;
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .divider{
+    border:none;
+    border-top:1px solid var(--panel-line);
+    margin:22px 0 18px;
+  }
+  .hint{
+    font-size:11.5px;
+    color:var(--panel-sub);
+    line-height:1.5;
+    margin-top:-6px;
+    margin-bottom:16px;
+  }
+  .status-toggle{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .status-toggle button{
+    flex:1;
+    font-family:'Oswald',sans-serif;
+    font-size:11.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:9px 6px;
+    border-radius:3px;
+    border:1px solid var(--panel-line);
+    background:var(--field-bg);
+    color:var(--panel-sub);
+    cursor:pointer;
+  }
+  .status-toggle button.active[data-v="approved"]{
+    background:var(--approve); border-color:var(--approve); color:#EFF6EF;
+  }
+  .status-toggle button.active[data-v="expired"]{
+    background:var(--expired); border-color:var(--expired); color:#FBEDE9;
+  }
+  .status-toggle button.active[data-v="hold"]{
+    background:#9C7A2A; border-color:#9C7A2A; color:#FBF3E1;
+  }
+  .status-toggle button.active[data-v="auto"]{
+    background:var(--focus); border-color:var(--focus); color:#1c1608;
+  }
+
+  /* ---------- TABS ---------- */
+  .tabbar{
+    display:flex;
+    gap:2px;
+    background:var(--panel);
+    border-bottom:1px solid var(--panel-line);
+    padding:0 26px;
+  }
+  .tab-btn{
+    font-family:'Oswald',sans-serif;
+    font-size:12.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:transparent;
+    border:none;
+    color:var(--panel-sub);
+    padding:14px 16px 12px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{
+    color:var(--focus);
+    border-bottom-color:var(--focus);
+  }
+
+  /* ---------- SPEC READOUT (tag panel) ---------- */
+  .spec-readout{
+    background:var(--field-bg);
+    border:1px solid var(--panel-line);
+    border-radius:5px;
+    padding:10px 12px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    margin-bottom:16px;
+    line-height:1.6;
+  }
+  .spec-readout .none{ color:var(--panel-sub); font-family:'Inter',sans-serif; }
+  .spec-readout a{
+    color:var(--focus);
+    text-decoration:none;
+    font-family:'Inter',sans-serif;
+    font-size:11.5px;
+  }
+  .spec-readout a:hover{ text-decoration:underline; }
+  .sg-status-line{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    margin:2px 0 12px;
+  }
+  .sg-status-line.pass{ color:#4f9a63; }
+  .sg-status-line.fail{ color:#d16b57; }
+  .sg-status-line.nospec{ color:var(--panel-sub); }
+
+  /* ---------- SPEC SHEET VIEW ---------- */
+  .spec-view{
+    padding:32px 40px;
+    max-width:900px;
+  }
+  .spec-view h1{
+    font-family:'Oswald',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 6px;
+  }
+  .spec-view .hint{ margin-bottom:22px; }
+  table.spec-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:16px;
+  }
+  table.spec-table th{
+    text-align:left;
+    font-family:'Oswald',sans-serif;
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+    padding:0 10px 10px;
+    border-bottom:1px solid var(--panel-line);
+  }
+  table.spec-table td{
+    padding:5px 10px;
+    border-bottom:1px solid var(--panel-line);
+  }
+  table.spec-table input{
+    width:100%;
+    background:var(--field-bg);
+    border:1px solid var(--panel-line);
+    color:var(--panel-text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    padding:7px 9px;
+    border-radius:3px;
+    outline:none;
+  }
+  table.spec-table input:focus{ border-color:var(--focus); }
+  table.spec-table .spec-code{ text-transform:uppercase; }
+  table.spec-table td.del-cell{ text-align:center; padding:5px 4px; }
+  table.spec-table .spec-del{
+    background:transparent;
+    border:none;
+    color:var(--panel-sub);
+    cursor:pointer;
+    font-size:15px;
+    padding:4px 6px;
+  }
+  table.spec-table .spec-del:hover{ color:var(--expired); }
+  table.spec-table .spec-save{
+    background:transparent;
+    border:none;
+    color:var(--approve);
+    cursor:pointer;
+    font-size:15px;
+    padding:4px 4px;
+    font-weight:700;
+  }
+  table.spec-table .spec-save:hover{ color:#4f9a63; }
+  .add-spec-btn{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--focus);
+    color:var(--focus);
+    padding:9px 16px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .add-spec-btn:hover{ background:var(--focus); color:#1c1608; }
+  .spec-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .backup-btn{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--panel-line);
+    color:var(--panel-text);
+    padding:9px 16px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .backup-btn:hover{ border-color:var(--focus); color:var(--focus); }
+  .backup-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .spec-edit-gate{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:5px;
+    padding:12px 14px;
+    margin-bottom:20px;
+  }
+  .spec-edit-status{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+  }
+  .spec-edit-gate.unlocked .spec-edit-status{ color:var(--approve); }
+  .spec-edit-gate input{
+    background:var(--field-bg);
+    border:1px solid var(--panel-line);
+    color:var(--panel-text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    padding:8px 10px;
+    border-radius:3px;
+    outline:none;
+    width:160px;
+  }
+  .spec-edit-gate input:focus{ border-color:var(--focus); }
+  .spec-lock-error{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    color:var(--expired);
+  }
+  table.spec-table input:disabled,
+  .add-spec-btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  table.spec-table .spec-del:disabled,
+  table.spec-table .spec-save:disabled{
+    opacity:.3;
+    cursor:not-allowed;
+  }
+  .lock-spec-btn{
+    font-family:'Oswald',sans-serif;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--expired);
+    color:var(--expired);
+    padding:9px 16px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .lock-spec-btn:hover{ background:var(--expired); color:#fff; }
+  .print-btn{
+    width:100%;
+    font-family:'Oswald',sans-serif;
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:13px;
+    border-radius:4px;
+    border:none;
+    background:var(--focus);
+    color:#1c1608;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .print-btn:hover{ filter:brightness(1.08); }
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 24px;
+  }
+
+  .tag{
+    position:relative;
+    width:400px;
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 18% 8%, rgba(255,255,255,.35), transparent 40%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.015) 0px, rgba(0,0,0,.015) 1px, transparent 1px, transparent 3px);
+    border-radius:10px;
+    box-shadow: 0 2px 0 var(--paper-shadow), 0 22px 40px -18px rgba(0,0,0,.65), 0 6px 18px -8px rgba(0,0,0,.4);
+    padding:26px 26px 24px;
+    color:var(--ink);
+  }
+  .tag::before{
+    /* hang hole */
+    content:"";
+    position:absolute;
+    top:16px; left:50%;
+    transform:translateX(-50%);
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--bg);
+    box-shadow: inset 0 0 0 2.5px #6b6248, 0 1px 1px rgba(255,255,255,.25);
+  }
+  .tester-badge{
+    position:absolute;
+    top:9px; right:12px;
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+  }
+  .tag.compact .tester-badge{
+    top:3pt; right:5pt;
+    font-size:7.5pt;
+  }
+  .tag-eyebrow{
+    text-align:center;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:20px 0 2px;
+  }
+  .tag-sub{
+    text-align:center;
+    font-family:'Oswald',sans-serif;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 16px;
+  }
+  .code-block{
+    text-align:center;
+    padding:14px 10px 16px;
+    border-top:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink);
+    margin-bottom:16px;
+  }
+  .code-block .k{
+    font-family:'Oswald',sans-serif;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .code-block .v{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:30px;
+    letter-spacing:.03em;
+    word-break:break-all;
+    line-height:1.1;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    row-gap:14px;
+    column-gap:10px;
+    margin-bottom:18px;
+  }
+  .cell .k{
+    font-family:'Oswald',sans-serif;
+    font-size:9.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .cell .v{
+    font-family:'JetBrains Mono',monospace;
+    font-size:16px;
+    font-weight:600;
+  }
+  .cell.full{ grid-column:1 / -1; }
+  .sg-range{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .sg-badge{
+    display:inline-block;
+    font-family:'Oswald',sans-serif;
+    font-size:9px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:600;
+    padding:1px 6px;
+    border-radius:8px;
+    margin-top:4px;
+  }
+  .sg-badge.pass{ background:#DCEBDE; color:#2F6B3E; }
+  .sg-badge.fail{ background:#F3DAD3; color:#A9402B; }
+  .sg-badge.nospec{ background:#E4DCC3; color:#6b6248; }
+
+  .barcode-wrap{
+    background:#fff;
+    border-radius:4px;
+    padding:10px 8px 6px;
+    display:flex;
+    justify-content:center;
+  }
+  .barcode-wrap svg{ width:100%; height:auto; }
+
+  .stamp{
+    position:absolute;
+    right:20px; bottom:88px;
+    width:96px; height:96px;
+    border-radius:50%;
+    border:3px solid var(--approve);
+    color:var(--approve-ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    transform:rotate(-11deg);
+    opacity:.9;
+    mix-blend-mode:multiply;
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    line-height:1.25;
+  }
+  .stamp::after{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px solid var(--approve);
+    border-radius:50%;
+  }
+  .stamp.expired{ border-color:var(--expired); color:#7a2417; }
+  .stamp.expired::after{ border-color:var(--expired); }
+  .stamp.hold{ border-color:#9C7A2A; color:#6b511a; }
+  .stamp.hold::after{ border-color:#9C7A2A; }
+
+  .tag-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    font-family:'Oswald',sans-serif;
+    font-size:9px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-top:14px;
+  }
+
+  .compact-status{
+    display:none;
+    font-family:'Oswald',sans-serif;
+    font-size:7px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:1px 5px;
+    border-radius:6px;
+  }
+  .compact-status.approved{ background:#DCEBDE; color:#2F6B3E; }
+  .compact-status.hold{ background:#F3E7CB; color:#8a6a1f; }
+  .compact-status.expired{ background:#F3DAD3; color:#A9402B; }
+
+  .k-short{ display:none; }
+
+  /* ---------- COMPACT (small barcode labels, e.g. 1in x 2.5in) ---------- */
+  .tag.compact{
+    width:2.5in;
+    padding:0.05in 0.09in;
+    border-radius:3px;
+    box-shadow:0 1px 0 var(--paper-shadow), 0 8px 16px -10px rgba(0,0,0,.5);
+  }
+  .tag.compact::before{ display:none; }
+  .tag.compact .tag-eyebrow,
+  .tag.compact .tag-sub,
+  .tag.compact .tag-footer,
+  .tag.compact .stamp,
+  .tag.compact .compact-hide{ display:none; }
+  .tag.compact .code-block{
+    padding:0 0 2pt;
+    margin-bottom:2pt;
+    border-top-width:1px;
+    border-bottom-width:1.5px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    text-align:left;
+  }
+  .tag.compact .code-block .k{ display:none; }
+  .tag.compact .code-block .v{ font-size:17pt; font-weight:800; line-height:1; letter-spacing:0; max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag.compact .code-block .compact-status{ display:inline-block; font-size:7.5pt; flex-shrink:0; }
+  .tag.compact .grid{
+    grid-template-columns:1fr 1fr;
+    row-gap:2pt;
+    column-gap:5pt;
+    margin-bottom:3pt;
+  }
+  .tag.compact .cell{
+    display:flex;
+    align-items:baseline;
+    gap:3pt;
+    min-width:0;
+  }
+  .tag.compact .k-full{ display:none; }
+  .tag.compact .k-short{ display:inline; }
+  .tag.compact .cell .k{ font-size:6.5pt; margin-bottom:0; letter-spacing:.02em; flex-shrink:0; }
+  .tag.compact .cell .v{ font-size:9.5pt; font-weight:700; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .tag.compact .sg-cell{ flex-wrap:wrap; }
+  .tag.compact .sg-range{ display:none; }
+  .tag.compact .sg-badge{ font-size:6.5pt; padding:0.5pt 4pt; border-radius:5pt; }
+  .tag.compact .barcode-wrap{ padding:2pt 4pt; margin-bottom:0; }
+  .tag.compact .barcode-wrap svg{ width:100%; height:auto; display:block; }
+
+  #printRoot{ display:none; }
+
+  @media print{
+    html, body{ margin:0; padding:0; }
+    body.printing > *:not(#printRoot){ display:none !important; }
+    body.printing #printRoot{ display:block; }
+    #printRoot .tag{
+      margin:0;
+      box-shadow:none;
+      width:var(--tag-print-w, 3.7in);
+      height:var(--tag-print-h, auto);
+      overflow:hidden;
+    }
+  }
+</style>
+<style id="pageSizeStyle">
+  @page{ size:4in 6in; margin:0.15in; }
+</style>
+</head>
+<body>
+<div id="printRoot"></div>
+
+<div class="tabbar">
+  <button type="button" class="tab-btn active" data-tab="tag">Approval Tag</button>
+  <button type="button" class="tab-btn" data-tab="spec">Compound Spec Sheet</button>
+</div>
+
+<div class="app" id="tagView">
+  <div class="panel">
+    <p class="panel-eyebrow">QC Release</p>
+    <h1>Compound Approval Tag</h1>
+
+    <div class="field">
+      <label for="compoundCode">Compound Code</label>
+      <select id="compoundCode"></select>
+    </div>
+
+    <div class="field">
+      <label for="batchNumber">Batch Number</label>
+      <input id="batchNumber" type="text" value="B26-0817" placeholder="e.g. B26-0817">
+    </div>
+
+    <div class="spec-readout" id="specReadout">Loading spec…</div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="prodDate">Mfg Date</label>
+        <input id="prodDate" type="date" readonly>
+      </div>
+      <div class="field">
+        <label for="mfgTime">Mfg Time</label>
+        <input id="mfgTime" type="time" readonly>
+      </div>
+    </div>
+    <div class="field">
+      <label for="expDate">Expiry Date</label>
+      <input id="expDate" type="date" readonly>
+    </div>
+    <p class="hint">Mfg Date and Time are set automatically when this tag is created; Expiry is calculated from the compound's expiration duration. None of these can be edited by hand.</p>
+
+    <div class="field">
+      <label for="sgValue">Specific Gravity (measured)</label>
+      <input id="sgValue" type="number" step="0.001" value="1.210" placeholder="e.g. 1.210">
+    </div>
+    <p class="sg-status-line nospec" id="sgStatusLine">No spec loaded for this compound yet.</p>
+
+    <hr class="divider">
+
+    <div class="field">
+      <label for="approver">Tested By</label>
+      <select id="approver">
+        <option value="Kavidu">Kavidu</option>
+        <option value="Rasidu">Rasidu</option>
+      </select>
+    </div>
+
+    <hr class="divider">
+
+    <div class="field">
+      <label for="labelSize">Label Size (loaded in printer)</label>
+      <select id="labelSize">
+        <option value="1x2.5" selected>1 in × 2.5 in (barcode label)</option>
+        <option value="4x6">4 in × 6 in</option>
+        <option value="4x3">4 in × 3 in</option>
+        <option value="3x2">3 in × 2 in</option>
+        <option value="2x1">2 in × 1 in</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </div>
+    <div class="row2" id="customSizeRow" style="display:none;">
+      <div class="field">
+        <label for="customW">Width (in)</label>
+        <input id="customW" type="number" step="0.1" value="4">
+      </div>
+      <div class="field">
+        <label for="customH">Height (in)</label>
+        <input id="customH" type="number" step="0.1" value="6">
+      </div>
+    </div>
+
+    <button class="print-btn" id="printBtn">Print Tag</button>
+  </div>
+
+  <div class="stage">
+    <div class="tag" id="tag">
+      <span class="tester-badge" id="testerBadge"></span>
+      <p class="tag-eyebrow">Compound Approval Tag</p>
+
+      <div class="code-block">
+        <div class="k">Compound Code</div>
+        <div class="v" id="outCode">RNM-4520</div>
+      </div>
+
+      <div class="grid">
+        <div class="cell full">
+          <div class="k"><span class="k-full">Mfg Date</span><span class="k-short">Mfg</span></div>
+          <div class="v" id="outProd">—</div>
+        </div>
+        <div class="cell">
+          <div class="k"><span class="k-full">Batch No.</span><span class="k-short">B.No</span></div>
+          <div class="v" id="outBatch">B26-0817</div>
+        </div>
+        <div class="cell sg-cell">
+          <div class="k"><span class="k-full">Specific Gravity</span><span class="k-short">S.G.</span></div>
+          <div class="v" id="outSG">1.180</div>
+          <div class="sg-range" id="outSGRange"></div>
+          <span class="sg-badge nospec" id="outSGBadge">NO SPEC</span>
+        </div>
+        <div class="cell full">
+          <div class="k"><span class="k-full">Expiry Date</span><span class="k-short">Exp</span></div>
+          <div class="v" id="outExp">—</div>
+        </div>
+      </div>
+
+      <div class="barcode-wrap">
+        <svg id="barcode"></svg>
+      </div>
+
+      <div class="tag-footer">
+        <span id="outApprover">Tested by —</span>
+        <span id="outPrintedOn"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spec-view" id="specView" style="display:none;">
+  <h1>Compound Spec Sheet</h1>
+  <p class="hint">S.G. limits and expiration (ageing) days per compound. Viewable by anyone — enter the password below to edit.</p>
+
+  <div class="spec-edit-gate" id="specEditGate">
+    <span class="spec-edit-status" id="specEditStatus">🔒 Read-only</span>
+    <input type="password" id="specPassword" placeholder="Password to edit">
+    <button type="button" class="add-spec-btn" id="specUnlockBtn">Unlock to Edit</button>
+    <button type="button" class="lock-spec-btn" id="specLockBtn" style="display:none;">Lock</button>
+    <span class="spec-lock-error" id="specLockError"></span>
+  </div>
+
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>Compound Code</th>
+        <th>S.G. Min (LSL)</th>
+        <th>S.G. Max (USL)</th>
+        <th>Expiration (days)</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="specTableBody"></tbody>
+  </table>
+  <div class="spec-actions">
+    <button type="button" class="add-spec-btn" id="addSpecRow">+ Add Compound</button>
+    <button type="button" class="backup-btn" id="backupSpecBtn">⬇ Download Backup</button>
+    <button type="button" class="backup-btn" id="restoreSpecBtn">⬆ Restore Backup</button>
+    <input type="file" id="restoreSpecFile" accept="application/json" style="display:none;">
+  </div>
+  <p class="hint" id="backupStatus" style="margin-top:10px;"></p>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const compoundCode = $('compoundCode');
+  const batchNumber  = $('batchNumber');
+  const prodDate     = $('prodDate');
+  const mfgTime      = $('mfgTime');
+  const expDate      = $('expDate');
+  const sgValue      = $('sgValue');
+  const approver     = $('approver');
+  const STORE_KEY = 'compoundApprovalTag_specs_v1';
+
+
+  // ---------- spec storage (per compound code) ----------
+  function loadSpecs(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+    catch(e){ return {}; }
+  }
+  function saveSpecs(specs){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(specs)); }
+    catch(e){ /* storage unavailable, ignore */ }
+  }
+  let specs = loadSpecs();
+
+  const DEFAULT_SPECS = {
+    'TMT':        { sgMin:1.195, sgMax:1.225, ageingDays:7 },
+    'TEV':        { sgMin:1.240, sgMax:1.260, ageingDays:7 },
+    'BTM':        { sgMin:1.215, sgMax:1.245, ageingDays:7 },
+    'GPT 3':      { sgMin:1.197, sgMax:1.247, ageingDays:7 },
+    'RH':         { sgMin:1.190, sgMax:1.230, ageingDays:7 },
+    'RB':         { sgMin:1.180, sgMax:1.220, ageingDays:7 },
+    'GPS':        { sgMin:1.170, sgMax:1.190, ageingDays:7 },
+    'RS':         { sgMin:1.360, sgMax:1.390, ageingDays:7 },
+    'BEV':        { sgMin:1.100, sgMax:1.130, ageingDays:7 },
+    'BAP':        { sgMin:1.155, sgMax:1.175, ageingDays:7 },
+    'MBT':        { sgMin:1.118, sgMax:1.138, ageingDays:7 },
+    'BFP':        { sgMin:1.130, sgMax:1.154, ageingDays:7 },
+    'ECO':        { sgMin:1.170, sgMax:1.190, ageingDays:7 },
+    'RGNM':       { sgMin:1.160, sgMax:1.180, ageingDays:3 },
+    'NMG':        { sgMin:1.135, sgMax:1.155, ageingDays:7 },
+    'NM AS':      { sgMin:1.230, sgMax:1.250, ageingDays:3 },
+    'CSM':        { sgMin:1.170, sgMax:1.210, ageingDays:7 },
+    'BCU 50':     { sgMin:1.150, sgMax:1.160, ageingDays:7 },
+    'BLK TR':     { sgMin:1.175, sgMax:1.185, ageingDays:7 },
+    'RNM (WHITE)':{ sgMin:1.155, sgMax:1.175, ageingDays:7 },
+    'SP':         { sgMin:1.155, sgMax:1.195, ageingDays:7 }
+  };
+
+  function seedDefaultSpecs(){
+    if(Object.keys(specs).length > 0) return; // already have data (user's own or seeded before)
+    Object.keys(DEFAULT_SPECS).forEach(code => {
+      const d = DEFAULT_SPECS[code];
+      specs[code] = { sgMin:d.sgMin, sgMax:d.sgMax, shelfLifeDays:d.ageingDays };
+    });
+    saveSpecs(specs);
+  }
+  seedDefaultSpecs();
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function currentSpec(){
+    const code = compoundCode.value.trim().toUpperCase();
+    return specs[code] || null;
+  }
+
+  // ---------- compound dropdown (Approval Tag tab) ----------
+  function refreshCompoundSelect(){
+    const codes = Object.keys(specs).sort();
+    const prev = compoundCode.value;
+    compoundCode.innerHTML = codes.length
+      ? codes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+      : '<option value="">No compounds saved</option>';
+    if(codes.includes(prev)) compoundCode.value = prev;
+    else if(codes.includes('TMT')) compoundCode.value = 'TMT';
+  }
+
+  // ---------- spec sheet (Compound Spec Sheet tab) ----------
+  function renderSpecTable(){
+    const tbody = $('specTableBody');
+    const codes = Object.keys(specs).sort();
+    tbody.innerHTML = codes.map(code => {
+      const s = specs[code];
+      return `<tr data-code="${esc(code)}">
+        <td><input type="text" class="spec-code" value="${esc(code)}"></td>
+        <td><input type="number" step="0.001" class="spec-min" value="${s.sgMin ?? ''}"></td>
+        <td><input type="number" step="0.001" class="spec-max" value="${s.sgMax ?? ''}"></td>
+        <td><input type="number" step="1" min="0" class="spec-days" value="${s.shelfLifeDays ?? ''}"></td>
+        <td class="del-cell"><button type="button" class="spec-del" title="Delete compound">✕</button></td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const oldCode = tr.dataset.code;
+      const codeInput = tr.querySelector('.spec-code');
+      const minInput  = tr.querySelector('.spec-min');
+      const maxInput  = tr.querySelector('.spec-max');
+      const daysInput = tr.querySelector('.spec-days');
+      const delBtn    = tr.querySelector('.spec-del');
+      [codeInput, minInput, maxInput, daysInput, delBtn].forEach(el => el.disabled = !specUnlocked);
+
+      function pushValues(){
+        const rec = specs[tr.dataset.code];
+        if(!rec) return;
+        rec.sgMin = minInput.value === '' ? null : Number(minInput.value);
+        rec.sgMax = maxInput.value === '' ? null : Number(maxInput.value);
+        rec.shelfLifeDays = daysInput.value === '' ? null : Number(daysInput.value);
+        saveSpecs(specs);
+        refreshCompoundSelect();
+        applyExpiryAndRender();
+      }
+      [minInput, maxInput, daysInput].forEach(el => el.addEventListener('input', pushValues));
+
+      codeInput.addEventListener('change', () => {
+        let newCode = codeInput.value.trim().toUpperCase();
+        const wasSelected = compoundCode.value === tr.dataset.code;
+        if(!newCode){ codeInput.value = tr.dataset.code; return; }
+        if(newCode !== tr.dataset.code){
+          const rec = specs[tr.dataset.code];
+          delete specs[tr.dataset.code];
+          specs[newCode] = rec;
+          tr.dataset.code = newCode;
+          saveSpecs(specs);
+          refreshCompoundSelect();
+          if(wasSelected) compoundCode.value = newCode;
+          applyExpiryAndRender();
+        }
+      });
+
+      delBtn.addEventListener('click', () => {
+        const wasSelected = compoundCode.value === tr.dataset.code;
+        delete specs[tr.dataset.code];
+        saveSpecs(specs);
+        renderSpecTable();
+        refreshCompoundSelect();
+        if(wasSelected) applyExpiryAndRender();
+      });
+    });
+  }
+
+  $('addSpecRow').addEventListener('click', () => {
+    if(!specUnlocked){
+      $('specPassword').focus();
+      $('specLockError').textContent = 'Enter the password to add a compound.';
+      return;
+    }
+    const tbody = $('specTableBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="spec-code" placeholder="CODE"></td>
+      <td><input type="number" step="0.001" class="spec-min" placeholder="LSL"></td>
+      <td><input type="number" step="0.001" class="spec-max" placeholder="USL"></td>
+      <td><input type="number" step="1" min="0" class="spec-days" placeholder="days"></td>
+      <td class="del-cell">
+        <button type="button" class="spec-save" title="Save this compound">✓</button>
+        <button type="button" class="spec-del" title="Cancel">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+    const codeInput = tr.querySelector('.spec-code');
+    const minInput  = tr.querySelector('.spec-min');
+    const maxInput  = tr.querySelector('.spec-max');
+    const daysInput = tr.querySelector('.spec-days');
+
+    function saveDraft(){
+      const code = codeInput.value.trim().toUpperCase();
+      if(!code){ codeInput.focus(); return; }
+      specs[code] = {
+        sgMin: minInput.value === '' ? null : Number(minInput.value),
+        sgMax: maxInput.value === '' ? null : Number(maxInput.value),
+        shelfLifeDays: daysInput.value === '' ? null : Number(daysInput.value)
+      };
+      saveSpecs(specs);
+      refreshCompoundSelect();
+      renderSpecTable();
+    }
+    tr.querySelector('.spec-save').addEventListener('click', saveDraft);
+    tr.querySelector('.spec-del').addEventListener('click', () => tr.remove());
+    codeInput.focus();
+  });
+
+  // ---------- dates ----------
+  function fmtDate(dstr){
+    if(!dstr) return '—';
+    const d = new Date(dstr + 'T00:00:00');
+    if(isNaN(d)) return '—';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function nowTimeStr(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mi}`;
+  }
+
+  function recalcExpiry(){
+    if(!prodDate.value) return;
+    const spec = currentSpec();
+    const days = spec && spec.shelfLifeDays != null ? parseInt(spec.shelfLifeDays, 10) : 0;
+    const d = new Date(prodDate.value + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    expDate.value = d.toISOString().slice(0,10);
+  }
+
+  function applyExpiryAndRender(){
+    recalcExpiry();
+    render();
+  }
+
+  function isExpired(){
+    if(!expDate.value) return false;
+    return expDate.value < todayStr();
+  }
+
+  // ---------- S.G. evaluation ----------
+  function evaluateSG(){
+    const spec = currentSpec();
+    const hasSpec = spec && spec.sgMin != null && spec.sgMax != null;
+    const hasValue = sgValue.value !== '';
+    if(!hasSpec) return { state:'nospec', text:'No spec saved for this compound — add it in the Compound Spec Sheet tab.' };
+    if(!hasValue) return { state:'nospec', text:`Spec: ${Number(spec.sgMin).toFixed(3)} – ${Number(spec.sgMax).toFixed(3)}` };
+    const v = Number(sgValue.value), lo = Number(spec.sgMin), hi = Number(spec.sgMax);
+    if(v >= lo && v <= hi){
+      return { state:'pass', text:`PASS — within spec ${lo.toFixed(3)}–${hi.toFixed(3)}` };
+    }
+    return { state:'fail', text:`OFF SPEC — outside ${lo.toFixed(3)}–${hi.toFixed(3)}` };
+  }
+
+  function render(){
+    // spec readout
+    const spec = currentSpec();
+    const readout = $('specReadout');
+    if(spec && spec.sgMin != null && spec.sgMax != null){
+      readout.innerHTML = `S.G. spec: ${Number(spec.sgMin).toFixed(3)} – ${Number(spec.sgMax).toFixed(3)}<br>Expiration: ${spec.shelfLifeDays ?? '—'} days<br><a href="#" data-goto-spec="1">Edit in Compound Spec Sheet →</a>`;
+    } else {
+      readout.innerHTML = `<span class="none">No spec saved for this compound yet.</span><br><a href="#" data-goto-spec="1">Add it in the Compound Spec Sheet →</a>`;
+    }
+    const gotoLink = readout.querySelector('[data-goto-spec]');
+    if(gotoLink) gotoLink.addEventListener('click', (e) => { e.preventDefault(); switchTab('spec'); });
+
+    $('outCode').textContent  = compoundCode.value.trim() || '—';
+    $('outBatch').textContent = batchNumber.value.trim() || '—';
+    $('outSG').textContent    = sgValue.value ? Number(sgValue.value).toFixed(3) : '—';
+    const isCompactTag = $('tag').classList.contains('compact');
+    $('outProd').textContent  = fmtDate(prodDate.value) + (mfgTime.value ? ' ' + mfgTime.value : '');
+    $('outExp').textContent   = fmtDate(expDate.value);
+    $('outApprover').textContent = 'Tested by ' + (approver.value.trim() || '—');
+    $('outPrintedOn').textContent = 'Printed ' + fmtDate(todayStr());
+
+    // SG status
+    const sg = evaluateSG();
+    $('sgStatusLine').textContent = sg.text;
+    $('sgStatusLine').className = 'sg-status-line ' + sg.state;
+
+    const badge = $('outSGBadge');
+    badge.className = 'sg-badge ' + sg.state;
+    badge.textContent = sg.state === 'pass' ? 'PASS' : sg.state === 'fail' ? 'OFF SPEC' : 'NO SPEC';
+    $('outSGRange').textContent = (spec && spec.sgMin != null && spec.sgMax != null)
+      ? `spec ${Number(spec.sgMin).toFixed(3)}–${Number(spec.sgMax).toFixed(3)}` : '';
+
+    $('testerBadge').textContent = (approver.value.trim() || '').slice(0, 3).toUpperCase();
+
+    const sgForBarcode = sgValue.value ? Number(sgValue.value).toFixed(3) : 'NA';
+    const statusForBarcode = sg.state === 'pass' ? 'PASS' : sg.state === 'fail' ? 'FAIL' : 'NA';
+    const value = (compoundCode.value.trim() || 'CODE') + '-' + (batchNumber.value.trim() || 'BATCH') + '-' + sgForBarcode + '-' + statusForBarcode;
+    try{
+      JsBarcode('#barcode', value, {
+        format:'CODE128',
+        lineColor:'#211C13',
+        width: isCompactTag ? 1.3 : 1.6,
+        height: isCompactTag ? 34 : 46,
+        displayValue: !isCompactTag,
+        fontSize:11,
+        fontOptions:'',
+        font:'JetBrains Mono',
+        margin: isCompactTag ? 2 : 4
+      });
+    }catch(e){ /* ignore invalid barcode chars mid-typing */ }
+  }
+
+  [batchNumber, sgValue].forEach(el => el.addEventListener('input', render));
+  approver.addEventListener('change', render);
+  compoundCode.addEventListener('change', applyExpiryAndRender);
+
+  function printTag(){
+    const printRoot = $('printRoot');
+    printRoot.innerHTML = '';
+    const clone = $('tag').cloneNode(true);
+    clone.removeAttribute('id');
+    printRoot.appendChild(clone);
+    document.body.classList.add('printing');
+    window.print();
+  }
+  window.addEventListener('afterprint', () => {
+    document.body.classList.remove('printing');
+    $('printRoot').innerHTML = '';
+  });
+  $('printBtn').addEventListener('click', printTag);
+
+  // ---------- tabs ----------
+  // ---------- spec sheet password gate ----------
+  const SPEC_PASSWORD = 'QC-Spec2026'; // change this to set a new password
+  let specUnlocked = false;
+
+  function updateSpecGateView(){
+    const gate = $('specEditGate');
+    gate.classList.toggle('unlocked', specUnlocked);
+    $('specEditStatus').textContent = specUnlocked ? '🔓 Unlocked — editing enabled' : '🔒 Read-only';
+    $('specPassword').style.display = specUnlocked ? 'none' : 'inline-block';
+    $('specUnlockBtn').style.display = specUnlocked ? 'none' : 'inline-block';
+    $('specLockBtn').style.display = specUnlocked ? 'inline-block' : 'none';
+    $('addSpecRow').disabled = !specUnlocked;
+    $('restoreSpecBtn').disabled = !specUnlocked;
+    renderSpecTable();
+  }
+  function trySpecUnlock(){
+    const val = $('specPassword').value;
+    if(val === SPEC_PASSWORD){
+      specUnlocked = true;
+      $('specLockError').textContent = '';
+      $('specPassword').value = '';
+      updateSpecGateView();
+    } else {
+      $('specLockError').textContent = 'Incorrect password.';
+    }
+  }
+  function lockSpecSheet(){
+    specUnlocked = false;
+    $('specLockError').textContent = '';
+    updateSpecGateView();
+  }
+  $('specUnlockBtn').addEventListener('click', trySpecUnlock);
+  $('specLockBtn').addEventListener('click', lockSpecSheet);
+  $('specPassword').addEventListener('keydown', (e) => { if(e.key === 'Enter') trySpecUnlock(); });
+
+  function switchTab(tab){
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    $('tagView').style.display = tab === 'tag' ? 'grid' : 'none';
+    $('specView').style.display = tab === 'spec' ? 'block' : 'none';
+    if(tab === 'spec') updateSpecGateView();
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // ---------- print label size ----------
+  const labelSize = $('labelSize');
+  const customW = $('customW');
+  const customH = $('customH');
+  const customSizeRow = $('customSizeRow');
+  const PRESETS = { '1x2.5':[2.5,1], '4x6':[4,6], '4x3':[4,3], '3x2':[3,2], '2x1':[2,1] };
+
+  function applyPageSize(){
+    let w, h;
+    if(labelSize.value === 'custom'){
+      customSizeRow.style.display = 'grid';
+      w = parseFloat(customW.value) || 4;
+      h = parseFloat(customH.value) || 6;
+    } else {
+      customSizeRow.style.display = 'none';
+      [w, h] = PRESETS[labelSize.value];
+    }
+    const isTiny = w <= 3 && h <= 1.5;
+    $('tag').classList.toggle('compact', isTiny);
+    const margin = isTiny ? 0.04 : 0.15;
+    const root = document.documentElement.style;
+    root.setProperty('--tag-print-w', isTiny ? w + 'in' : Math.max(w - 0.3, 0.5) + 'in');
+    if(isTiny){
+      root.setProperty('--tag-print-h', Math.max(h - margin * 2, 0.3) + 'in');
+    } else {
+      root.removeProperty('--tag-print-h');
+    }
+    $('pageSizeStyle').textContent = `@page{ size:${w}in ${h}in; margin:${margin}in; }`;
+    render();
+  }
+  labelSize.addEventListener('change', applyPageSize);
+  customW.addEventListener('input', applyPageSize);
+  customH.addEventListener('input', applyPageSize);
+  applyPageSize();
+
+  // ---------- backup / restore ----------
+  $('backupSpecBtn').addEventListener('click', () => {
+    const payload = { exportedAt: new Date().toISOString(), specs: specs };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compound-spec-backup-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    $('backupStatus').textContent = 'Backup file downloaded.';
+  });
+
+  $('restoreSpecBtn').addEventListener('click', () => {
+    if(!specUnlocked){
+      $('specPassword').focus();
+      $('specLockError').textContent = 'Enter the password to restore a backup.';
+      return;
+    }
+    $('restoreSpecFile').click();
+  });
+
+  $('restoreSpecFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        const incoming = data && data.specs ? data.specs : data; // accept raw specs object too
+        if(!incoming || typeof incoming !== 'object') throw new Error('bad format');
+        specs = incoming;
+        saveSpecs(specs);
+        refreshCompoundSelect();
+        renderSpecTable();
+        applyExpiryAndRender();
+        $('backupStatus').textContent = `Restored ${Object.keys(specs).length} compounds from backup.`;
+      }catch(err){
+        $('backupStatus').textContent = 'Could not read that file — make sure it\'s a backup downloaded from this tool.';
+      }
+      $('restoreSpecFile').value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  // init
+  prodDate.value = todayStr();
+  mfgTime.value = nowTimeStr();
+  refreshCompoundSelect();
+  renderSpecTable();
+  recalcExpiry();
+  render();
+</script>
+
+</body>
+</html>

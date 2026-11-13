@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITL — Process Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#211f1b;
+    --paper:#f4f1e9;
+    --card:#fffefb;
+    --card-line:#dedad0;
+    --muted:#7c766a;
+    --accent:#c4501e;
+    --accent-ink:#7a2f10;
+    --accent-tint:#f6e2d5;
+    --high:#a8362a;
+    --high-tint:#f6dfdc;
+    --high-ink:#7a241b;
+    --med:#a9760f;
+    --med-tint:#f7ecd4;
+    --med-ink:#6e4c09;
+    --low:#3f6b4a;
+    --low-tint:#e1ebe1;
+    --low-ink:#294933;
+    --line:#e4e0d5;
+    --shadow:0 1px 2px rgba(33,31,27,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--accent-tint);}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
+  button{font-family:'Inter',sans-serif;}
+
+  /* header */
+  header{
+    background:var(--ink);
+    color:var(--paper);
+    padding:18px 0 0;
+    border-bottom:6px solid var(--accent);
+  }
+  .head-row{
+    max-width:1080px;margin:0 auto;padding:0 20px 16px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo-mark{
+    flex:0 0 auto;height:40px;border-radius:4px;overflow:hidden;
+    display:block;
+  }
+  .logo-mark img{display:block;height:40px;width:auto;}
+  .logo-text{flex:1 1 auto;min-width:200px;}
+  .logo-text .word{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    letter-spacing:0.02em;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  .logo-text .word span{color:var(--accent);}
+  .logo-text .sub{
+    font-size:12px;color:#c9c4b6;margin-top:5px;letter-spacing:0.02em;
+  }
+  .head-actions{display:flex;gap:8px;align-items:center;}
+  .ghost-btn{
+    height:32px;padding:0 12px;border-radius:7px;border:1px solid #4c483d;
+    background:transparent;color:#d9d5c7;font-size:12px;font-weight:500;
+    cursor:pointer;display:flex;align-items:center;gap:6px;
+  }
+  .ghost-btn:hover{background:#33312a;}
+  .ghost-btn input[type=file]{display:none;}
+
+  /* view tabs */
+  .view-tabs{max-width:1080px;margin:0 auto;padding:0 20px;display:flex;gap:2px;}
+  .view-tabs button{
+    background:transparent;border:none;color:#a49d8c;font-size:13px;font-weight:500;
+    padding:10px 14px 12px;cursor:pointer;border-bottom:3px solid transparent;
+  }
+  .view-tabs button.active{color:var(--paper);border-bottom-color:var(--accent);}
+  .view-tabs button:hover{color:var(--paper);}
+
+  /* sector tabs */
+  .sector-outer{background:#2b2925;}
+  .sector-tabs{
+    max-width:1080px;margin:0 auto;padding:8px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  }
+  .sector-tabs button{
+    background:#3a372f;border:1px solid #4c483d;color:#c9c4b6;font-size:12.5px;font-weight:500;
+    padding:6px 12px;border-radius:20px;cursor:pointer;
+  }
+  .sector-tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .sector-tabs .add{border-style:dashed;}
+
+  /* process rail */
+  .rail-outer{background:var(--ink);}
+  .rail{
+    max-width:1080px;margin:0 auto;padding:6px 14px 8px;
+    display:flex;gap:4px;flex-wrap:wrap;
+  }
+  .rail button{
+    flex:0 0 auto;
+    background:transparent;border:none;
+    color:#a49d8c;
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;font-weight:500;
+    padding:8px 12px 9px;
+    cursor:pointer;
+    display:flex;align-items:baseline;gap:6px;
+    border-bottom:3px solid transparent;
+    border-radius:6px 6px 0 0;
+    white-space:nowrap;
+  }
+  .rail button .n{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:15px;font-weight:700;color:#6f6a5c;
+  }
+  .rail button.active{color:var(--paper);border-bottom-color:var(--accent);}
+  .rail button.active .n{color:var(--accent);}
+  .rail button:hover{color:var(--paper);}
+  .rail button .cnt{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;color:#847e6f;
+  }
+  .rail button.active .cnt{color:#d7ab93;}
+
+  /* toolbar */
+  .toolbar{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:18px 0 6px;
+  }
+  .date-field{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--card-line);border-radius:8px;height:38px;padding:0 10px;}
+  .date-field label{font-size:12px;color:var(--muted);font-weight:500;}
+  .date-field input{border:none;background:transparent;font-size:13px;color:var(--ink);font-family:'Inter',sans-serif;height:100%;}
+  .search{
+    flex:1 1 200px;position:relative;min-width:160px;
+  }
+  .search input{
+    width:100%;height:38px;border-radius:8px;border:1px solid var(--card-line);
+    background:var(--card);padding:0 12px 0 34px;font-size:13.5px;color:var(--ink);
+    font-family:'Inter',sans-serif;
+  }
+  .search input:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+  .search svg{position:absolute;left:10px;top:10px;width:18px;height:18px;stroke:var(--muted);}
+  .filters{display:flex;gap:6px;}
+  .filters button{
+    height:38px;padding:0 13px;border-radius:8px;border:1px solid var(--card-line);
+    background:var(--card);font-size:12.5px;font-weight:500;color:var(--muted);
+    cursor:pointer;
+  }
+  .filters button[data-f="H"].active{background:var(--high-tint);color:var(--high-ink);border-color:var(--high);}
+  .filters button[data-f="M"].active{background:var(--med-tint);color:var(--med-ink);border-color:var(--med);}
+  .filters button[data-f="L"].active{background:var(--low-tint);color:var(--low-ink);border-color:var(--low);}
+  .filters button[data-f="all"].active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .filters button[data-f="unchecked"].active{background:var(--accent-tint);color:var(--accent-ink);border-color:var(--accent);}
+
+  /* stage summary */
+  .stage-head{padding:14px 0 4px;}
+  .stage-head h1{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;
+    margin:0 0 4px;text-transform:uppercase;letter-spacing:0.01em;
+  }
+  .stage-progress{
+    display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);
+  }
+  .bar{flex:1 1 auto;height:6px;border-radius:3px;background:var(--card-line);overflow:hidden;max-width:220px;}
+  .bar > div{height:100%;background:var(--accent);border-radius:3px;transition:width .25s ease;}
+
+  /* substep */
+  .substep{margin-top:22px;}
+  .substep-title{
+    display:flex;align-items:baseline;gap:8px;margin-bottom:8px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;
+    color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:6px;
+  }
+  .substep-title .idx{color:var(--accent);}
+
+  .item{
+    background:var(--card);border:1px solid var(--card-line);border-radius:10px;
+    padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;
+  }
+  .item.checked{opacity:0.55;}
+  .item.checked .cause{text-decoration:line-through;text-decoration-color:var(--card-line);}
+  .chk{
+    appearance:none;width:20px;height:20px;border-radius:5px;border:1.5px solid var(--card-line);
+    margin-top:1px;cursor:pointer;position:relative;background:var(--card);
+  }
+  .chk:checked{background:var(--accent);border-color:var(--accent);}
+  .chk:checked::after{
+    content:"";position:absolute;left:5px;top:1px;width:6px;height:11px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  .body{min-width:0;}
+  .tags{display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap;}
+  .tag{
+    font-size:10.5px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;
+    padding:2px 7px;border-radius:20px;background:var(--paper);color:var(--muted);
+    border:1px solid var(--line);
+  }
+  .mode{font-size:14px;font-weight:600;margin:0 0 2px;}
+  .cause{font-size:13px;color:var(--muted);margin:0 0 6px;}
+  .ctrl{
+    font-size:12.5px;color:var(--ink);background:var(--paper);border-radius:6px;
+    padding:6px 9px;display:flex;gap:6px;
+  }
+  .ctrl b{font-weight:600;color:var(--accent-ink);white-space:nowrap;}
+  .ctrl + .ctrl{margin-top:5px;}
+  .metrics{
+    display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  }
+  .sod{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+    display:flex;gap:6px;white-space:nowrap;
+  }
+  .sod span{font-weight:700;color:var(--ink);}
+  .ap{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;
+    padding:3px 10px;border-radius:20px;letter-spacing:0.03em;
+  }
+  .ap.H{background:var(--high-tint);color:var(--high-ink);}
+  .ap.M{background:var(--med-tint);color:var(--med-ink);}
+  .ap.L{background:var(--low-tint);color:var(--low-ink);}
+
+  .empty{text-align:center;color:var(--muted);font-size:13.5px;padding:40px 0;}
+
+  /* AP calculator view */
+  .edit-items{margin-top:14px;}
+  .edit-item{background:var(--card);border:1px solid var(--card-line);border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+  .edit-item .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:600px){.edit-item .row2{grid-template-columns:1fr;}}
+  .edit-item .top-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;}
+  .edit-item .top-row .field{flex:0 0 140px;margin-bottom:0;}
+  .edit-item .del-item{margin-left:auto;}
+  .panel{background:var(--card);border:1px solid var(--card-line);border-radius:12px;padding:18px 20px;}
+  .panel h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.02em;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:4px;}
+  .field input[type=text], .field select, .field textarea{
+    width:100%;height:36px;border-radius:7px;border:1px solid var(--card-line);
+    background:var(--paper);padding:0 10px;font-size:13px;color:var(--ink);font-family:'Inter',sans-serif;
+  }
+  .field textarea{height:56px;padding:8px 10px;resize:vertical;}
+  .sod-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+  .sod-row .field select{font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .ap-preview{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--paper);border-radius:10px;padding:14px 16px;margin:14px 0;
+  }
+  .ap-preview .lbl{font-size:12px;color:var(--muted);font-weight:500;}
+  .ap-preview .apbig{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;padding:5px 16px;border-radius:8px;}
+  .primary-btn{
+    height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);
+    color:#fff;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .primary-btn:hover{background:var(--accent-ink);}
+  .secondary-btn{
+    height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--card-line);background:var(--card);
+    color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;
+  }
+  .secondary-btn:hover{background:var(--paper);}
+  .report-actions{display:flex;gap:8px;margin:14px 0 10px;flex-wrap:wrap;}
+  table.report{width:100%;border-collapse:collapse;font-size:12px;}
+  table.report th{
+    text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:0.02em;padding:6px 8px;border-bottom:1px solid var(--line);
+  }
+  table.report td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;}
+  table.report tr:last-child td{border-bottom:none;}
+  .del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;}
+  .del-btn:hover{color:var(--high);}
+  .ap-chip{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;padding:2px 8px;border-radius:20px;}
+  .ap-chip.H{background:var(--high-tint);color:var(--high-ink);}
+  .ap-chip.M{background:var(--med-tint);color:var(--med-ink);}
+  .ap-chip.L{background:var(--low-tint);color:var(--low-ink);}
+
+  .stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px;}
+  .stat-card{background:var(--card);border:1px solid var(--card-line);border-radius:10px;padding:12px 14px;}
+  .stat-card .num{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;line-height:1;}
+  .stat-card .lbl{font-size:11.5px;color:var(--muted);margin-top:4px;}
+
+  table.report input[type=text], table.report input[type=date], table.report select{
+    width:100%;border:1px solid transparent;background:transparent;border-radius:5px;
+    font-size:12px;font-family:'Inter',sans-serif;color:var(--ink);padding:4px 5px;
+  }
+  table.report input[type=text]:hover, table.report input[type=date]:hover, table.report select:hover{border-color:var(--card-line);}
+  table.report input[type=text]:focus, table.report input[type=date]:focus, table.report select:focus{
+    border-color:var(--accent);outline:none;background:var(--paper);
+  }
+  table.report .stagecell{color:var(--muted);font-size:11px;}
+  table.report .modecell b{display:block;font-size:12.5px;}
+
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(33,31,27,0.55);display:flex;align-items:center;justify-content:center;
+    z-index:50;padding:20px;
+  }
+  .modal{background:var(--card);border-radius:12px;padding:22px 24px;max-width:480px;width:100%;max-height:86vh;overflow:auto;}
+  .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:19px;margin:0 0 12px;text-transform:uppercase;}
+  .modal p.hint{font-size:12px;color:var(--muted);margin:4px 0 12px;line-height:1.5;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+  .tag.draft{background:var(--med-tint);color:var(--med-ink);border-color:var(--med);}
+  .effect{font-size:13px;color:var(--ink);margin:0 0 6px;}
+  .effect b{font-weight:600;color:var(--high-ink);}
+  .draft-bar{display:flex;align-items:center;gap:10px;background:var(--med-tint);color:var(--med-ink);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;}
+  .draft-bar button{margin-left:auto;height:30px;font-size:12px;}
+  .doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 14px;}
+  .doc-head{display:none;border:1px solid var(--card-line);border-radius:10px;padding:10px 14px;margin-top:16px;font-size:12px;background:var(--card);}
+  .doc-head .dh-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;margin-bottom:6px;text-transform:uppercase;}
+  .doc-head .dh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 14px;}
+  .doc-head .dh-grid span{color:var(--muted);}
+  .doc-head.show{display:block;}
+  .new-ap-cell{white-space:nowrap;}
+  table.report td.sodcell{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap;}
+  table.report select.nsod{width:46px;font-family:'JetBrains Mono',monospace;}
+  .stat-card.warn .num{color:var(--high);}
+  footer{text-align:center;font-size:11.5px;color:var(--muted);padding:30px 0 0;}
+
+  @media print{
+    header,.view-tabs,.sector-outer,.rail-outer,.toolbar,.stage-progress,footer,.report-actions,.head-actions{display:none !important;}
+    body{background:#fff;}
+    table.report input, table.report select{border:none !important;}
+    .doc-head{display:block !important;}
+    #doc-view{display:none !important;}
+  }
+
+  @media (max-width:560px){
+    .item{grid-template-columns:20px 1fr;}
+    .metrics{grid-column:1 / -1;flex-direction:row;justify-content:flex-start;padding-left:32px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <span class="logo-mark"><img src="data:image/jpeg;base64,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" alt="Ferentino Industrial Tyres logo"></span>
+    <div class="logo-text">
+      <div class="word">Ferentino <span>Industrial Tyres</span> PVT LTD</div>
+      <div class="sub">FITL &nbsp;·&nbsp; Process control &amp; risk guide</div>
+    </div>
+    <div class="head-actions">
+      <button class="ghost-btn" id="btn-backup" title="Download a backup of all sectors, checks and AP report">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Backup
+      </button>
+      <label class="ghost-btn" title="Restore from a backup file">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Restore
+        <input type="file" id="restore-file" accept="application/json">
+      </label>
+    </div>
+  </div>
+  <div class="view-tabs" id="view-tabs">
+    <button data-v="guide" class="active">Process guide</button>
+    <button data-v="edit">Edit risks</button>
+    <button data-v="summary">Summary record</button>
+    <button data-v="doc">Document control</button>
+  </div>
+</header>
+
+<div class="sector-outer">
+  <div class="sector-tabs" id="sector-tabs"></div>
+</div>
+
+<div class="rail-outer" id="rail-outer">
+  <nav class="rail" id="rail"></nav>
+</div>
+
+<div class="wrap" id="guide-view">
+  <div class="toolbar">
+    <div class="date-field">
+      <label for="date-input">Shift date</label>
+      <input type="date" id="date-input">
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="q" type="text" placeholder="Search failure modes, causes, controls…">
+    </div>
+    <div class="filters" id="filters">
+      <button data-f="all" class="active">All risk</button>
+      <button data-f="H">High</button>
+      <button data-f="M">Med</button>
+      <button data-f="L">Low</button>
+      <button data-f="unchecked">Not checked</button>
+    </div>
+  </div>
+
+  <div class="stage-head">
+    <h1 id="stage-title">—</h1>
+    <div class="stage-progress">
+      <span id="stage-count">0 / 0 checked</span>
+      <div class="bar"><div id="stage-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div class="wrap" id="edit-view" style="display:none;">
+  <div class="toolbar" style="padding-top:20px;">
+    <div class="field" style="min-width:220px;margin-bottom:0;">
+      <label for="edit-stage">Stage</label>
+      <select id="edit-stage"></select>
+    </div>
+    <div class="field" style="min-width:220px;margin-bottom:0;">
+      <label for="edit-substep">Sub-step</label>
+      <select id="edit-substep"></select>
+    </div>
+    <button class="secondary-btn" id="btn-add-stage">+ Add stage</button>
+    <button class="secondary-btn" id="btn-add-substep">+ Add sub-step</button>
+  </div>
+  <p class="hint" style="margin:8px 0 4px;">Edit any field directly — changes save automatically. Action priority is always calculated from severity, occurrence and detection using the AIAG-VDA table. Rate severity from the failure effect.</p>
+  <div id="edit-items"></div>
+  <button class="primary-btn" id="btn-add-item" style="margin-top:6px;">+ Add failure mode</button>
+</div>
+
+<div class="wrap" id="summary-view" style="display:none;">
+  <div class="toolbar" style="padding-top:20px;">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="sum-q" type="text" placeholder="Search stage, failure mode, cause…">
+    </div>
+    <div class="filters" id="sum-filters">
+      <button data-f="H" class="active">High only</button>
+      <button data-f="HM">High + medium</button>
+      <button data-f="all">All items</button>
+      <button data-f="open">Open actions</button>
+    </div>
+  </div>
+
+  <div class="doc-head" id="sum-doc-head"></div>
+  <div class="stat-cards" id="sum-stats"></div>
+
+  <div class="report-actions">
+    <button class="secondary-btn" id="btn-sum-print">Print / save as PDF</button>
+    <button class="secondary-btn" id="btn-sum-csv">Download CSV</button>
+  </div>
+
+  <div style="overflow-x:auto;">
+  <table class="report" id="summary-table">
+    <thead><tr>
+      <th style="min-width:140px;">Stage / step</th>
+      <th style="min-width:180px;">Failure mode / cause</th>
+      <th>S O D</th>
+      <th>AP</th>
+      <th style="min-width:150px;">Prevention action</th>
+      <th style="min-width:150px;">Detection action</th>
+      <th style="min-width:120px;">Responsible</th>
+      <th style="min-width:110px;">Target date</th>
+      <th style="min-width:130px;">Status</th>
+      <th style="min-width:110px;">Completion date</th>
+      <th title="Severity after action">New S</th>
+      <th title="Occurrence after action">New O</th>
+      <th title="Detection after action">New D</th>
+      <th>New AP</th>
+    </tr></thead>
+    <tbody id="summary-body"></tbody>
+  </table>
+  </div>
+  <p class="empty" id="summary-empty" style="display:none;">No items match this view.</p>
+</div>
+
+<div class="wrap" id="doc-view" style="display:none;">
+  <div class="panel" style="margin-top:20px;">
+    <h2>FMEA header</h2>
+    <div class="doc-grid">
+      <div class="field"><label for="dh-docNo">Document no.</label><input type="text" id="dh-docNo" data-h="docNo" placeholder="e.g. FIT/Q/RG-QA-xx"></div>
+      <div class="field"><label for="dh-rev">Revision</label><input type="text" id="dh-rev" data-h="rev" placeholder="e.g. 00"></div>
+      <div class="field"><label for="dh-revDate">Revision date</label><input type="text" id="dh-revDate" data-h="revDate" placeholder="DD/MM/YYYY"></div>
+      <div class="field"><label for="dh-startDate">FMEA start date</label><input type="text" id="dh-startDate" data-h="startDate" placeholder="DD/MM/YYYY"></div>
+      <div class="field"><label for="dh-nextReview">Next review due</label><input type="text" id="dh-nextReview" data-h="nextReview" placeholder="DD/MM/YYYY"></div>
+      <div class="field"><label for="dh-scope">Process / scope</label><input type="text" id="dh-scope" data-h="scope" placeholder="e.g. Solid tyre, RM transfer to dispatch"></div>
+      <div class="field"><label for="dh-preparedBy">Prepared by</label><input type="text" id="dh-preparedBy" data-h="preparedBy" placeholder="Name, designation"></div>
+      <div class="field"><label for="dh-approvedBy">Approved by</label><input type="text" id="dh-approvedBy" data-h="approvedBy" placeholder="Name, designation"></div>
+    </div>
+    <div class="field"><label for="dh-team">Cross-functional team</label><textarea id="dh-team" data-h="team" placeholder="Name – department, one per line (production, QC, maintenance, mixing, planning…)"></textarea></div>
+  </div>
+
+  <div class="panel" style="margin-top:14px;">
+    <h2>Revision history</h2>
+    <div style="overflow-x:auto;">
+    <table class="report">
+      <thead><tr><th style="width:70px;">Rev.</th><th style="width:120px;">Date</th><th>Description of change</th><th style="width:160px;">Changed by</th><th style="width:30px;"></th></tr></thead>
+      <tbody id="hist-body"></tbody>
+    </table>
+    </div>
+    <button class="secondary-btn" id="btn-add-hist" style="margin-top:10px;">+ Add revision</button>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<footer>Ferentino Industrial Tyres PVT Ltd &nbsp;·&nbsp; Data is shared with everyone using this tool &nbsp;·&nbsp; For shop-floor reference only</footer>
+
+<script>
+const BUILTIN_SECTOR_ID = 'solid-tyre';
+const BUILTIN_SECTOR_NAME = 'Solid Tyre Manufacturing';
+const BUILTIN_STAGES = [{"title": "Transfer raw material from RM store to mixing floor", "subSteps": [{"title": "RM request from mixing department", "items": [{"we": "Man", "mode": "Un approved material came from FTC", "cause": "Before approving material send to MITL", "prevention": "Refer approval card.", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Unavailability of approved material.", "cause": "Material is not order on time.", "prevention": "Define minimum stock level.", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Material testing delay", "prevention": "Testing complete in advaced", "occ": 3, "detCtrl": "", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong material selection.", "cause": "Work done by unskill operator", "prevention": "Aware operator.", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Poor visual controll.", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check / Process Checklist", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Requested material transfer to mixing floor", "items": [{"we": "Man", "mode": "Wrong material issuing.", "cause": "Lack of identification.", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Store on wrong location", "prevention": "Define specific area.", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Issue insufficient weight.", "cause": "Operator mistakes", "prevention": "Visual inspection", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 3, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Use suitable transport method", "items": [{"we": "Man / Machine", "mode": "Wrong transport method.", "cause": "Lack of experience.", "prevention": "Train new comers & give awareness.", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 5, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "", "cause": "Unavailability of MHE", "prevention": "", "occ": 7, "detCtrl": "", "det": 8, "sev": 5, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Doing the activities in past track.", "cause": "Limited manpower", "prevention": "New recrutment & train them", "occ": 7, "detCtrl": "Training plan", "det": 8, "sev": 5, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Chemical weighing", "subSteps": [{"title": "Fill up chemical to storing bins", "items": [{"we": "Man / Machine", "mode": "Put wrong chemical to wrong bin.", "cause": "Poor visual controll.\nLack of awareness", "prevention": "Chemical identified with chemical name.\nProvide awareness.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 5, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Put expired chemical to bin.", "cause": "By mistake of operator.\nLack of awareness.", "prevention": "Use red tag for expired chemicals.\nProvide awareness.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 5, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Chemical mix up while loading.", "cause": "Package damage during loading.\nNot using right method.", "prevention": "Identify damage pack before loading.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 5, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Select chemical weighing formula", "items": [{"we": "Man / Method", "mode": "Wrong formula selection.", "cause": "Poor visual controll", "prevention": "Provide separate weighing formula.", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Method", "mode": "Less consentration for the work", "cause": "Stress mind.", "prevention": "Work balancing", "occ": 4, "detCtrl": "Talk with people.", "det": 6, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Chemical weighing process", "items": [{"we": "Man / machine", "mode": "Weighment of less or high quantity of chemicals.", "cause": "Weighing scale error.", "prevention": "Calibrate weighing scale as per the schedule.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 5, "sev": 6, "ap": "L", "prevAction": "Frequently calibrate the scale.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / machine", "mode": "", "cause": "Use unskill operator.", "prevention": "100% use skill operators.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 5, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / machine", "mode": "", "cause": "Use wrong chemical bin.", "prevention": "Properly maning the bin.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 7, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / machine", "mode": "", "cause": "use wrong weighing sequence.", "prevention": "Provide separate colume for cummilative weight.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 5, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Weighted chemical naming & storing", "items": [{"we": "Man", "mode": "Wrong naming of chemical bag.", "cause": "Not following WI", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Visual Check", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Mising letter.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Visual Check / Process Checklist", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "No identification.", "cause": "Not following WI", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Visual Check / Process Checklist", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Oil filler & polymer weighing", "subSteps": [{"title": "Oil weighing", "items": [{"we": "Machine / Man", "mode": "Error in scale", "cause": "Not calibrated as per the frequency.", "prevention": "Calibrate weighing scale as per the schedule.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine / Man", "mode": "Selection of wrong oil type", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine / Man", "mode": "", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Filler weighing", "items": [{"we": "Machine / Man", "mode": "Error in scale", "cause": "Not calibrated as per the frequency.", "prevention": "Calibrate weighing scale as per the schedule.", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine / Man", "mode": "Selection of wrong filler type", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Talk with people.", "det": 6, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Polymer weighing", "items": [{"we": "Machine / Man", "mode": "Error in scale", "cause": "Not calibrated as per the frequency.", "prevention": "Calibrate weighing scale as per the schedule.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 5, "sev": 6, "ap": "L", "prevAction": "Frequently calibrate the scale.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine / Man", "mode": "Selection of wrong polymer type", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 5, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine / Man", "mode": "Weighing wrong qty", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Off spec rheometer properties", "det": 7, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Cleaning process for non black mixing", "subSteps": [{"title": "After black mixing make masticate mixing batches", "items": [{"we": "Availability of RSS", "mode": "Not making clean batch", "cause": "Not following WI", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Colour variation on the NM batch", "det": 5, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Availability of RSS", "mode": "Use incorrect weight.", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Colour variation on the NM batch", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Availability of RSS", "mode": "Use insufficient mixing time", "cause": "Not following spec", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Colour variation on the NM batch", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Remove left overs from dump convayer & mill trays", "items": [{"we": "Man", "mode": "Not removing the lumps", "cause": "Not following WI", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Visual check", "det": 6, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Close carbon feeding screw opening", "items": [{"we": "Man", "mode": "Does not close the opening", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Visual check", "det": 5, "sev": 6, "ap": "L", "prevAction": "Frequently calibrate the scale.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Insufficient closing.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Visual check", "det": 5, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Open while mixing.", "cause": "No proper system", "prevention": "", "occ": 3, "detCtrl": "Visual check", "det": 7, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Remove remaining carbon particles from the filter bag", "items": [{"we": "Man", "mode": "Insufficient blow pressure", "cause": "Block the filter", "prevention": "Frequentely clean the filters", "occ": 2, "detCtrl": "Visual check", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Insufficient final mixing no of batches.", "cause": "Tide schedule", "prevention": "", "occ": 2, "detCtrl": "Production plan", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Compound mixing and approval process", "subSteps": [{"title": "Select the mixing cycle & formula", "items": [{"we": "Man", "mode": "Follow wrong mixing cycle", "cause": "Not follow up spec", "prevention": "Give awareness.", "occ": 1, "detCtrl": "", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Close the drop door", "items": [{"we": "Man", "mode": "Forget to close the DD", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 1, "detCtrl": "Visual inspection of indicator bulb", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Feed weighted materials to mixing chamber", "items": [{"we": "Man / Machine", "mode": "Material spill while loading.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 4, "detCtrl": "waste chemical qty", "det": 5, "sev": 6, "ap": "M", "prevAction": "Frequently calibrate the scale.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Material struck on feeding door.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Abnormal mixing time", "det": 5, "sev": 6, "ap": "M", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Follow wrong sequence.", "cause": "Not follow up mixing cycle", "prevention": "Give awareness.", "occ": 3, "detCtrl": "Rheometer results", "det": 5, "sev": 6, "ap": "L", "prevAction": "Provide training.", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Do the mixing as per the given spec", "items": [{"we": "Man / Machine", "mode": "Over mixing", "cause": "Not follow up mixing cycle", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Scorched compound & Rheometer results.", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Under mixing", "cause": "Not follow up mixing cycle", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Scorched compound & Rheometer results.", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Pick the samples for testing", "items": [{"we": "Man", "mode": "Pick wrong samples", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Rheometer results.", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Put wrong iD on the samples", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Rheometer results.", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Insufficient sampling.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 2, "detCtrl": "Daily mixing report", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Compound testing & approval process", "items": [{"we": "Man / Machine", "mode": "Wrong ID tag & approval", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 2, "detCtrl": "QC inspection report.", "det": 5, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man / Machine", "mode": "Select wrong specification.", "cause": "Less awareness", "prevention": "Give awareness.", "occ": 4, "detCtrl": "Daily check the record sheet.", "det": 5, "sev": 6, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Profile Making", "subSteps": [{"title": "Select Die/ Compound", "items": [{"we": "Man", "mode": "Wrong die use", "cause": "Did not checked before loading die", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification", "prevention": "die size embosed on the die", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong compound use", "cause": "Did not checked before loading compound", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification Card for compound pallet", "prevention": "Compound Identification Card", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Scorch/ Contaminated compound loading", "cause": "Did not awareness to identify scorch/contaminate compounds", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Did not cheked before", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Extruding", "items": [{"we": "Man", "mode": "Compound scorch at extruder", "cause": "Operator Mistakes", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "Working Instruction", "detAction": "", "responsible": "Production Executives/Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Power cut", "prevention": "Startup Checking", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong extruding speed", "cause": "Did not follow specification", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Extruder over heat", "cause": "Improper water cooling process", "prevention": "Startup Checking", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Improper temperature control", "prevention": "Startup Checking", "occ": 3, "detCtrl": "Visual Check", "det": 5, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Cutting", "items": [{"we": "Man", "mode": "Use Wrong Cutting Length", "cause": "Did not follow specification", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check / Auto profile cutting machine", "det": 6, "sev": 8, "ap": "H", "prevAction": "Working Instruction", "detAction": "", "responsible": "Production Executives/Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Use Wrong width", "cause": "Did not follow specification", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Did not checked before extruding", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Incomplete Profile", "cause": "Cutter failure", "prevention": "Startup Checking", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Storeing", "items": [{"we": "Man", "mode": "Improper storing", "cause": "Did not checked before storing", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "Random Checking by Process controller", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "storage profiles under wrong name tag", "prevention": "Profile identification labeling on the cart", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "T1 Making", "subSteps": [{"title": "Select profile & bead rings", "items": [{"we": "Man", "mode": "Wrong Profile used", "cause": "Did not checked before", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "Working Instruction", "detAction": "", "responsible": "Production Executives/Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong sepcification following", "prevention": "Specification Card", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "storage profiles under wrong name tag", "prevention": "Profile identification labeling on the cart", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong Bead Ring used", "cause": "Operator did not cheked before", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong sepcification following", "prevention": "Specification Card", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Storage bead rings under wrong name tage boxes", "prevention": "Name tags in storage area", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Damage/Defective profile used", "cause": "Operator did not cheked before", "prevention": "Visual inspection", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "Awareness Program for defect/damage identify", "detAction": "Random Checking by Process controlle", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Damage/Defective Bead ring used", "cause": "Operator did not check", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "Awareness Program for defect/damage identify", "detAction": "Random Checking by Lab", "responsible": "Senior Technical Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Incomplete weldings, Improper Storage", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Profile rolling & insert bead rings", "items": [{"we": "Man", "mode": "Used wrong no of bead rings", "cause": "Operator Mistakes", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Following wrong specification", "prevention": "Specification Card", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong Bead Positioning", "cause": "Operator mistakes", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "Random Checking by Lab", "responsible": "Senior Technical Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong profile used", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Insufficient profile thickness & width", "prevention": "Visual inspection/specification", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "preparing T1 by using manual press machine", "items": [{"we": "Man", "mode": "Incomplete T1", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "Random Checking by Process controller", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Insufficient profile length", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Used profiles with melt fracture along the edge", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Loose of bead rings & profile", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Insufficient Hydraulic Press", "prevention": "Startup Checking", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "L", "prevAction": "", "detAction": "", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Pump failure", "prevention": "Startup Checking", "occ": 1, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Storing", "items": [{"we": "Man", "mode": "T1, T2 seperation,Fix broken ,", "cause": "Operator Unawareness", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "Random Checking by Process controller", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Improper keeping of prepared T1", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 10, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Green tyre building", "subSteps": [{"title": "Select T1/ Base building", "items": [{"we": "Man", "mode": "Wrong compound use", "cause": "Operator did not checked before loading", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification Card for compound pallet", "prevention": "Compound Identification Card", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong T1 used", "cause": "Operator mistakes   (New commers)", "prevention": "Visual inspection", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "Specification display in Work station", "detAction": "Random Checking by Process controller (check list)", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong base width & no of compound  layers", "cause": "Unskilled operator/careless   (New commers)", "prevention": "Measure by ruller", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Operator did not follow specification (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check / Process Checklist", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Un even rolling", "cause": "Operator did not rolling symmetrically (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Scorch compound rolling", "cause": "Operator did not check", "prevention": "Visual inspection", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "rolling mill overheat", "prevention": "IR gun", "occ": 2, "detCtrl": "Visual Check / Process Checklist/ Mill Temperature detector", "det": 5, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Roll Cushion compound on base", "items": [{"we": "Man", "mode": "Wrong compound use", "cause": "Operator did not checked before loading", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification Card for compound pallet", "prevention": "Compound Identification Card", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong base used", "cause": "Operator mistakes   (New commers)", "prevention": "Visual inspection", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "Specification display in Work station", "detAction": "Random Checking by Process controller (check list)", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong cushion width & no of compound  layers", "cause": "Unskilled operator/careless   (New commers)", "prevention": "Measure by ruller", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Operator did not follow specification (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check / Process Checklist", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Un even rolling", "cause": "Operator did not rolling symmetrically (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Scorch compound rolling", "cause": "Operator did not check (New commers)", "prevention": "Visual inspection", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "rolling mill overheat", "prevention": "IR gun", "occ": 2, "detCtrl": "Visual Check / Process Checklist/ Mill Temperature detector", "det": 5, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Roll Tread compound on cushion", "items": [{"we": "Man", "mode": "Wrong compound use", "cause": "Operator did not checked before loading (New commers)", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification Card for compound pallet", "prevention": "Compound Identification Card", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong (base + cushion) used", "cause": "Operator mistakes   (New commers)", "prevention": "Visual inspection", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong Tread ,width & no of compound  layers", "cause": "Unskilled operator/carelessness  (New commers)", "prevention": "Measure by ruller", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "Specification display in Work station", "detAction": "Random Checking by Process controller (check list)", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Operator did not follow specification (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check / Process Checklist", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong Tread Weight (Under weight scrap & High Spew weight)", "cause": "Unskilled operator/careless   (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Auto weighing system not working (Dragging long time to repair)", "prevention": "Startup Checking", "occ": 4, "detCtrl": "Auto weighing system data analysis", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Un even rolling", "cause": "Operator did not rolling symmetrically (New commers)", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Scorch compound rolling", "cause": "Operator did not check", "prevention": "Visual inspection", "occ": 2, "detCtrl": "Visual Check", "det": 6, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "rolling mill overheat", "prevention": "IR gun", "occ": 2, "detCtrl": "Visual Check / Process Checklist", "det": 5, "sev": 7, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Remove finished green tyre & transfer to curing", "items": [{"we": "Man", "mode": "Damage T1 during removing", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Wrong green tyre transfering method mill to press", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 6, "ap": "L", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Tyre Curing", "subSteps": [{"title": "Select green tyre / select press/ select mold", "items": [{"we": "Man", "mode": "Used wrong green tyre", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 8, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Used wrong press & mold", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 8, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Wrong Identification", "prevention": "Press Identification sticker", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Mold Clean and MCLUBE apllication", "items": [{"we": "Man", "mode": "Different shades of black on the same tyre, Tread break", "cause": "Wrong MCLUBE application method", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 5, "sev": 8, "ap": "M", "prevAction": "Working Instruction", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Select FIX side and Tyre loading", "items": [{"we": "Man", "mode": "Unbalance loading", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "H", "prevAction": "Working Instruction", "detAction": "Random Checking by Process controller", "responsible": "Process Executive", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Loading incorrect side", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 4, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "H", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Mold pressing and Bumping", "items": [{"we": "Machine", "mode": "Pressure drop, Incorrect Bumping,Tread Break", "cause": "Insufficient Hydraulic Press", "prevention": "Startup Checking", "occ": 4, "detCtrl": "Visual Check / Process Checklist / Press alarming system (5M,6M,7M LINE)", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "Process controller check list (3 time per shift)", "responsible": "", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Pump failure", "prevention": "Startup Checking", "occ": 4, "detCtrl": "Visual Check / Process Checklist / Press alarming system (5M,6M,7M LINE)", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Auto Bumping Programing issue", "prevention": "Startup Checking", "occ": 4, "detCtrl": "Visual Check / Process Checklist / Press alarming system (5M,6M,7M LINE)", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Curing", "items": [{"we": "Machine", "mode": "Wrong Cycle time", "cause": "Did not follow specification", "prevention": "FIP document", "occ": 2, "detCtrl": "Visual Check", "det": 5, "sev": 8, "ap": "M", "prevAction": "FIP DOCUMENT", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Wrong Press Temperature", "cause": "Steam line breakdown", "prevention": "Startup Checking / IR gun", "occ": 3, "detCtrl": "Visual Check / Process Checklist", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "Process controller check list (3 time per shift)", "responsible": "", "targetDate": "Continuing", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "", "cause": "Improper temperature control / thermometer issue", "prevention": "Visual inspection/ IR gun", "occ": 3, "detCtrl": "Visual Check / Process Checklist", "det": 5, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Mold opening", "items": [{"we": "Machine", "mode": "Damage cured tyre FIX during mold opening", "cause": "Incomplete mold lock system", "prevention": "Visual inspection", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Unloading", "items": [{"we": "Man", "mode": "Damage cured tyre FIX during mold unloding", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "", "cause": "Hydraulic jack failure in TAXI", "prevention": "Startup Checking", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Used wrong nyloan ring / nyloan ring not used for unloading", "cause": "Unskilled operator/careless", "prevention": "Awareness of Operator", "occ": 3, "detCtrl": "Visual Check", "det": 6, "sev": 8, "ap": "M", "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Trimming & finishing", "subSteps": [{"title": "Spew removal / trimming", "items": [{"we": "Man", "mode": "Tyre surface cut or gouged during trimming", "effect": "Cosmetic reject; a deep cut can start a crack in service", "cause": "Blunt or wrong trimming knife, unskilled operator", "prevention": "Knife change frequency, trained operators", "occ": 4, "detCtrl": "Visual check", "det": 5, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Spew not fully removed", "effect": "Appearance complaint from customer", "cause": "Worn trimming blade or wrong machine setting", "prevention": "Blade change schedule", "occ": 5, "detCtrl": "Visual check", "det": 4, "sev": 3, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Cosmetic repair", "items": [{"we": "Method", "mode": "Surface defect repaired beyond acceptable limit (crack or void hidden)", "effect": "Defective tyre reaches customer and may fail in service", "cause": "No written repair limits", "prevention": "Repair standard with acceptance limits", "occ": 3, "detCtrl": "QC visual check", "det": 6, "sev": 8, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Final inspection", "subSteps": [{"title": "Visual inspection", "items": [{"we": "Man", "mode": "Surface defects missed (cracks, flow marks, blisters, bare spots)", "effect": "Customer complaint or return", "cause": "Poor lighting, inspector fatigue, no limit samples", "prevention": "Limit samples / defect catalogue, lighting standard", "occ": 4, "detCtrl": "100% visual inspection", "det": 6, "sev": 7, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Method", "mode": "Internal defects not detected (voids, layer separation, undercure)", "effect": "Tyre separation or chunking in service", "cause": "Internal defects are not visible from the surface", "prevention": "Cure parameter control at press", "occ": 3, "detCtrl": "Periodic cut-section test", "det": 7, "sev": 9, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Dimension, weight & hardness check", "items": [{"we": "Machine", "mode": "Outer diameter or width out of tolerance passed", "effect": "Tyre does not fit rim or vehicle; customer rejection", "cause": "Gauge not calibrated, sampling plan not followed", "prevention": "Gauge calibration schedule", "occ": 3, "detCtrl": "Dimension check per sampling plan", "det": 5, "sev": 7, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Hardness out of specification passed", "effect": "Poor wear life or ride; early failure", "cause": "Durometer not calibrated, test done before tyre cooled", "prevention": "Calibration, test at defined time after cure", "occ": 3, "detCtrl": "Shore A test per batch", "det": 5, "sev": 7, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Machine", "mode": "Tyre weight out of tolerance not detected", "effect": "Under weight: internal voids; over weight: excess spew", "cause": "Scale not calibrated", "prevention": "Scale calibration schedule", "occ": 3, "detCtrl": "Weighing every tyre", "det": 4, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Marking, packing & storage", "subSteps": [{"title": "Marking / labelling", "items": [{"we": "Man", "mode": "Wrong size, compound or date code marked", "effect": "Wrong tyre supplied; traceability lost", "cause": "Wrong marking plate or label selected", "prevention": "Marking plate check against production order", "occ": 3, "detCtrl": "Visual check at packing", "det": 6, "sev": 7, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Marking missing or illegible", "effect": "Traceability lost; customer complaint", "cause": "Marking step skipped or plate worn", "prevention": "Marking included in process checklist", "occ": 3, "detCtrl": "Visual check at packing", "det": 5, "sev": 5, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Packing", "items": [{"we": "Man", "mode": "Wrong quantity or wrong item packed", "effect": "Short or wrong supply; customer complaint", "cause": "Packing list not checked against order", "prevention": "Packing list vs order check", "occ": 3, "detCtrl": "Second check at loading", "det": 5, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}, {"title": "Finished tyre storage", "items": [{"we": "Method", "mode": "Tyres deformed by improper stacking", "effect": "Out-of-round tyre; customer rejection", "cause": "Stack height or stacking method not controlled", "prevention": "Stacking height standard", "occ": 3, "detCtrl": "Visual check", "det": 6, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Material", "mode": "Tyres degraded by sunlight, heat, oil or ozone", "effect": "Surface cracking, reduced service life", "cause": "Stored outdoors or near heat or electrical equipment", "prevention": "Covered storage area away from heat sources", "occ": 2, "detCtrl": "Store inspection", "det": 6, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Method", "mode": "FIFO not followed (old stock dispatched first)", "effect": "Aged tyres supplied to customer", "cause": "No stock rotation system", "prevention": "FIFO with date labels", "occ": 4, "detCtrl": "Stock audit", "det": 6, "sev": 5, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}, {"title": "Dispatch", "subSteps": [{"title": "Release, loading & dispatch", "items": [{"we": "Method", "mode": "Held or non-conforming tyres dispatched", "effect": "Defective tyre reaches customer", "cause": "Hold or reject tyres not segregated or tagged", "prevention": "Quarantine area with hold tags", "occ": 2, "detCtrl": "Release check against QC approval", "det": 6, "sev": 8, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Man", "mode": "Tyres damaged during loading", "effect": "Damaged tyre received by customer", "cause": "Improper handling, untrained forklift operator", "prevention": "Handling instruction, trained operators", "occ": 3, "detCtrl": "Visual check at loading", "det": 6, "sev": 6, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}, {"we": "Method", "mode": "Wrong customer order or container loaded", "effect": "Wrong delivery, customer complaint and cost", "cause": "Order mix-up at loading", "prevention": "Dispatch checklist", "occ": 2, "detCtrl": "Document check before sealing", "det": 5, "sev": 7, "ap": "", "draft": true, "prevAction": "", "detAction": "", "responsible": "", "targetDate": "", "status": "", "evidence": "", "completionDate": ""}]}]}];
+
+const STORAGE_KEY = 'fitl-app-state';
+
+let appState = { sectors: {}, checks: {}, optimizations: {}, headers: {} };
+const STATUS_OPTIONS = [
+  ['', '—'], ['O','Open'], ['DP','Decision pending'], ['IP','Implementation pending'],
+  ['C','Completed'], ['NP','Not implemented']
+];
+let ui = {
+  view: 'guide',
+  sectorId: BUILTIN_SECTOR_ID,
+  stage: 0,
+  filter: 'all',
+  query: '',
+  date: new Date().toISOString().slice(0,10)
+};
+
+function allSectors(){
+  const s = { [BUILTIN_SECTOR_ID]: { name: BUILTIN_SECTOR_NAME, stages: BUILTIN_STAGES } };
+  Object.keys(appState.sectors).forEach(id => { s[id] = appState.sectors[id]; });
+  return s;
+}
+
+function activeStages(){
+  const s = allSectors()[ui.sectorId];
+  return s ? s.stages : [];
+}
+
+async function loadState(){
+  let loaded = false;
+  try{
+    if (window.storage){
+      const res = await window.storage.get(STORAGE_KEY, true);
+      if (res && res.value){
+        const parsed = JSON.parse(res.value);
+        appState = Object.assign({ sectors:{}, checks:{}, optimizations:{}, headers:{} }, parsed);
+        loaded = true;
+      }
+    }
+  }catch(e){}
+  if (!loaded){
+    // Fallback (and belt-and-suspenders backup) for when this file is opened standalone,
+    // outside the Claude chat, where window.storage isn't available.
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw){
+        const parsed = JSON.parse(raw);
+        appState = Object.assign({ sectors:{}, checks:{}, optimizations:{}, headers:{} }, parsed);
+      }
+    }catch(e){}
+  }
+  migrateBuiltinSector();
+  document.getElementById('date-input').value = ui.date;
+  renderAll();
+}
+
+/* Stages added to the built-in process after a copy was already edited are appended to that copy. */
+function migrateBuiltinSector(){
+  if (!appState.headers) appState.headers = {};
+  const saved = appState.sectors[BUILTIN_SECTOR_ID];
+  if (!saved || !Array.isArray(saved.stages)) return;
+  const have = new Set(saved.stages.map(st => (st.title||'').trim().toLowerCase()));
+  let added = false;
+  BUILTIN_STAGES.forEach(st => {
+    if (!have.has(st.title.trim().toLowerCase())){
+      saved.stages.push(JSON.parse(JSON.stringify(st)));
+      added = true;
+    }
+  });
+  if (added) saveState();
+}
+
+async function saveState(){
+  const json = JSON.stringify(appState);
+  try{
+    if (window.storage){ await window.storage.set(STORAGE_KEY, json, true); return; }
+  }catch(e){}
+  try{ localStorage.setItem(STORAGE_KEY, json); }catch(e){}
+}
+
+function itemId(si, ssi, ii){ return si+'-'+ssi+'-'+ii; }
+function checkKey(){ return ui.sectorId + '__' + ui.date; }
+
+function isChecked(id){
+  const bucket = appState.checks[checkKey()];
+  return !!(bucket && bucket[id]);
+}
+function toggleChecked(id, val){
+  const key = checkKey();
+  if (!appState.checks[key]) appState.checks[key] = {};
+  if (val) appState.checks[key][id] = true;
+  else delete appState.checks[key][id];
+  saveState();
+}
+
+function stageStats(si){
+  const stages = activeStages();
+  const stage = stages[si];
+  let total = 0, checked = 0;
+  stage.subSteps.forEach((ss, ssi) => {
+    ss.items.forEach((it, ii) => {
+      total++;
+      if (isChecked(itemId(si, ssi, ii))) checked++;
+    });
+  });
+  return { total, checked };
+}
+
+/* ---------- optimization (Step 6) data ---------- */
+function getOpt(sectorId, id, builtin){
+  const saved = (appState.optimizations[sectorId] && appState.optimizations[sectorId][id]) || {};
+  return {
+    prevAction: saved.prevAction ?? builtin.prevAction ?? '',
+    detAction: saved.detAction ?? builtin.detAction ?? '',
+    responsible: saved.responsible ?? builtin.responsible ?? '',
+    targetDate: saved.targetDate ?? builtin.targetDate ?? '',
+    status: saved.status ?? builtin.status ?? '',
+    completionDate: saved.completionDate ?? builtin.completionDate ?? '',
+    newSev: saved.newSev ?? '',
+    newOcc: saved.newOcc ?? '',
+    newDet: saved.newDet ?? ''
+  };
+}
+function setOpt(sectorId, id, field, value){
+  if (!appState.optimizations[sectorId]) appState.optimizations[sectorId] = {};
+  if (!appState.optimizations[sectorId][id]) appState.optimizations[sectorId][id] = {};
+  appState.optimizations[sectorId][id][field] = value;
+  saveState();
+}
+function statusLabel(code){
+  const found = STATUS_OPTIONS.find(o => o[0] === code);
+  return found ? found[1] : '—';
+}
+
+function weIcon(we){
+  const w = (we||'').toLowerCase();
+  if (w.indexOf('machine') > -1 && w.indexOf('man') > -1) return 'Man / Machine';
+  if (w.indexOf('machine') > -1) return 'Machine';
+  if (w.indexOf('man') > -1) return 'Man';
+  if (w.indexOf('method') > -1) return 'Method';
+  return we || 'Material';
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/* ---------- AIAG-VDA Action Priority lookup ---------- */
+function band(v, edges){
+  for (let i=0;i<edges.length;i++){ if (v <= edges[i]) return i; }
+  return edges.length - 1;
+}
+function sBand(s){ if (s<=1) return 0; if (s<=3) return 1; if (s<=6) return 2; if (s<=8) return 3; return 4; }
+function oBand(o){ if (o<=1) return 0; if (o<=3) return 1; if (o<=5) return 2; if (o<=7) return 3; return 4; }
+function dBand(d){ if (d<=1) return 0; if (d<=4) return 1; if (d<=6) return 2; return 3; }
+/* AIAG-VDA FMEA Handbook (2019) action priority table.
+   Indexed [severity band][detection band][occurrence band].
+   S bands: 1 | 2-3 | 4-6 | 7-8 | 9-10.  D bands: 1 | 2-4 | 5-6 | 7-10.  O bands: 1 | 2-3 | 4-5 | 6-7 | 8-10. */
+const AP_TABLE = [
+  [ ['L','L','L','L','L'], ['L','L','L','L','L'], ['L','L','L','L','L'], ['L','L','L','L','L'] ],
+  [ ['L','L','L','L','L'], ['L','L','L','L','L'], ['L','L','L','L','M'], ['L','L','L','L','M'] ],
+  [ ['L','L','L','L','M'], ['L','L','L','M','M'], ['L','L','L','M','H'], ['L','L','M','M','H'] ],
+  [ ['L','L','M','M','H'], ['L','L','M','H','H'], ['L','M','M','H','H'], ['L','M','H','H','H'] ],
+  [ ['L','L','M','H','H'], ['L','L','H','H','H'], ['L','M','H','H','H'], ['L','H','H','H','H'] ]
+];
+function calcAP(s,o,d){
+  s = Math.min(10, Math.max(1, Number(s)||1));
+  o = Math.min(10, Math.max(1, Number(o)||1));
+  d = Math.min(10, Math.max(1, Number(d)||1));
+  return AP_TABLE[sBand(s)][dBand(d)][oBand(o)];
+}
+/* AP is always derived from the current S/O/D so it can never disagree with the ratings. */
+function apOf(it){ return calcAP(it.sev||5, it.occ||5, it.det||5); }
+function newAPOf(opt){
+  if (!opt.newSev || !opt.newOcc || !opt.newDet) return '';
+  return calcAP(opt.newSev, opt.newOcc, opt.newDet);
+}
+function apLabel(ap){ return ap === 'H' ? 'High' : ap === 'M' ? 'Medium' : 'Low'; }
+
+/* ---------- rendering: sector tabs ---------- */
+function renderSectorTabs(){
+  const wrap = document.getElementById('sector-tabs');
+  wrap.innerHTML = '';
+  const sectors = allSectors();
+  Object.keys(sectors).forEach(id => {
+    const b = document.createElement('button');
+    b.textContent = sectors[id].name;
+    b.className = id === ui.sectorId ? 'active' : '';
+    b.onclick = () => { ui.sectorId = id; ui.stage = 0; edit.stage = 0; edit.substep = 0; renderAll(); };
+    wrap.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className = 'add';
+  add.textContent = '+ Add sector';
+  add.onclick = openAddSectorModal;
+  wrap.appendChild(add);
+}
+
+/* ---------- rendering: process rail ---------- */
+function buildRail(){
+  const rail = document.getElementById('rail');
+  rail.innerHTML = '';
+  const stages = activeStages();
+  if (!stages.length){
+    document.getElementById('rail-outer').style.display = 'none';
+    document.getElementById('content').innerHTML = '<div class="empty">This sector has no process data yet. Use "+ Add sector" to load a process map.</div>';
+    document.getElementById('stage-title').textContent = '—';
+    document.getElementById('stage-count').textContent = '0 / 0 checked';
+    document.getElementById('stage-bar').style.width = '0%';
+    return;
+  }
+  document.getElementById('rail-outer').style.display = '';
+  stages.forEach((s, i) => {
+    const stats = stageStats(i);
+    const b = document.createElement('button');
+    b.className = i === ui.stage ? 'active' : '';
+    b.innerHTML = '<span class="n">'+(i+1)+'</span> ' + escapeHtml(s.title) + ' <span class="cnt">'+stats.checked+'/'+stats.total+'</span>';
+    b.onclick = () => { ui.stage = i; renderGuideContent(); buildRail(); };
+    rail.appendChild(b);
+  });
+}
+
+function matchesQuery(it, q){
+  if (!q) return true;
+  q = q.toLowerCase();
+  return ((it.mode||'')+' '+(it.effect||'')+' '+(it.cause||'')+' '+(it.prevention||'')+' '+(it.detCtrl||'')).toLowerCase().indexOf(q) > -1;
+}
+function matchesFilter(it, id){
+  if (ui.filter === 'all') return true;
+  if (ui.filter === 'unchecked') return !isChecked(id);
+  return apOf(it) === ui.filter;
+}
+
+function renderGuideContent(){
+  const stages = activeStages();
+  if (!stages.length) return;
+  if (ui.stage >= stages.length) ui.stage = 0;
+  const stage = stages[ui.stage];
+  document.getElementById('stage-title').textContent = (ui.stage+1) + '. ' + stage.title;
+  const stats = stageStats(ui.stage);
+  document.getElementById('stage-count').textContent = stats.checked + ' / ' + stats.total + ' checked';
+  document.getElementById('stage-bar').style.width = (stats.total ? (100*stats.checked/stats.total) : 0) + '%';
+
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  let shown = 0;
+
+  stage.subSteps.forEach((ss, ssi) => {
+    const rows = ss.items
+      .map((it, ii) => ({ it, ii, id: itemId(ui.stage, ssi, ii) }))
+      .filter(({it, id}) => matchesQuery(it, ui.query) && matchesFilter(it, id));
+    if (!rows.length) return;
+
+    const sec = document.createElement('div');
+    sec.className = 'substep';
+    const h = document.createElement('div');
+    h.className = 'substep-title';
+    h.innerHTML = '<span class="idx">' + (ssi+1) + '</span> ' + escapeHtml(ss.title);
+    sec.appendChild(h);
+
+    rows.forEach(({it, id}) => {
+      shown++;
+      const checked = isChecked(id);
+      const row = document.createElement('div');
+      row.className = 'item' + (checked ? ' checked' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'chk';
+      cb.checked = checked;
+      cb.setAttribute('aria-label', 'Mark verified: ' + (it.mode || it.cause));
+      cb.onchange = () => {
+        toggleChecked(id, cb.checked);
+        row.classList.toggle('checked', cb.checked);
+        buildRail();
+        const st2 = stageStats(ui.stage);
+        document.getElementById('stage-count').textContent = st2.checked + ' / ' + st2.total + ' checked';
+        document.getElementById('stage-bar').style.width = (st2.total ? (100*st2.checked/st2.total) : 0) + '%';
+      };
+
+      const body = document.createElement('div');
+      body.className = 'body';
+      body.innerHTML =
+        '<div class="tags"><span class="tag">' + escapeHtml(weIcon(it.we)) + '</span>' +
+          (it.draft ? '<span class="tag draft" title="Proposed entry, not yet reviewed by the FMEA team">Draft – team review</span>' : '') + '</div>' +
+        (it.mode ? '<p class="mode">' + escapeHtml(it.mode) + '</p>' : '') +
+        (it.effect ? '<p class="effect"><b>Effect:</b> ' + escapeHtml(it.effect) + '</p>' : '') +
+        '<p class="cause">Cause: ' + escapeHtml(it.cause || '—') + '</p>' +
+        (it.prevention ? '<div class="ctrl"><b>Prevent</b> ' + escapeHtml(it.prevention) + '</div>' : '') +
+        (it.detCtrl ? '<div class="ctrl"><b>Detect</b> ' + escapeHtml(it.detCtrl) + '</div>' : '');
+
+      const metrics = document.createElement('div');
+      metrics.className = 'metrics';
+      metrics.innerHTML =
+        '<span class="ap ' + apOf(it) + '">' + apLabel(apOf(it)) + '</span>' +
+        '<span class="sod">S<span>' + (it.sev ?? '–') + '</span> O<span>' + (it.occ ?? '–') + '</span> D<span>' + (it.det ?? '–') + '</span></span>';
+
+      row.appendChild(cb);
+      row.appendChild(body);
+      row.appendChild(metrics);
+      sec.appendChild(row);
+    });
+    content.appendChild(sec);
+  });
+
+  if (!shown){
+    content.innerHTML = '<div class="empty">No items match this search or filter.</div>';
+  }
+}
+
+/* ---------- add sector modal ---------- */
+function openAddSectorModal(){
+  const root = document.getElementById('modal-root');
+  root.innerHTML =
+    '<div class="modal-bg" id="modal-bg">' +
+      '<div class="modal">' +
+        '<h3>Add a sector / process line</h3>' +
+        '<p class="hint">Give it a name, then either upload a JSON process map or start empty and build it up through the AP calculator. JSON format: an array of stages, each with a title and subSteps, each subStep with a title and items (we, mode, effect, cause, prevention, occ, detCtrl, det, sev). Action priority is calculated from sev, occ and det.</p>' +
+        '<div class="field"><label>Sector name</label><input type="text" id="new-sector-name" placeholder="e.g. Pneumatic Tyre Manufacturing"></div>' +
+        '<div class="field"><label>Process map (optional .json file)</label><input type="file" id="new-sector-file" accept="application/json"></div>' +
+        '<div class="modal-actions">' +
+          '<button class="secondary-btn" id="modal-cancel">Cancel</button>' +
+          '<button class="primary-btn" id="modal-save">Add sector</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('modal-cancel').onclick = () => { root.innerHTML = ''; };
+  document.getElementById('modal-bg').onclick = (e) => { if (e.target.id === 'modal-bg') root.innerHTML = ''; };
+  document.getElementById('modal-save').onclick = async () => {
+    const name = document.getElementById('new-sector-name').value.trim();
+    if (!name){ alert('Enter a sector name.'); return; }
+    const fileInput = document.getElementById('new-sector-file');
+    let stages = [];
+    if (fileInput.files && fileInput.files[0]){
+      try{
+        const text = await fileInput.files[0].text();
+        stages = JSON.parse(text);
+        if (!Array.isArray(stages)) throw new Error('not an array');
+      }catch(e){ alert('Could not read that file as a valid process map JSON.'); return; }
+    }
+    const id = 'sector-' + Date.now();
+    appState.sectors[id] = { name, stages };
+    await saveState();
+    ui.sectorId = id;
+    ui.stage = 0;
+    root.innerHTML = '';
+    renderAll();
+  };
+}
+
+/* ---------- editable sector data ---------- */
+function fillSelect(sel, max){
+  sel.innerHTML = '';
+  for (let i=1;i<=max;i++){
+    const o = document.createElement('option');
+    o.value = i; o.textContent = i;
+    sel.appendChild(o);
+  }
+}
+function csvEscape(v){
+  v = String(v ?? '');
+  if (/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+
+function ensureEditableSector(sectorId){
+  if (!appState.sectors[sectorId]){
+    if (sectorId === BUILTIN_SECTOR_ID){
+      appState.sectors[sectorId] = { name: BUILTIN_SECTOR_NAME, stages: JSON.parse(JSON.stringify(BUILTIN_STAGES)) };
+    } else {
+      appState.sectors[sectorId] = { name: 'Untitled sector', stages: [] };
+    }
+  }
+  return appState.sectors[sectorId].stages;
+}
+
+let edit = { stage: 0, substep: 0 };
+
+function renderEditStageOptions(){
+  const stages = activeStages();
+  const sel = document.getElementById('edit-stage');
+  sel.innerHTML = '';
+  stages.forEach((s, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = (i+1) + '. ' + s.title;
+    sel.appendChild(o);
+  });
+  if (edit.stage >= stages.length) edit.stage = 0;
+  sel.value = edit.stage;
+}
+function renderEditSubstepOptions(){
+  const stages = activeStages();
+  const sel = document.getElementById('edit-substep');
+  sel.innerHTML = '';
+  const stage = stages[edit.stage];
+  if (!stage){ return; }
+  stage.subSteps.forEach((ss, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = (i+1) + '. ' + ss.title;
+    sel.appendChild(o);
+  });
+  if (edit.substep >= stage.subSteps.length) edit.substep = 0;
+  sel.value = edit.substep;
+}
+
+function renderEditItems(){
+  const stages = activeStages();
+  const container = document.getElementById('edit-items');
+  container.innerHTML = '';
+  const stage = stages[edit.stage];
+  if (!stage){ container.innerHTML = '<p class="empty">Add a stage to get started.</p>'; return; }
+  const substep = stage.subSteps[edit.substep];
+  if (!substep){ container.innerHTML = '<p class="empty">Add a sub-step to get started.</p>'; return; }
+
+  if (!substep.items.length){
+    container.innerHTML = '<p class="empty">No failure modes yet for this sub-step. Use "+ Add failure mode" below.</p>';
+    return;
+  }
+
+  substep.items.forEach((it, ii) => {
+    const card = document.createElement('div');
+    card.className = 'edit-item';
+    const ap = apOf(it);
+    card.innerHTML =
+      (it.draft ? '<div class="draft-bar">Draft entry – ratings are a proposal for the FMEA team to confirm.<button class="secondary-btn" data-reviewed>Mark as reviewed</button></div>' : '') +
+      '<div class="top-row">' +
+        '<div class="field"><label>Work element (4M)</label><input type="text" data-f="we" value="' + escapeHtml(it.we||'') + '" placeholder="Man / Machine / Material / Method"></div>' +
+        '<div class="field"><label>Severity</label><select data-f="sev"></select></div>' +
+        '<div class="field"><label>Occurrence</label><select data-f="occ"></select></div>' +
+        '<div class="field"><label>Detection</label><select data-f="det"></select></div>' +
+        '<span class="ap ' + ap + '" data-ap-badge>' + apLabel(ap) + '</span>' +
+        '<button class="del-btn del-item" title="Delete this failure mode">×</button>' +
+      '</div>' +
+      '<div class="field"><label>Failure mode</label><input type="text" data-f="mode" value="' + escapeHtml(it.mode||'') + '" placeholder="What goes wrong"></div>' +
+      '<div class="field"><label>Failure effect (rate severity from this)</label><input type="text" data-f="effect" value="' + escapeHtml(it.effect||'') + '" placeholder="Effect on the next process, the customer or the end user"></div>' +
+      '<div class="field"><label>Failure cause</label><input type="text" data-f="cause" value="' + escapeHtml(it.cause||'') + '" placeholder="Why it happens"></div>' +
+      '<div class="row2">' +
+        '<div class="field"><label>Prevention control</label><textarea data-f="prevention">' + escapeHtml(it.prevention||'') + '</textarea></div>' +
+        '<div class="field"><label>Detection control</label><textarea data-f="detCtrl">' + escapeHtml(it.detCtrl||'') + '</textarea></div>' +
+      '</div>';
+
+    ['sev','occ','det'].forEach(f => {
+      const sel = card.querySelector('select[data-f="'+f+'"]');
+      fillSelect(sel, 10);
+      sel.value = it[f] || 5;
+    });
+
+    const revBtn = card.querySelector('[data-reviewed]');
+    if (revBtn) revBtn.addEventListener('click', () => {
+      const stages2 = ensureEditableSector(ui.sectorId);
+      delete stages2[edit.stage].subSteps[edit.substep].items[ii].draft;
+      saveState();
+      renderEditItems();
+    });
+
+    card.querySelectorAll('input[data-f],textarea[data-f],select[data-f]').forEach(el => {
+      el.addEventListener('change', () => {
+        const stages2 = ensureEditableSector(ui.sectorId);
+        const target = stages2[edit.stage].subSteps[edit.substep].items[ii];
+        const f = el.dataset.f;
+        target[f] = (f === 'sev' || f === 'occ' || f === 'det') ? Number(el.value) : el.value;
+        if (f === 'sev' || f === 'occ' || f === 'det'){
+          target.ap = calcAP(target.sev, target.occ, target.det);
+          const badge = card.querySelector('[data-ap-badge]');
+          badge.className = 'ap ' + target.ap;
+          badge.textContent = apLabel(target.ap);
+        }
+        saveState();
+      });
+    });
+
+    card.querySelector('.del-item').addEventListener('click', () => {
+      if (!confirm('Delete this failure mode? Checklist marks on later items in this sub-step may need re-checking.')) return;
+      const stages2 = ensureEditableSector(ui.sectorId);
+      stages2[edit.stage].subSteps[edit.substep].items.splice(ii, 1);
+      saveState();
+      renderEditItems();
+      buildRail();
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function renderEditView(){
+  renderEditStageOptions();
+  renderEditSubstepOptions();
+  renderEditItems();
+}
+
+/* ---------- summary record view ---------- */
+
+let sumFilter = 'H';
+let sumQuery = '';
+
+function collectSummaryRows(){
+  const stages = activeStages();
+  const rows = [];
+  stages.forEach((stage, si) => {
+    stage.subSteps.forEach((ss, ssi) => {
+      ss.items.forEach((it, ii) => {
+        const id = itemId(si, ssi, ii);
+        const opt = getOpt(ui.sectorId, id, it);
+        rows.push({ id, stageTitle: stage.title, stepTitle: ss.title, it, opt });
+      });
+    });
+  });
+  return rows;
+}
+
+function summaryPasses(row){
+  const ap = apOf(row.it);
+  if (sumFilter === 'H' && ap !== 'H') return false;
+  if (sumFilter === 'HM' && ap === 'L') return false;
+  if (sumFilter === 'open' && !(row.opt.status && row.opt.status !== 'C')) return false;
+  if (sumQuery){
+    const q = sumQuery.toLowerCase();
+    const hay = (row.stageTitle+' '+row.stepTitle+' '+(row.it.mode||'')+' '+(row.it.effect||'')+' '+(row.it.cause||'')).toLowerCase();
+    if (hay.indexOf(q) === -1) return false;
+  }
+  return true;
+}
+
+function renderSummaryStats(rows){
+  const stages = activeStages();
+  const allRows = collectSummaryRows();
+  const total = allRows.length;
+  const high = allRows.filter(r => apOf(r.it) === 'H').length;
+  const highNoAction = allRows.filter(r => apOf(r.it) === 'H' && !(r.opt.prevAction||'').trim() && !(r.opt.detAction||'').trim()).length;
+  const noEffect = allRows.filter(r => !(r.it.effect||'').trim()).length;
+  const drafts = allRows.filter(r => r.it.draft).length;
+  const open = allRows.filter(r => r.opt.status && r.opt.status !== 'C').length;
+  const completed = allRows.filter(r => r.opt.status === 'C').length;
+  const el = document.getElementById('sum-stats');
+  el.innerHTML = [
+    ['Total risk items', total, false],
+    ['High priority', high, false],
+    ['High with no action', highNoAction, highNoAction > 0],
+    ['Effect not recorded', noEffect, noEffect > 0],
+    ['Draft entries', drafts, drafts > 0],
+    ['Actions open', open, false],
+    ['Actions completed', completed, false]
+  ].map(([lbl,num,warn]) => '<div class="stat-card'+(warn?' warn':'')+'"><div class="num">'+num+'</div><div class="lbl">'+lbl+'</div></div>').join('');
+  renderDocHead();
+}
+
+function renderSummary(){
+  if (!document.getElementById('summary-view')) return;
+  const rows = collectSummaryRows().filter(summaryPasses);
+  renderSummaryStats(rows);
+  const body = document.getElementById('summary-body');
+  body.innerHTML = '';
+  document.getElementById('summary-empty').style.display = rows.length ? 'none' : '';
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    const statusOpts = STATUS_OPTIONS.map(([code,label]) => '<option value="'+code+'"'+(row.opt.status===code?' selected':'')+'>'+label+'</option>').join('');
+    tr.innerHTML =
+      '<td class="stagecell">' + escapeHtml(row.stageTitle) + '<br>' + escapeHtml(row.stepTitle) + '</td>' +
+      '<td class="modecell">' + (row.it.mode ? '<b>'+escapeHtml(row.it.mode)+'</b>' : '') +
+        (row.it.effect ? '<span style="color:var(--high-ink);">Effect: ' + escapeHtml(row.it.effect) + '</span><br>' : '') +
+        'Cause: ' + escapeHtml(row.it.cause||'—') + '</td>' +
+      '<td class="sodcell">' + row.it.sev + ' ' + row.it.occ + ' ' + row.it.det + '</td>' +
+      '<td><span class="ap-chip ' + apOf(row.it) + '">' + apOf(row.it) + '</span></td>' +
+      '<td><input type="text" data-id="' + row.id + '" data-f="prevAction" value="' + escapeHtml(row.opt.prevAction) + '" placeholder="Prevention action"></td>' +
+      '<td><input type="text" data-id="' + row.id + '" data-f="detAction" value="' + escapeHtml(row.opt.detAction) + '" placeholder="Detection action"></td>' +
+      '<td><input type="text" data-id="' + row.id + '" data-f="responsible" value="' + escapeHtml(row.opt.responsible) + '" placeholder="Name"></td>' +
+      '<td><input type="text" data-id="' + row.id + '" data-f="targetDate" value="' + escapeHtml(row.opt.targetDate) + '" placeholder="DD/MMM\'YY"></td>' +
+      '<td><select data-id="' + row.id + '" data-f="status">' + statusOpts + '</select></td>' +
+      '<td><input type="text" data-id="' + row.id + '" data-f="completionDate" value="' + escapeHtml(row.opt.completionDate) + '" placeholder="—"></td>' +
+      ['newSev','newOcc','newDet'].map(f => '<td><select class="nsod" data-id="' + row.id + '" data-f="' + f + '">' + rateOpts(row.opt[f]) + '</select></td>').join('') +
+      '<td class="new-ap-cell" data-newap="' + row.id + '">' + newApChip(newAPOf(row.opt)) + '</td>';
+    body.appendChild(tr);
+  });
+
+  body.querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('change', () => {
+      setOpt(ui.sectorId, el.dataset.id, el.dataset.f, el.value);
+      if (/^new(Sev|Occ|Det)$/.test(el.dataset.f)){
+        const r = collectSummaryRows().find(x => x.id === el.dataset.id);
+        const cell = body.querySelector('[data-newap="' + el.dataset.id + '"]');
+        if (r && cell) cell.innerHTML = newApChip(newAPOf(r.opt));
+      }
+      renderSummaryStats(collectSummaryRows().filter(summaryPasses));
+    });
+  });
+}
+
+function rateOpts(v){
+  let h = '<option value=""' + (v ? '' : ' selected') + '>–</option>';
+  for (let i=1;i<=10;i++) h += '<option value="'+i+'"' + (String(v) === String(i) ? ' selected' : '') + '>'+i+'</option>';
+  return h;
+}
+function newApChip(ap){ return ap ? '<span class="ap-chip ' + ap + '">' + ap + '</span>' : '<span style="color:var(--muted);">–</span>'; }
+
+function downloadSummaryCsv(){
+  const rows = collectSummaryRows().filter(summaryPasses);
+  const h = headerFor(ui.sectorId);
+  const lines = [];
+  [['Document no.',h.docNo],['Revision',h.rev],['Revision date',h.revDate],['Process / scope',h.scope],['Prepared by',h.preparedBy],['Approved by',h.approvedBy]]
+    .forEach(([k,v]) => lines.push([k, v||''].map(csvEscape).join(',')));
+  lines.push('');
+  const cols = ['Stage','Step','Work element','Failure mode','Failure effect','Cause','Prevention control','Detection control','S','O','D','AP','Draft','Prevention action','Detection action','Responsible','Target date','Status','Completion date','New S','New O','New D','New AP'];
+  lines.push(cols.join(','));
+  rows.forEach(r => {
+    lines.push([r.stageTitle, r.stepTitle, r.it.we, r.it.mode, r.it.effect, r.it.cause, r.it.prevention, r.it.detCtrl, r.it.sev, r.it.occ, r.it.det, apOf(r.it), r.it.draft ? 'Yes' : '',
+      r.opt.prevAction, r.opt.detAction, r.opt.responsible, r.opt.targetDate, statusLabel(r.opt.status), r.opt.completionDate, r.opt.newSev, r.opt.newOcc, r.opt.newDet, newAPOf(r.opt)].map(csvEscape).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'FITL-summary-record-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+/* ---------- backup / restore ---------- */
+function downloadBackup(){
+  const blob = new Blob([JSON.stringify(appState, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'FITL-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+async function restoreBackup(file){
+  try{
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object') throw new Error('bad file');
+    appState = Object.assign({ sectors:{}, checks:{}, optimizations:{}, headers:{} }, parsed);
+    migrateBuiltinSector();
+    await saveState();
+    renderAll();
+    alert('Backup restored.');
+  }catch(e){
+    alert('Could not read that backup file.');
+  }
+}
+
+/* ---------- document control (FMEA header + revision history) ---------- */
+function headerFor(sectorId){
+  if (!appState.headers) appState.headers = {};
+  if (!appState.headers[sectorId]) appState.headers[sectorId] = { history: [] };
+  if (!Array.isArray(appState.headers[sectorId].history)) appState.headers[sectorId].history = [];
+  return appState.headers[sectorId];
+}
+function renderDocView(){
+  const h = headerFor(ui.sectorId);
+  document.querySelectorAll('#doc-view [data-h]').forEach(el => { el.value = h[el.dataset.h] || ''; });
+  const body = document.getElementById('hist-body');
+  body.innerHTML = '';
+  if (!h.history.length){
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);">No revisions recorded yet. Add one each time the FMEA is reviewed or changed.</td></tr>';
+    return;
+  }
+  h.history.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="text" data-i="'+i+'" data-k="rev" value="'+escapeHtml(r.rev||'')+'" placeholder="00"></td>' +
+      '<td><input type="text" data-i="'+i+'" data-k="date" value="'+escapeHtml(r.date||'')+'" placeholder="DD/MM/YYYY"></td>' +
+      '<td><input type="text" data-i="'+i+'" data-k="desc" value="'+escapeHtml(r.desc||'')+'" placeholder="What changed and why"></td>' +
+      '<td><input type="text" data-i="'+i+'" data-k="by" value="'+escapeHtml(r.by||'')+'" placeholder="Name"></td>' +
+      '<td><button class="del-btn" data-del="'+i+'" title="Delete this revision line">×</button></td>';
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('input').forEach(el => el.addEventListener('change', () => {
+    headerFor(ui.sectorId).history[Number(el.dataset.i)][el.dataset.k] = el.value;
+    saveState();
+  }));
+  body.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+    if (!confirm('Delete this revision line?')) return;
+    headerFor(ui.sectorId).history.splice(Number(b.dataset.del), 1);
+    saveState();
+    renderDocView();
+  }));
+}
+function renderDocHead(){
+  const el = document.getElementById('sum-doc-head');
+  if (!el) return;
+  const h = headerFor(ui.sectorId);
+  const sectorName = (allSectors()[ui.sectorId] || {}).name || '';
+  const f = v => escapeHtml(v || '—');
+  el.innerHTML =
+    '<div class="dh-title">Process FMEA – ' + escapeHtml(sectorName) + '</div>' +
+    '<div class="dh-grid">' +
+      '<div><span>Document no.</span> ' + f(h.docNo) + '</div>' +
+      '<div><span>Revision</span> ' + f(h.rev) + ' <span>dated</span> ' + f(h.revDate) + '</div>' +
+      '<div><span>Scope</span> ' + f(h.scope) + '</div>' +
+      '<div><span>Prepared by</span> ' + f(h.preparedBy) + '</div>' +
+      '<div><span>Approved by</span> ' + f(h.approvedBy) + '</div>' +
+      '<div><span>Next review</span> ' + f(h.nextReview) + '</div>' +
+      '<div style="grid-column:1/-1;"><span>Team</span> ' + f((h.team||'').split('\n').filter(Boolean).join(', ')) + '</div>' +
+    '</div>';
+  el.classList.toggle('show', !!(h.docNo || h.rev || h.preparedBy));
+}
+
+/* ---------- view switching ---------- */
+function setView(v){
+  ui.view = v;
+  document.querySelectorAll('#view-tabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  document.getElementById('guide-view').style.display = v === 'guide' ? '' : 'none';
+  document.getElementById('edit-view').style.display = v === 'edit' ? '' : 'none';
+  document.getElementById('summary-view').style.display = v === 'summary' ? '' : 'none';
+  document.getElementById('doc-view').style.display = v === 'doc' ? '' : 'none';
+  document.getElementById('sector-tabs').parentElement.style.display = '';
+  if (v === 'guide'){ document.getElementById('rail-outer').style.display = ''; buildRail(); renderGuideContent(); }
+  else if (v === 'summary'){ document.getElementById('rail-outer').style.display = 'none'; renderSummary(); }
+  else if (v === 'doc'){ document.getElementById('rail-outer').style.display = 'none'; renderDocView(); }
+  else { document.getElementById('rail-outer').style.display = 'none'; edit.stage = 0; edit.substep = 0; renderEditView(); }
+}
+
+function renderAll(){
+  renderSectorTabs();
+  if (ui.view === 'guide'){ buildRail(); renderGuideContent(); }
+  else if (ui.view === 'summary'){ renderSummary(); }
+  else if (ui.view === 'edit'){ renderEditView(); }
+  else if (ui.view === 'doc'){ renderDocView(); }
+}
+
+
+/* ---------- wire up ---------- */
+document.getElementById('view-tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (btn) setView(btn.dataset.v);
+});
+
+document.getElementById('date-input').addEventListener('change', (e) => {
+  ui.date = e.target.value || new Date().toISOString().slice(0,10);
+  buildRail();
+  renderGuideContent();
+});
+
+document.getElementById('q').addEventListener('input', (e) => {
+  ui.query = e.target.value;
+  renderGuideContent();
+});
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  ui.filter = btn.dataset.f;
+  [...document.getElementById('filters').children].forEach(b => b.classList.toggle('active', b === btn));
+  renderGuideContent();
+});
+
+document.getElementById('btn-backup').addEventListener('click', downloadBackup);
+document.getElementById('restore-file').addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) restoreBackup(e.target.files[0]);
+  e.target.value = '';
+});
+
+document.getElementById('edit-stage').addEventListener('change', (e) => {
+  edit.stage = Number(e.target.value);
+  edit.substep = 0;
+  renderEditSubstepOptions();
+  renderEditItems();
+});
+document.getElementById('edit-substep').addEventListener('change', (e) => {
+  edit.substep = Number(e.target.value);
+  renderEditItems();
+});
+document.getElementById('btn-add-stage').addEventListener('click', () => {
+  const name = prompt('Name of the new stage (e.g. "10. Final inspection"):');
+  if (!name || !name.trim()) return;
+  const stages = ensureEditableSector(ui.sectorId);
+  stages.push({ title: name.trim(), subSteps: [] });
+  saveState();
+  edit.stage = stages.length - 1;
+  edit.substep = 0;
+  renderEditView();
+  buildRail();
+});
+document.getElementById('btn-add-substep').addEventListener('click', () => {
+  const stages = activeStages();
+  if (!stages.length){ alert('Add a stage first.'); return; }
+  const name = prompt('Name of the new sub-step:');
+  if (!name || !name.trim()) return;
+  const editable = ensureEditableSector(ui.sectorId);
+  editable[edit.stage].subSteps.push({ title: name.trim(), items: [] });
+  saveState();
+  edit.substep = editable[edit.stage].subSteps.length - 1;
+  renderEditSubstepOptions();
+  renderEditItems();
+  buildRail();
+});
+document.getElementById('btn-add-item').addEventListener('click', () => {
+  const stages = activeStages();
+  if (!stages.length || !stages[edit.stage] || !stages[edit.stage].subSteps.length){
+    alert('Add a stage and sub-step first.');
+    return;
+  }
+  const editable = ensureEditableSector(ui.sectorId);
+  editable[edit.stage].subSteps[edit.substep].items.push({
+    we: '', mode: '', effect: '', cause: '', prevention: '', detCtrl: '',
+    sev: 5, occ: 5, det: 5, ap: calcAP(5,5,5)
+  });
+  saveState();
+  renderEditItems();
+  buildRail();
+});
+
+document.getElementById('sum-q').addEventListener('input', (e) => { sumQuery = e.target.value; renderSummary(); });
+document.getElementById('sum-filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  sumFilter = btn.dataset.f;
+  [...document.getElementById('sum-filters').children].forEach(b => b.classList.toggle('active', b === btn));
+  renderSummary();
+});
+document.getElementById('btn-sum-print').addEventListener('click', () => window.print());
+document.getElementById('btn-sum-csv').addEventListener('click', downloadSummaryCsv);
+
+document.querySelectorAll('#doc-view [data-h]').forEach(el => el.addEventListener('change', () => {
+  headerFor(ui.sectorId)[el.dataset.h] = el.value;
+  saveState();
+}));
+document.getElementById('btn-add-hist').addEventListener('click', () => {
+  const h = headerFor(ui.sectorId);
+  h.history.push({ rev: '', date: '', desc: '', by: '' });
+  saveState();
+  renderDocView();
+});
+
+loadState();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bead Ring Lot Tag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --paper:        #ECE2C6;
+    --paper-shadow: #D9CB9E;
+    --ink:          #211C13;
+    --ink-soft:     #6b6248;
+    --rule:         #C7B98A;
+    --bg:           #121210;
+    --panel:        #1B1A16;
+    --panel-line:   #322E22;
+    --panel-text:   #E7E1D0;
+    --panel-sub:    #8B8570;
+    --field-bg:     #100F0C;
+    --focus:        #C7A24A;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--panel-text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 860px){
+    .app{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- FORM PANEL ---------- */
+  .panel{
+    background:var(--panel);
+    border-right:1px solid var(--panel-line);
+    padding:28px 26px 32px;
+  }
+  .panel-eyebrow{
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+    margin:0 0 4px;
+  }
+  .panel h1{
+    font-family:'Oswald',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:.01em;
+    margin:0 0 22px;
+    color:var(--panel-text);
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--panel-sub);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--field-bg);
+    border:1px solid var(--panel-line);
+    color:var(--panel-text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:3px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{ border-color:var(--focus); }
+  .field input:read-only{
+    opacity:.7;
+    cursor:not-allowed;
+    background:#0a0a08;
+  }
+  .lot-row{ display:flex; gap:8px; }
+  .lot-row input{ flex:1; }
+  .gen-btn{
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--focus);
+    color:var(--focus);
+    padding:0 12px;
+    border-radius:3px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .gen-btn:hover{ background:var(--focus); color:#1c1608; }
+  .divider{ border:none; border-top:1px solid var(--panel-line); margin:22px 0 18px; }
+  .hint{ font-size:11.5px; color:var(--panel-sub); line-height:1.5; margin-top:-6px; margin-bottom:16px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .print-btn{
+    width:100%;
+    font-family:'Oswald',sans-serif;
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:13px;
+    border-radius:4px;
+    border:none;
+    background:var(--focus);
+    color:#1c1608;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .print-btn:hover{ filter:brightness(1.08); }
+
+  /* ---------- STAGE ---------- */
+  .stage{ display:flex; align-items:center; justify-content:center; padding:40px 24px; }
+
+  .tag{
+    position:relative;
+    width:400px;
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 18% 8%, rgba(255,255,255,.35), transparent 40%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.015) 0px, rgba(0,0,0,.015) 1px, transparent 1px, transparent 3px);
+    border-radius:10px;
+    box-shadow: 0 2px 0 var(--paper-shadow), 0 22px 40px -18px rgba(0,0,0,.65), 0 6px 18px -8px rgba(0,0,0,.4);
+    padding:26px 26px 24px;
+    color:var(--ink);
+  }
+  .tag::before{
+    content:"";
+    position:absolute;
+    top:16px; left:50%;
+    transform:translateX(-50%);
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--bg);
+    box-shadow: inset 0 0 0 2.5px #6b6248, 0 1px 1px rgba(255,255,255,.25);
+  }
+  .date-badge{
+    position:absolute;
+    top:9px; right:12px;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .tag.compact .date-badge{
+    top:3pt; right:5pt;
+    font-size:7.5pt;
+  }
+  .tag-eyebrow{
+    text-align:center;
+    font-family:'Oswald',sans-serif;
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:20px 0 16px;
+  }
+  .size-block{
+    text-align:center;
+    padding:14px 10px 16px;
+    border-top:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink);
+    margin-bottom:16px;
+  }
+  .size-block .k{
+    font-family:'Oswald',sans-serif;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .size-block .v{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:36px;
+    letter-spacing:.03em;
+    line-height:1.1;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    row-gap:14px;
+    column-gap:10px;
+    margin-bottom:18px;
+  }
+  .cell.full{ grid-column:1 / -1; }
+  .cell .k{
+    font-family:'Oswald',sans-serif;
+    font-size:9.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .cell .v{
+    font-family:'JetBrains Mono',monospace;
+    font-size:26px;
+    font-weight:700;
+  }
+
+  .barcode-wrap{
+    background:#fff;
+    border-radius:4px;
+    padding:10px 8px 6px;
+    display:flex;
+    justify-content:center;
+  }
+  .barcode-wrap svg{ width:100%; height:auto; }
+
+  .tag-footer{
+    font-family:'Oswald',sans-serif;
+    font-size:9px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-top:14px;
+    text-align:right;
+  }
+
+  /* ---------- COMPACT (small barcode labels, e.g. 1in x 2.5in) ---------- */
+  .k-short{ display:none; }
+  .tag.compact{
+    width:2.5in;
+    padding:0.05in 0.09in;
+    border-radius:3px;
+    box-shadow:0 1px 0 var(--paper-shadow), 0 8px 16px -10px rgba(0,0,0,.5);
+  }
+  .tag.compact::before{ display:none; }
+  .tag.compact .tag-eyebrow,
+  .tag.compact .tag-footer{ display:none; }
+  .tag.compact .size-block{
+    padding:0 0 2pt;
+    margin-bottom:2pt;
+    border-top-width:1px;
+    border-bottom-width:1.5px;
+    text-align:left;
+  }
+  .tag.compact .size-block .k{ display:none; }
+  .tag.compact .size-block .v{ font-size:19pt; font-weight:800; line-height:1.1; }
+  .tag.compact .grid{
+    grid-template-columns:1fr 1fr;
+    row-gap:3pt;
+    column-gap:6pt;
+    margin-bottom:3pt;
+  }
+  .tag.compact .cell{ display:flex; align-items:baseline; gap:4pt; min-width:0; }
+  .tag.compact .k-full{ display:none; }
+  .tag.compact .k-short{ display:inline; }
+  .tag.compact .cell .k{ font-size:7pt; margin-bottom:0; letter-spacing:.02em; flex-shrink:0; }
+  .tag.compact .cell .v{ font-size:14pt; font-weight:700; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .tag.compact .barcode-wrap{ padding:3pt 4pt; margin-bottom:0; }
+  .tag.compact .barcode-wrap svg{ width:100%; height:auto; display:block; }
+
+  #printRoot{ display:none; }
+  @media print{
+    html, body{ margin:0; padding:0; }
+    body.printing > *:not(#printRoot){ display:none !important; }
+    body.printing #printRoot{ display:block; }
+    #printRoot .tag{
+      margin:0;
+      box-shadow:none;
+      width:var(--tag-print-w, 3.7in);
+      height:var(--tag-print-h, auto);
+      overflow:hidden;
+    }
+  }
+</style>
+<style id="pageSizeStyle">
+  @page{ size:4in 6in; margin:0.15in; }
+</style>
+</head>
+<body>
+<div id="printRoot"></div>
+
+<div class="app">
+  <div class="panel">
+    <p class="panel-eyebrow">Incoming QC</p>
+    <h1>Bead Ring Lot Tag</h1>
+
+    <div class="field">
+      <label for="beadSize">Bead Ring Size</label>
+      <select id="beadSize">
+        <option value="4">4"</option>
+        <option value="6">6"</option>
+        <option value="8">8"</option>
+        <option value="9">9"</option>
+        <option value="10">10"</option>
+        <option value="12">12"</option>
+        <option value="13">13"</option>
+        <option value="15">15"</option>
+        <option value="20">20"</option>
+        <option value="24">24"</option>
+        <option value="25">25"</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="receiveDate">Receive Date</label>
+      <input id="receiveDate" type="date">
+    </div>
+
+    <div class="field">
+      <label for="lotNo">Lot No</label>
+      <div class="lot-row">
+        <input id="lotNo" type="text" placeholder="BR 04 26 001" readonly>
+        <button type="button" class="gen-btn" id="genLotBtn">Next Lot No</button>
+      </div>
+      <p class="hint" style="margin-top:6px;">Format: BR &lt;size&gt; &lt;year&gt; &lt;sequence&gt;. This is a preview only — the number isn't reserved until you print the tag, so clicking around freely won't skip or waste lot numbers.</p>
+    </div>
+
+    <div class="field">
+      <label for="setLotSeq">Set Next Sequence No.</label>
+      <div class="lot-row">
+        <input type="number" id="setLotSeq" min="1" placeholder="e.g. 1">
+        <button type="button" class="gen-btn" id="setLotBtn">Set</button>
+      </div>
+      <p class="hint" style="margin-top:6px;">Enter any number and click Set to make that the next lot sequence — e.g. enter 1 to start this year's lots from 001. Takes effect on the next preview.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="field">
+      <label for="labelSize">Label Size (loaded in printer)</label>
+      <select id="labelSize">
+        <option value="1x2.5" selected>1 in × 2.5 in (barcode label)</option>
+        <option value="4x6">4 in × 6 in</option>
+        <option value="4x3">4 in × 3 in</option>
+        <option value="3x2">3 in × 2 in</option>
+        <option value="2x1">2 in × 1 in</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </div>
+    <div class="row2" id="customSizeRow" style="display:none;">
+      <div class="field">
+        <label for="customW">Width (in)</label>
+        <input id="customW" type="number" step="0.1" value="4">
+      </div>
+      <div class="field">
+        <label for="customH">Height (in)</label>
+        <input id="customH" type="number" step="0.1" value="6">
+      </div>
+    </div>
+
+    <button class="print-btn" id="printBtn">Print Tag</button>
+  </div>
+
+  <div class="stage">
+    <div class="tag" id="tag">
+      <span class="date-badge" id="dateBadge">—</span>
+      <p class="tag-eyebrow">Bead Ring Lot Tag</p>
+
+      <div class="size-block">
+        <div class="k">Bead Ring Size</div>
+        <div class="v" id="outSize">4"</div>
+      </div>
+
+      <div class="grid">
+        <div class="cell full">
+          <div class="k"><span class="k-full">Lot No</span><span class="k-short">Lot</span></div>
+          <div class="v" id="outLot">—</div>
+        </div>
+      </div>
+
+      <div class="barcode-wrap">
+        <svg id="barcode"></svg>
+      </div>
+
+      <div class="tag-footer" id="outPrintedOn"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const beadSize    = $('beadSize');
+  const receiveDate = $('receiveDate');
+  const lotNo       = $('lotNo');
+  const STORE_KEY = 'beadRingLotCounter_v1';
+
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function fmtDate(dstr){
+    if(!dstr) return '—';
+    const d = new Date(dstr + 'T00:00:00');
+    if(isNaN(d)) return '—';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  // ---------- lot counter (per year, shared across sizes) ----------
+  function loadCounters(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+    catch(e){ return {}; }
+  }
+  function saveCounters(c){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(c)); }
+    catch(e){ /* ignore */ }
+  }
+
+  // Shows what the next lot number WOULD be, without reserving it.
+  // The number is only actually committed to storage when the tag is printed.
+  function previewNextLotNo(){
+    const yy = String(new Date().getFullYear()).slice(-2);
+    const sizeStr = String(beadSize.value).padStart(2, '0');
+    const counters = loadCounters();
+    const next = (counters[yy] || 0) + 1;
+    lotNo.value = `BR ${sizeStr} ${yy} ${String(next).padStart(3, '0')}`;
+    render();
+  }
+  $('genLotBtn').addEventListener('click', previewNextLotNo);
+
+  $('setLotBtn').addEventListener('click', () => {
+    const input = $('setLotSeq');
+    const val = parseInt(input.value, 10);
+    if(isNaN(val) || val < 1){
+      alert('Enter a valid sequence number (1 or higher).');
+      return;
+    }
+    const yy = String(new Date().getFullYear()).slice(-2);
+    const counters = loadCounters();
+    counters[yy] = val - 1; // so the next preview becomes exactly `val`
+    saveCounters(counters);
+    input.value = '';
+    previewNextLotNo();
+  });
+
+  // Reserves the currently previewed lot number in storage. Called only at print time.
+  function commitLotNo(){
+    const parts = lotNo.value.trim().split(/\s+/);
+    if(parts.length !== 4 || parts[0] !== 'BR') return;
+    const yy = parts[2];
+    const seq = parseInt(parts[3], 10);
+    if(isNaN(seq)) return;
+    const counters = loadCounters();
+    if(!counters[yy] || seq > counters[yy]){
+      counters[yy] = seq;
+      saveCounters(counters);
+    }
+  }
+
+  function render(){
+    $('outSize').textContent = beadSize.value ? `${beadSize.value}"` : '—';
+    $('outLot').textContent  = lotNo.value.trim() || '—';
+    $('dateBadge').textContent = fmtDate(receiveDate.value);
+    $('outPrintedOn').textContent = 'Printed ' + fmtDate(todayStr());
+
+    const isCompactTag = $('tag').classList.contains('compact');
+    const value = lotNo.value.trim() || 'LOTNO';
+    try{
+      JsBarcode('#barcode', value, {
+        format:'CODE128',
+        lineColor:'#211C13',
+        width: isCompactTag ? 1.4 : 1.8,
+        height: isCompactTag ? 36 : 48,
+        displayValue: true,
+        fontSize: isCompactTag ? 9 : 12,
+        fontOptions:'',
+        font:'JetBrains Mono',
+        margin: isCompactTag ? 3 : 4
+      });
+    }catch(e){ /* ignore invalid barcode chars mid-typing */ }
+  }
+
+  beadSize.addEventListener('change', previewNextLotNo);
+  receiveDate.addEventListener('input', render);
+
+  // ---------- print ----------
+  function printTag(){
+    commitLotNo();
+    const printRoot = $('printRoot');
+    printRoot.innerHTML = '';
+    const clone = $('tag').cloneNode(true);
+    clone.removeAttribute('id');
+    printRoot.appendChild(clone);
+    document.body.classList.add('printing');
+    window.print();
+  }
+  window.addEventListener('afterprint', () => {
+    document.body.classList.remove('printing');
+    $('printRoot').innerHTML = '';
+  });
+  $('printBtn').addEventListener('click', printTag);
+
+  // ---------- print label size ----------
+  const labelSize = $('labelSize');
+  const customW = $('customW');
+  const customH = $('customH');
+  const customSizeRow = $('customSizeRow');
+  const PRESETS = { '1x2.5':[2.5,1], '4x6':[4,6], '4x3':[4,3], '3x2':[3,2], '2x1':[2,1] };
+
+  function applyPageSize(){
+    let w, h;
+    if(labelSize.value === 'custom'){
+      customSizeRow.style.display = 'grid';
+      w = parseFloat(customW.value) || 4;
+      h = parseFloat(customH.value) || 6;
+    } else {
+      customSizeRow.style.display = 'none';
+      [w, h] = PRESETS[labelSize.value];
+    }
+    const isTiny = w <= 3 && h <= 1.5;
+    $('tag').classList.toggle('compact', isTiny);
+    const margin = isTiny ? 0.04 : 0.15;
+    const root = document.documentElement.style;
+    root.setProperty('--tag-print-w', isTiny ? w + 'in' : Math.max(w - 0.3, 0.5) + 'in');
+    if(isTiny){
+      root.setProperty('--tag-print-h', Math.max(h - margin * 2, 0.3) + 'in');
+    } else {
+      root.removeProperty('--tag-print-h');
+    }
+    $('pageSizeStyle').textContent = `@page{ size:${w}in ${h}in; margin:${margin}in; }`;
+    render();
+  }
+  labelSize.addEventListener('change', applyPageSize);
+  customW.addEventListener('input', applyPageSize);
+  customH.addEventListener('input', applyPageSize);
+  applyPageSize();
+
+  // init
+  receiveDate.value = todayStr();
+  previewNextLotNo();
+</script>
+
+</body>
+</html>
