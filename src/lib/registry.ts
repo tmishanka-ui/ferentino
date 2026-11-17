@@ -24,6 +24,7 @@ export const APP_TITLES: Record<string, string> = {
   hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB', compoundspec: 'Compound Properties — Spec & QC Dashboard',
   compoundtag: 'Compound Approval Tag', beadringtag: 'Bead Ring Lot Tag', holdcompound: 'Hold Compound Control',
   planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
+  dailycheck: 'Machine Daily Check Lists',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -36,8 +37,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Live monitoring, loading, pallet labels, press trace, gauge calibration',
     tabs: [['live', 'Live & Tyre Production Monitoring'], ['loading', 'Loading Report'], ['pallet', 'Pallet Label Generator'], ['trace', 'Press Trace'], ['calib', 'Temperature Gauge Calibration']] },
   { id: 'maint', title: 'Maintenance Department', color: '#D97706', icon: 'wrench',
-    blurb: 'Maintenance dashboard, KPI, waste removing records',
-    tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing']] },
+    blurb: 'Maintenance dashboard, KPI, waste removing records, machine daily check lists',
+    tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing'], ['dailycheck', 'Machine Daily Check Lists']] },
   { id: 'prod', title: 'Production Department', color: '#16A34A', icon: 'factory',
     blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups',
     tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups']] },

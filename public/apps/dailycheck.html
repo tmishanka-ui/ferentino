@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FITL Machine Daily Check Lists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F2; --surface:#FFFFFF; --sunk:#E3E8EC; --ink:#1C2630; --muted:#56636F; --line:#C9D1D8;
+  --brand:#1F4E79; --brand-ink:#FFFFFF; --ok:#1E7B45; --ok-soft:#DCEFE3; --bad:#C22F2F; --bad-soft:#F8DEDD;
+  --stop:#9A6412; --stop-soft:#F6E9CF; --focus:#2F7FD0;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171C; --surface:#1A2229; --sunk:#141B21; --ink:#E5EBEF; --muted:#9BA8B3; --line:#2D3943;
+    --brand:#6EA6D9; --brand-ink:#0D1A26; --ok:#45C27C; --ok-soft:#173326; --bad:#F0625E; --bad-soft:#3A1C1C;
+    --stop:#E2AA4E; --stop-soft:#36291A; --focus:#7CB6EE; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171C; --surface:#1A2229; --sunk:#141B21; --ink:#E5EBEF; --muted:#9BA8B3; --line:#2D3943;
+  --brand:#6EA6D9; --brand-ink:#0D1A26; --ok:#45C27C; --ok-soft:#173326; --bad:#F0625E; --bad-soft:#3A1C1C;
+  --stop:#E2AA4E; --stop-soft:#36291A; --focus:#7CB6EE; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 Barlow,"Noto Sans Sinhala","Iskoola Pota","Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:980px;margin:0 auto;padding:16px 16px 120px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:8px 0 16px;border-bottom:3px solid var(--ink)}
+h1{font:700 2rem/1.05 "Barlow Condensed",Barlow,sans-serif;margin:0;letter-spacing:.2px}
+.sub{color:var(--muted);margin:4px 0 0}
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:10px}
+.tabs button{border:0;background:transparent;padding:8px 16px;border-radius:7px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 0 var(--line)}
+.status-line{font-size:.85rem;color:var(--muted);margin-top:8px}
+section{margin-top:24px}
+h2{font:600 1.35rem/1.2 "Barlow Condensed",Barlow,sans-serif;margin:0 0 12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+input[type=date],input[type=text],input[type=month],select{height:46px;padding:0 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);width:100%}
+input.invalid{border-color:var(--bad)}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;height:46px;background:var(--surface)}
+.seg button{flex:1;border:0;background:transparent;cursor:pointer;font-weight:600;padding:0 8px;line-height:1.1}
+.seg button small{display:block;font-weight:500;font-size:.72rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+.seg button[aria-pressed="true"] small{color:inherit;opacity:.85}
+.seg button+button{border-left:1.5px solid var(--line)}
+.group-label{font-weight:600;color:var(--muted);font-size:.9rem;margin:16px 0 8px}
+.machines{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.mach{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;min-height:64px}
+.mach b{display:block;font:700 1.15rem/1.1 "Barlow Condensed",Barlow,sans-serif}
+.mach span{font-size:.78rem;color:var(--muted)}
+.mach[aria-pressed="true"]{border-color:var(--brand);box-shadow:inset 0 0 0 2px var(--brand)}
+.mach .done{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--ok-soft);color:var(--ok)}
+.mach .done.bad{background:var(--bad-soft);color:var(--bad)}
+.sheet{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;margin-top:20px;overflow:hidden}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:16px;border-bottom:1.5px solid var(--line)}
+.sheet-head h3{margin:0;font:700 1.5rem/1.1 "Barlow Condensed",Barlow,sans-serif}
+.code{font-size:.85rem;color:var(--muted)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{height:42px;padding:0 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-weight:600;cursor:pointer}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.stopbox{display:none;padding:12px 16px;background:var(--stop-soft);border-bottom:1.5px solid var(--line)}
+.stopbox.on{display:block}
+.stopbox label{font-weight:600;font-size:.9rem;color:var(--stop)}
+.stopbox select,.stopbox input{margin-top:6px}
+.repair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:10px}
+.repair label{display:flex;flex-direction:column}
+.repair input{height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);width:100%}
+.repair input.invalid{border-color:var(--bad)}
+.dur{font-weight:600;color:var(--stop);margin-top:8px;font-size:.9rem}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:40px 1fr;gap:4px 12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .no{font:700 1.2rem/1.3 "Barlow Condensed",Barlow,sans-serif;color:var(--muted)}
+.row .txt{font-weight:500}
+.row .txt .en{font-weight:400;font-size:.85rem;color:var(--muted);margin-top:2px}
+.row .ctl{grid-column:2;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;margin-top:6px}
+.mark{display:flex;border-radius:8px;overflow:hidden;border:1.5px solid var(--line)}
+.mark button{border:0;background:var(--surface);height:44px;min-width:92px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.mark button+button{border-left:1.5px solid var(--line)}
+.mark button.ok[aria-pressed="true"]{background:var(--ok);color:#fff}
+.mark button.bad[aria-pressed="true"]{background:var(--bad);color:#fff}
+.row.is-bad{background:var(--bad-soft)}
+.row.missing .mark{border-color:var(--bad)}
+.remark{height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);width:100%}
+.remark.need{border-color:var(--bad)}
+.rows.disabled .ctl{opacity:.4;pointer-events:none}
+.empty{border:1.5px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted);margin-top:20px}
+.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1.5px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:5}
+.savebar .in{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.prog{font-weight:600}
+.prog small{display:block;font-weight:500;color:var(--muted)}
+.msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-weight:600;display:none}
+.msg.show{display:block}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}
+/* records */
+.scroll{overflow-x:auto;border:1.5px solid var(--line);border-radius:10px;background:var(--surface)}
+table.grid{border-collapse:collapse;font-size:.85rem;min-width:100%}
+table.grid th,table.grid td{border:1px solid var(--line);padding:4px 5px;text-align:center;white-space:nowrap}
+table.grid th{background:var(--sunk);font-weight:600}
+table.grid td.it{text-align:left;white-space:normal;min-width:260px;max-width:360px}
+table.grid td.c-ok{color:var(--ok);font-weight:700}
+table.grid td.c-bad{color:var(--bad);background:var(--bad-soft);font-weight:700}
+table.grid td.c-s{color:var(--stop);background:var(--stop-soft);font-weight:700}
+.legend{font-size:.85rem;color:var(--muted);margin:8px 0 0}
+.reclist{list-style:none;padding:0;margin:0}
+.rec{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.rec-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.rec-top b{font-family:"Barlow Condensed",Barlow,sans-serif;font-size:1.15rem}
+.pill{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:5px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.s{background:var(--stop-soft);color:var(--stop)}
+.rec ul{margin:6px 0 0;padding-left:18px;font-size:.9rem}
+.rec .meta{font-size:.85rem;color:var(--muted)}
+.linkbtn{border:0;background:none;color:var(--brand);font-weight:600;cursor:pointer;padding:4px}
+.linkbtn.del{color:var(--bad)}
+[hidden]{display:none!important}
+@media (max-width:560px){
+  h1{font-size:1.6rem}
+  .row .ctl{grid-column:1 / -1;grid-template-columns:1fr}
+  .mark button{flex:1}
+}
+@media (prefers-reduced-motion:no-preference){.row{transition:background .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Machine daily check lists</h1>
+      <p class="sub">Ferentino Industrial Tyres · Mixing, hydraulic and electrical check lists</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-mark" aria-selected="true">Mark check list</button>
+      <button role="tab" id="tab-fork" aria-selected="false">Forklift check sheet</button>
+      <button role="tab" id="tab-rec" aria-selected="false">Records</button>
+    </div>
+  </header>
+  <div class="status-line" id="storeStatus">Connecting to shared records…</div>
+
+  <!-- MARK -->
+  <div id="view-mark">
+    <section>
+      <h2 id="markTitle">Check details</h2>
+      <div class="fields">
+        <label class="f">Date<input type="date" id="fDate"></label>
+        <div class="f" style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem">Shift
+          <div class="seg" id="fShift">
+            <button type="button" data-v="Day" aria-pressed="true">Day<small>7:00 – 19:00</small></button>
+            <button type="button" data-v="Night" aria-pressed="false">Night<small>19:00 – 7:00</small></button>
+          </div>
+        </div>
+        <label class="f">Employee number<input type="text" id="fEmp" inputmode="text" autocomplete="off" placeholder="e.g. 1045"></label>
+        <label class="f"><span id="machLabel">Machine</span><select id="fMachine"></select></label>
+      </div>
+    </section>
+
+    <div id="sheetWrap"><div class="empty">Select a machine to show its checking parameters.</div></div>
+    <div class="msg" id="msg" role="status"></div>
+  </div>
+
+  <!-- RECORDS -->
+  <div id="view-rec" hidden>
+    <section>
+      <h2>Monthly check sheet</h2>
+      <div class="fields">
+        <label class="f">Month<input type="month" id="rMonth"></label>
+        <label class="f">Machine<select id="rMachine"></select></label>
+        <label class="f">Shift<select id="rShift"><option>Day</option><option>Night</option></select></label>
+      </div>
+      <div style="margin-top:12px" class="scroll" id="gridWrap"></div>
+      <p class="legend">✓ OK &nbsp; ✗ Not OK &nbsp; S Machine stopped (breakdown / P.M. / planned). Hover or tap a ✗ to see the remark.</p>
+    </section>
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <h2 style="margin:0">Entries this month</h2>
+        <div class="tools">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem"><input type="checkbox" id="rOnlyBad"> Only Not OK</label>
+          <button class="btn" id="btnCsv">Download month (CSV)</button>
+        </div>
+      </div>
+      <ul class="reclist" id="recList"></ul>
+    </section>
+  </div>
+</div>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="in">
+    <div class="prog" id="prog">0 of 0 marked<small>Not OK items need a remark</small></div>
+    <div class="tools">
+      <button class="btn" id="btnClear">Clear</button>
+      <button class="btn primary" id="btnSave">Save check list</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Checklist data (from EN/CL check sheets, translated to English) ---------- */
+const MILL_COMMON_A = [
+  "Check that oil is fully applied to the bull gear teeth",
+  "Check that oil is fully applied to the teeth of the small (pinion) wheel on the other side",
+  "Check all foundation bolts by hand for looseness",
+  "Check the roll guides for rubbing against the roll and for looseness",
+  "Check that water is circulating through the rolls (feel both rolls by hand)"
+];
+const NIP = "Check that oil is available in the nip gear unit";
+const BEARINGS = n => `Bearing No. ${n} – check oil flow and check by hand for overheating`;
+const MILL_COMMON_B = [
+  BEARINGS(1),BEARINGS(2),BEARINGS(3),BEARINGS(4),
+  "Check bearing oil tank level and check that no water has mixed with the oil",
+  "Check main gearbox oil level",
+  "Check that all roll cutters are working properly",
+  "Check roll bush condition and clearance",
+  "Check main coupling for any unusual noise or vibration and check coupling bush condition",
+  "Check emergency brake system operation"
+];
+const MILL_1_4 = [...MILL_COMMON_A, NIP, ...MILL_COMMON_B];
+const MILL_5_7 = [...MILL_COMMON_A, ...MILL_COMMON_B];
+const MILL_SI = [
+ "බුල් ගියර් එකේ දැති වල තෙල් සම්පූර්නයෙන්ම තැවරී යනවාද පරීක්ෂාව",
+ "අනිත් පැත්තේ ඇති පොඩි වීල් වල තෙල් සම්පූර්නයෙන්ම තැවරී යනවාද පරීක්ෂාව",
+ "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව",
+ "මිල් ගයිඩ් මිල් කදේ ගෑවීම හා බුරුල්ද යන්න පරීක්ෂාව",
+ "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව (මිල් කදන් දෙක අල්ලා බැලීම)",
+ "නිප් ගියර් යුනිට් වල ඔයිල් තිබේදැයි පරීක්ෂාව",
+ "බෙයාරින් අංක 1 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව",
+ "බෙයාරින් අංක 2 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව",
+ "බෙයාරින් අංක 3 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව",
+ "බෙයාරින් අංක 4 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව",
+ "බෙයාරින් තෙල් ටැන්කියේ ඔයිල් ලෙවල් එක පරීක්ෂාව හා එයට වතුර එකතු වී ඇතිදැයි පරීක්ෂාව",
+ "ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් පරීක්ෂාව",
+ "සියලුම මිල් කටර් හරියාකාරව තිබේදැයි පරීක්ෂාව",
+ "මිල් පිවුස් වල තත්වය පරීක්ෂාව හා ක්ලියරන්ස් පරීක්ෂාව",
+ "ප්‍රධාන කප්ලිමේ වෙනත් ආකාරයක ශබ්දයක් පැමිණේද යන වග හා කප්ලිම් බුෂ් තත්ව පරීක්ෂාව",
+ "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය"
+];
+const MILL_9 = [
+  "Check all foundation bolts by hand for looseness",
+  "Check the roll guides for rubbing against the roll and for looseness",
+  "Check that water is circulating through the rolls (feel both rolls by hand)",
+  "Check that all water valves are fully open",
+  "Cooling system – check water pressure to the back roll",
+  "Cooling system – check water pressure to the front roll",
+  BEARINGS(1),BEARINGS(2),BEARINGS(3),BEARINGS(4),
+  "Check bearing oil tank level and check that no water has mixed with the oil",
+  "Check main gearbox oil level",
+  "Check main gearbox oil pump operation and oil flow",
+  "Check front roll motor by hand for overheating",
+  "Check back roll motor by hand for overheating",
+  "Check roll bush condition and clearance",
+  "Check that all roll cutters are working properly",
+  "Check front motor coupling and back motor coupling condition",
+  "Check front and back drive shaft condition",
+  "Grease the roll bush system",
+  "Grease the front and back drive shaft system",
+  "Check emergency brake system operation"
+];
+const EXTRUDER_2 = [
+  "Check main gearbox oil level",
+  "Check that the main motor cooling fan is working",
+  "Check oil flow in all oil gauges",
+  "Check oil pump operation and that the pump is not overheating",
+  "Check oil in all gear motors",
+  "Check all conveyor motors by hand for overheating",
+  "Check that all nylon belts are running centred",
+  "Check water flow and that all valves are properly open",
+  "Grease the main cutter points",
+  "Check main coupling for any unusual noise or vibration and check coupling bush condition"
+];
+const TWIN_MILL = [
+  "Main motor left-side bearing – check oil level and that the oil ring is rotating",
+  "Main motor right-side bearing – check oil level and that the oil ring is rotating",
+  "Drive shaft bearing No. 1 – check oil level and that the oil ring is rotating",
+  "Drive shaft bearing No. 2 – check oil level and that the oil ring is rotating",
+  "Drive shaft bearing No. 3 – check oil level and that the oil ring is rotating",
+  "Drive shaft bearing No. 4 – check oil level and that the oil ring is rotating",
+  "Remove the motor guard and check that the inner-side bearing oil rings are rotating",
+  "Check that oil is fully applied to the bull gear teeth",
+  "Check that oil is fully applied to the friction wheels and bull gear",
+  "Grease the 8 main bearings and check by hand that they are not overheating",
+  "Check all foundation bolts and frame bolts by hand for looseness",
+  "Check the roll guides for rubbing against the roll and for looseness",
+  "Check that the conveyor belt is running centred",
+  "Check that water is circulating through the rolls",
+  "Check that all roll cutters are working properly",
+  "Check water level in the resistor bank box",
+  "Check roll bush condition and clearance",
+  "Remove the roll bush units and inspect them",
+  "Check emergency brake system operation"
+];
+const THREAD_MILL = [
+  "Main bearings oil circulation","Main gearbox oil level","Condition of mill fuse",
+  "Drive shaft bearing greasing","Retighten bearing bolts","Mill water flow condition",
+  "Retighten foundation bolts","Motor brake condition","Safety bar working condition",
+  "Friction wheel black jack level","Bull wheel black jack level","Main coupling bush condition"
+];
+/* ---------- Added check lists (Sinhala decoded from Sinhala INetFont sheets) ---------- */
+const SI_SOFT = ["ප්‍රධාන බෙයාරින් හතරේම ඔයිල් ලෙවල් එක", "බෙයාරින් හතරම අතින් අල්ලා රත් වේ දැයි පරීක්ෂා කිරීම", "මිල් පිවුස් වල තත්වය පරීක්ෂාව හා ක්ලියරන්ස් පරීක්ෂාව", "ඩ්‍රයිව් ෂාෆ්ට් එකේ බෙයාරින් ග්‍රීස් කිරීම", "බෙයාරින් වල නට් තද කිරීම", "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව(මිල් කදන් දෙක අල්ලා බැලීම.)", "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය.", "මිල් කදේ ඇණ අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂා කිරීම", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් පරීක්ෂාව", "ප්‍රික්ෂන් වීල් වල හා බුල් ගියර් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව"];
+const SI_M84N = ["බුල් ගියර් එකේ දැති වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "අනිත් පැත්තේ ඇති පොඩි වීල් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "මිල් ගයිඩ් මිල් කදේ ගෑවීම හා බුරුල්ද යන්න පරීක්ෂාව", "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව(මිල් කදන් දෙක අල්ලා බැලීම.)", "නිප් ගියර් යුනිට් වල ඔයිල් තිබේදැයි පරීක්ෂාව", "බෙයාරින් අංක 1 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 2 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 3 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 4 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් තෙල් ටැන්කියේ ඔයිල් ලෙවල් එක පරීක්ෂාව හා එයට වතුර එකතු වී ඇතිදැයි පරීක්ෂාව", "ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් පරීක්ෂාව", "සියලුම මිල් කටර් හරියාකාරව තිබේදැයි පරීක්ෂාව", "මිල් පිවුස් වල තත්වය පරීක්ෂාව හා ක්ලියරන්ස් පරීක්ෂාව", "ප්‍රධාන කප්ලිමේ වෙනත් ආකාරයක ශබ්දයක් පැමිණේද යන වග හා කප්ලිම් බුෂ් තත්ව පරීක්ෂාව", "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය."];
+const SI_T2 = ["බෙයාරින් අංක 1 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 2 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 3 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 4 ඔයිල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් තෙල් ටැන්කියේ ඔයිල් ලෙවල් එක පරීක්ෂාව හා එයට වතුර එකතු වී ඇතිදැයි පරීක්ෂාව", "බුල් ගියර් එකේ දැති වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "අනිත් පැත්තේ ඇති පොඩි වීල් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව(මිල් කදන් දෙක අල්ලා බැලීම.)", "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය.", "මෝටරය හා ගියර් බොක්ස් එක රත් වේද යන වග.", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "මිල් පිවුස් වල තත්වය පරීක්ෂාව හා ක්ලියරන්ස් පරීක්ෂාව", "ප්‍රධාන කප්ලිමේ වෙනත් ආකාරයක ශබ්දයක් පැමිණේද යන වග හා කප්ලිම් බුෂ් තත්ව පරීක්ෂාව"];
+const SI_M84 = ["ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් පරීක්ෂාව", "ප්‍රික්ෂන් වීල් වල හා බුල් ගියර් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "බෙයරින් තෙල් පොම්ප මෝටරය ක්‍රියා කරයිද, රත්වේද යන්න පරීක්ෂාව", "ගියර් බොක්ස් තෙල් පොම්ප මෝටරය ක්‍රියා කරයිද, රත්වේද යන්න පරීක්ෂාව", "බෙයාරින් අංක 1 තෙල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 2 තෙල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 3 තෙල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "බෙයාරින් අංක 4 තෙල් වැඩකිරීම හා අතින් අල්ලා රත්වේදැයි පරීක්ෂාව", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "මිල් ගයිඩ් මිල් කදේ ගෑවීම හා බුරුල්ද යන්න පරීක්ෂාව", "කන්වේයර් බෙල්ට් හරියාකාරව සෙන්ටර් වී තිබේදැයි පරීක්ෂාව", "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව", "සියලුම මිල් කටර් හරියාකාරව තිබේදැයි පරීක්ෂාව", "මිල් පිවුස් වල තත්වය පරීක්ෂාව", "ප්‍රධාන කන්වේයර් එකේ මෝටරයේ ඔයිල් පරීක්ෂාව", "ස්ටොක් බ්ලෙන්ඩර් මෝටරයේ ඔයිල් පරීක්ෂාව", "ස්ටොක් බ්ලෙන්ඩරයේ හයිඩ්‍රොලික් ටැංකියේ ඔයිල් පරීක්ෂාව", "ප්‍රධාන කප්ලිමේ බුෂ් වල තත්වය පරීක්ෂාව", "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය."];
+const SI_BAMB = ["ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් පරීක්ෂාව", "ග්‍රීස් වැඩ කිරීම පරීක්ෂාව (ග්‍රීස් එන ස්ථාන අත තබා බලන්න)", "ග්‍රීස් බදුනේ ග්‍රීස් තිබේදැයි පරීක්ෂාව", "ග්‍රීස් පොම්පයේ මෝටරයේ ක්‍රියාකාරිත්වය හා ඔයිල් ලෙවල් එක පරීක්ෂාව", "හයිඩ්‍රොලික් ටැංකියේ ඔයිල් ලෙවල් එක පරීක්ෂාව", "ඩස්ට් සීල් පොම්ප වල ක්‍රියාකාරිත්වය(pressure) හා ඔයිල් ටැංකියේ ඔයිල් ලෙවල් එක පරීක්ෂාව", "රැම් එක පහත් වූ විට process oil line pressure වී oil වැඩ කිරීම පරීක්ෂාව", "රැම් එකේ FRL Unit එකේ තෙල් ලෙවල් එක පරීක්ෂාව", "Motor හා Mixer Body වලට යන water pressure එක පරීක්ෂාව", "Water return line අත තබා පරීක්ෂාව හා mixer Body එක අත තබා රත්වීම පරීක්ෂාව", "බුල් ගියර් එකේ දැති වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "කන්වේයර් බෙල්ට් හරියාකාරව සෙන්ටර් වී තිබේදැයි පරීක්ෂාව", "Drop Door එකේ ඇණ 4 තද කිරීම .", "Drop Door එකේ ඇණ 4 හි අධාරක කේබල් පරීක්ෂාව", "Water Rotery Joints මැනුවල් ග්‍රීස් කිරීම", "Drop Door Actuator තෙල් ලෙවල් පරීක්ෂාව", "ගියර් බොක්ස් එක හා සම්බන්ධ සියලුම බෙයාරින් වල ඇණ පරීක්ෂාව", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "ප්‍රධාන කප්ලිමේ බුෂ් වල තත්වය පරීක්ෂාව", "ඩ්‍රයිව් ශාෆ්ට් කප්ලිමේ බුෂ් වල තත්වය පරීක්ෂාව", "Friction වීල් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "ප්‍රධාන මෝටරය හා චෙම්බරය වතුර ලයින් හා නියමිත ලෙස වතුර පැමිණේදැයි පරීක්ෂාව", "හොපර් දොරේ කාබන් ලීක් වන ස්ථාන පරීක්ෂාව", "වැකුම් පොම්පයේ ක්‍රියාකරීත්වය හා තෙල් පරීක්ෂාව", "වැකුම් වෑල් වැඩකිරීම පරීක්ෂාව", "ලෝඩිං කන්වේයර් සෙන්ටර් වී තිබේදැයි පරීක්ෂාව", "කන්වේයර් කප්ලින් ගියර් යුනිට් පරීක්ෂාව හා බෙල්ට් සෙන්ටර්ද යන්න පරීක්ෂාව", "Banbury Ram Weight එක මැනුවල් ග්‍රීස් කිරීම"];
+const SI_CAL1 = ["ප්‍රධාන බෙයාරින් හතරම තෙල් වැඩ කිරීම හා ටැංකියේ තෙල් තිබේදැයි පරීක්ෂාව", "ප්‍රධාන බෙයාරින් හතර රත් වේ දැයි පරීක්ෂාව", "සියලුම නිපල් අත් පොම්පයෙන් මැනුවල් ග්‍රීස් කිරීම", "මිල් එක ඉහලින් ඇති වෝම් ඇන්ඩ් වීල් යුනිට් දෙකම ග්‍රීස් තැවරීම.", "වෝම් ඇන්ඩ් වීල් යුනිට් මෝටර් එකේ ගියර් බොක්ස් එකේ ඔයිල් පරීක්ෂාව", "වතුර වැඩකරනවාදැයි පරීක්ෂාව", "ටයර් පල්ඩර් එක හරියාකාරව වැඩකරයිද,හුලං ලීක් වේදැයි පරීක්ෂාව", "ප්‍රධාන ගියර් පෙට්ටියේ තෙල් මට්ටම හා රත් වේ දැයි පරීක්ෂාව", "මිල් රෝල දෙක වදිනවාදැයි පරීක්ෂාව හා නිප් දෙකම සමාන දැයි පරීක්ෂාව"];
+const SI_CAL2 = ["ප්‍රධාන බෙයාරින් හතරම ග්‍රීස් වැඩ කිරීම හා ටැංකියේ ග්‍රීස් තිබේදැයි පරීක්ෂාව", "ප්‍රධාන බෙයාරින් හතර රත් වේ දැයි පරීක්ෂාව", "සියලුම නිපල් අත් පොම්පයෙන් මැනුවල් ග්‍රීස් කිරීම", "මිල් එක ඉහලින් ඇති වෝම් ඇන්ඩ් වීල් යුනිට් දෙකම ග්‍රීස් තැවරීම.", "වෝම් ඇන්ඩ් වීල් යුනිට් මෝටර් එකේ ගියර් බොක්ස් එකේ ඔයිල් පරීක්ෂාව", "වතුර වැඩකරනවාදැයි පරීක්ෂාව", "ටයර් පල්ඩර් එක හරියාකාරව වැඩකරයිද,හුලං ලීක් වේදැයි පරීක්ෂාව", "ඉලෙක්ට්‍රිෂියන් සමග ප්‍රධාන මෝටරයේ බ්‍රෂ් පරීක්ෂා කිරීම", "ප්‍රධාන ගියර් පෙට්ටියේ තෙල් මට්ටම හා රත් වේ දැයි පරීක්ෂාව", "මිල් රෝල දෙක වදිනවාදැයි පරීක්ෂාව හා නිප් දෙකම සමාන දැයි පරීක්ෂාව", "මෝරයේ බෙල්ට් බුරුල්ද යන්න පරීක්ෂාව", "මෝරයේ බ්ලෝවරයේ දැල බ්ලොක් වි ඇත්ද යන වග.", "ප්‍රධාන කප්ලිමෙන් ශබ්දයක් ඒද යන වග."];
+const SI_EXT = ["ප්‍රධාන ගියර් බොක්ස් එකේ ඔයිල් ලෙවල් එක පරීක්ෂාව", "ප්‍රධාන මෝටරයේ ෆෑන් එක ක්‍රියාත්මක වීම පරීක්ෂාව", "සියලුම oil gauge වල තෙල් වැඩ කිරීම පරීක්ෂාව", "ඔයිල් පොම්පයේ ක්‍රියාකාරීත්වය හා පොම්පය රත් වේද යන වග.", "සියලුම gear motor වල තෙල් පරීක්ෂාව", "කන්වේයර් මොටර් සියල්ල රත් වෙද යන්න අත තබා පරීක්ෂාව", "සියලුම නයිලෝන් බෙල්ට් වල සෙන්ටර් වීම පරීක්ෂාව", "වතුර වැඩ කරනවාද ,වෑල් සියල්ල විවෘත වී තිබේද යන වග.", "ප්‍රධාන කටරයේ ස්ථාන ග්‍රීස් කිරීම", "ප්‍රධාන කප්ලිමේ වෙනත් ආකාරයක ශබ්දයක් පැමිණේද යන වග හා කප්ලිම් බුෂ් තත්ව පරීක්ෂාව"];
+const SI_TWIN = ["ප්‍රධාන මෝටරයේ වම් පස බෙයාරිමේ ඔයිල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "ප්‍රධාන මෝටරයේ දකුණු පස බෙයාරිමේ ඔයිල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "ඩ්‍රයිව් සාෆ්ට් අංක 1 බෙයරිමේ තෙල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "ඩ්‍රයිව් සාෆ්ට් අංක 2 බෙයරිමේ තෙල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "ඩ්‍රයිව් සාෆ්ට් අංක 3 බෙයරිමේ තෙල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "ඩ්‍රයිව් සාෆ්ට් අංක 4 බෙයරිමේ තෙල් ලෙවල් එක හා රින් එක කැරකේද යන වග.", "මෝටරයේ දැල ගලවා බෙයරින්වල ඇතුල් පැත්තේ රින් කැරකේ දැයි බැලීම", "බුල් ගියර් වල දැති වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "ප්‍රික්ෂන් වීල් වල හා බුල් ගියර් වල තෙල් සම්පූර්ණයෙන්ම තැවරී යනවාද පරීක්ෂාව", "ප්‍රධාන බෙයාරින් අට ග්‍රීස් කිරීම හා අත තබා බෙයාරින් රත් වේද යන්න පරීක්ෂා කිරීම", "සියලුම ෆවුන්ඩේෂන් බෝල්ට් හා ෆ්‍රේම් බොල්ට් අතින් අල්ලා බුරුල්ද යන්න පරීක්ෂාව", "මිල් ගයිඩ් මිල් කදේ ගෑවීම හා බුරුල්ද යන්න පරීක්ෂාව", "කන්වේයර් බෙල්ට් හරියාකාරව සෙන්ටර් වී තිබේදැයි පරීක්ෂාව", "මිල් කදේ වතුර වැඩ කරනවාදැයි පරීක්ෂාව", "සියලුම මිල් කටර් හරියාකාරව තිබේදැයි පරීක්ෂාව", "රෙසිස්ටර් බෑන්ක් පෙට්ටියේ වතුර ලෙවල් එක පරීක්ෂාව", "මිල් පිවුස් වල තත්වය පරීක්ෂාව හා ක්ලියරන්ස් පරීක්ෂාව", "මිල් පිවුස් යුනිට් ගලවා ඉවතට ගෙන පරීක්ෂා කිරීම", "හදිසි බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය."];
+const EN_SOFT = ["Check oil level of all four main bearings", "Check by hand that all four bearings are not overheating", "Check roll bush condition and clearance", "Grease the drive shaft bearings", "Tighten the bearing nuts", "Check that water is circulating through the rolls (feel both rolls by hand)", "Check emergency brake system operation", "Check the mill roll bolts by hand for looseness", "Check all foundation bolts by hand for looseness", "Check main gearbox oil level", "Check that oil is fully applied to the friction wheels and bull gear"];
+const EN_T2 = ["Bearing No. 1 – check oil flow and check by hand for overheating", "Bearing No. 2 – check oil flow and check by hand for overheating", "Bearing No. 3 – check oil flow and check by hand for overheating", "Bearing No. 4 – check oil flow and check by hand for overheating", "Check bearing oil tank level and check that no water has mixed with the oil", "Check that oil is fully applied to the bull gear teeth", "Check that oil is fully applied to the small (pinion) wheel on the other side", "Check that water is circulating through the rolls (feel both rolls by hand)", "Check emergency brake system operation", "Check whether the motor and gearbox are overheating", "Check all foundation bolts by hand for looseness", "Check roll bush condition and clearance", "Check main coupling for any unusual noise and check coupling bush condition"];
+const EN_M84 = ["Check main gearbox oil level", "Check that oil is fully applied to the friction wheels and bull gear", "Check bearing oil pump motor is working and not overheating", "Check gearbox oil pump motor is working and not overheating", "Bearing No. 1 – check oil flow and check by hand for overheating", "Bearing No. 2 – check oil flow and check by hand for overheating", "Bearing No. 3 – check oil flow and check by hand for overheating", "Bearing No. 4 – check oil flow and check by hand for overheating", "Check all foundation bolts by hand for looseness", "Check the roll guides for rubbing against the roll and for looseness", "Check that the conveyor belt is running centred", "Check that water is circulating through the rolls", "Check that all roll cutters are working properly", "Check roll bush condition", "Check main conveyor motor oil", "Check stock blender motor oil", "Check stock blender hydraulic tank oil", "Check main coupling bush condition", "Check emergency brake system operation"];
+const EN_BAMB = ["Check main gearbox oil level", "Check greasing is working (feel the grease points by hand)", "Check there is grease in the grease container (බදුන)", "Check grease pump motor operation and oil level", "Check hydraulic tank oil level", "Check dust seal pumps operation (pressure) and oil tank level", "With the ram down, check process oil line pressure and oil flow", "Check oil level in the ram FRL unit", "Check water pressure to the motor and mixer body", "Check the water return line by hand and feel the mixer body for heat", "Check that oil is fully applied to the bull gear teeth", "Check that the conveyor belt is running centred", "Tighten the 4 drop door bolts", "Check the support cables of the 4 drop door bolts", "Manually grease the water rotary joints", "Check drop door actuator oil level", "Check the bolts of all bearings connected to the gearbox", "Check all foundation bolts by hand for looseness", "Check main coupling bush condition", "Check drive shaft coupling bush condition", "Check that oil is fully applied to the friction wheels", "Check main motor and chamber water lines and correct water flow", "Check the hopper door for carbon leak points", "Check vacuum pump operation and oil", "Check vacuum valve operation", "Check that the loading conveyor is running centred", "Check conveyor coupling and gear unit, and that the belt is centred", "Manually grease the Banbury ram weight"];
+const EN_CAL1 = ["Check oil flow to all four main bearings and oil in the tank", "Check the four main bearings for overheating", "Manually grease all nipples with the hand pump", "Grease both worm and wheel units on top of the mill", "Check worm and wheel unit motor gearbox oil", "Check that water is circulating", "Check the tyre puller works properly and there are no air leaks", "Check main gearbox oil level and overheating", "Check that the two rolls do not touch and both nips are equal"];
+const EN_CAL2 = ["Check grease flow to all four main bearings and grease in the tank", "Check the four main bearings for overheating", "Manually grease all nipples with the hand pump", "Grease both worm and wheel units on top of the mill", "Check worm and wheel unit motor gearbox oil", "Check that water is circulating", "Check the tyre puller works properly and there are no air leaks", "Check main motor brushes together with the electrician", "Check main gearbox oil level and overheating", "Check that the two rolls do not touch and both nips are equal", "Check motor belts for looseness", "Check whether the motor blower mesh is blocked", "Check for unusual noise from the main coupling"];
+const KNEADER = ["Check water lines physically by hand", "Check air pressure (6 bar) and return water drain lines", "Check oil pump and its condition", "Check main gearbox oil level", "Check tilting unit gearbox oil level", "Check pinion wheel lubricant condition", "Oil the tilting bearings", "Manually grease the main bearings", "Check foundation bolts for looseness", "Check and retighten ram unit bolts", "Check main motor by hand", "Grease the ram shaft and guide shaft", "Check the 4 limit switches work (correct if not)", "Check cylinder lubrication system and add oil to the cylinder and regulator"];
+const HYD_TECH = ["1M presses – check oil level", "2M line central hydraulic packs – check oil level", "2M line tyre ejectors – check oil level", "3M presses – check hydraulic oil level", "4M presses – check hydraulic oil level", "1M presses – clean filters", "2M presses – clean filters", "3M presses – clean filters", "4M presses – clean filters", "1M press pit – clean oil", "2M2, 2M3 press pit – clean oil", "4M press pit – clean oil", "3M presses – check oil cooler condition", "1M presses – safety doors and limit switch condition", "3M presses – safety doors and limit switch condition", "4M presses – safety doors and limit switch condition", "1M presses – auto operation", "2M presses – auto operation", "3M presses – auto operation", "4M presses – auto operation"];
+const PRESS_1_4 = ["1M presses – check oil level", "2M line central hydraulic packs – check oil level", "2M line tyre ejectors – check oil level", "3M presses – check hydraulic oil level", "4M presses – check hydraulic oil level", "1M presses – oil leak inspection (remove press plates)", "2M presses – pit oil leak inspection (open press pit)", "3M presses – oil leak inspection", "4M presses – oil leak inspection (remove press plates)", "1M presses – safety doors and limit switch condition", "2M presses – limit switch condition", "3M presses – safety doors and limit switch condition", "4M presses – safety doors and limit switch condition", "1M presses – auto operation", "2M presses – auto operation", "3M presses – auto operation", "4M presses – auto operation"];
+const PRESS_5_7 = ["5M1 tank oil level", "5M2–5M3 tank oil level", "6M1–6M2 tank oil level", "7M1 tank oil level", "7M2–7M3 oil level", "7M4–7M5 oil level", "7M6–7M7 oil level", "5M oil leak", "6M oil leak", "7M oil leak"];
+const ELEC_BAMB = ["Power supply – 24 V DC power supply indicator ON", "Power supply – battery water level", "400 V supply – Breaker 1 position ON", "400 V supply – Breaker 2 position ON", "400 V supply – Breaker 3 position ON", "6600 V 3-phase supply indicator ON", "Air compressor ON", "Air compressor main valve ON", "Cooling tower ON", "Motor water line pressure (enter reading in remark)", "Chamber water line pressure (enter reading in remark)", "Flow water indicator ON", "Cooling water line valves OPEN", "Cooling tower alarm working condition", "Gearbox oil level (Not OK = refilled, note in remark)", "Dust seal oil level (Not OK = refilled, note in remark)", "Hydraulic oil level (Not OK = refilled, note in remark)", "Grease bucket grease level", "Grease pump working condition", "Oil pumps working condition", "Oil pump valves open", "Air ram position (note UP / DOWN in remark)", "Drop door position (note OPEN / CLOSED in remark)", "Dust extraction system ON", "Emergency (note ON / OFF in remark)", "Motor brush condition", "Slip ring unit cleaned", "Dust extraction – blower condition", "Dust extraction – pneumatic air pulse"];
+const ELEC_84_1 = ["400 V power supply – breaker position ON", "400 V power supply – 3-phase indicator ON", "Air compressor ON", "Air compressor main valve ON", "Cooling tower ON", "Mixing water cooling pump ON", "Gearbox oil level", "End wheel black jack level", "Bull gear black jack level", "Lubrication pumps oil level", "Lubrication pumps working condition / breaker position", "Mill fuses – Mill 1 left", "Mill fuses – Mill 1 right", "Safety bar – Mill 1 front", "Safety bar – Mill 1 back", "Batch feeding conveyor", "Stock blender", "Motor oil level"];
+const ELEC_84_2 = ["400 V power supply – breaker position ON", "400 V power supply – 3-phase indicator ON", "Air compressor ON", "Air compressor main valve ON", "Cooling tower ON", "Mixing water cooling pump ON", "Gearbox oil level", "End wheel black jack level", "Bull gear black jack level", "Lubrication pumps oil level", "Lubrication pumps working condition / breaker position", "Mill fuses – Mill 2 left", "Mill fuses – Mill 2 right", "Safety bar – Mill 2 front", "Safety bar – Mill 2 back", "Batch feeding conveyor", "Stock blender", "Motor oil level"];
+const ELEC_DAILY = ["MDB1 power factor (0.95–0.99) / alarming", "MDB2 power factor (0.95–0.99) / alarming", "Generator oil level, diesel level and battery water level", "Generator battery charge condition / starting condition", "Electrical multistage fire pump working condition", "Electrical hydrant fire pump working condition", "Petrol fire pump working condition, petrol level", "Switch off all high-bay lamps and unnecessary lights", "DB1 ACB incoming / outgoing busbar temperature (°C – enter in remark)", "Twin mill safety condition", "60\" mills safety condition", "ECO tread mill safety condition", "Soft mill safety condition", "Calender mills safety condition", "T2 mill safety condition", "All tyre builders pedal switch and proximity sensor condition", "Bambury slip ring unit cleaning", "Bambury motor step resistance bank checking", "Bambury DC battery power pack and charging condition", "Bambury control panel cleaning and tightening all terminals", "Vacuum system control panel cleaning and tightening all terminals", "Mixing line conveyor panel servicing and overload condition", "T2 calenders motor brush condition", "ECO calender motor brush condition", "Twin mill motor brush condition", "Tread mill motor brush condition", "Test bench motor brush condition", "60 Mill 5, 6, 7 brush condition", "ECO calender mill panel cleaning", "T2 calender mill panel cleaning", "Twin mill resistance bank water level", "Generator battery charge / starting condition (night)", "Electrical multistage fire pump working condition (night)", "Electrical hydrant fire pump working condition (night)"];
+const FORKLIFT_SI = ["සියලුම බැටරිවල වතුර ලෙවල් එක නිසියාකාරව ඇත", "බැටරිය චාර්ජ් වී තිබේද නැද්ද යන වග", "හයිඩ්‍රොලික් තෙල් ටැංකියේ තෙල් ලෙවල් එක", "බ්‍රේක් පද්ධතියේ ක්‍රියාකාරිත්වය", "බැටරියේ උඩ surface එක හොඳින් පිරිසිදු කිරීම", "යන්ත්‍රයේ තෙල් ලීක් තිබේද නැද්ද යන වග", "Engine තෙල් ලෙවල් එක", "Radiator coolant ලෙවල් එක", "යන්ත්‍රයේ ඩැමේජ් පරීක්ෂාව", "ලයිට් සිග්නල් රිවස් එලාම් වැඩකිරීම පරීක්ෂාව", "හෝන් එක පරීක්ෂාව", "බ්‍රේක් වැඩකිරීම පරීක්ෂාව", "හොයිස්ට් එක වැඩකිරීම පරීක්ෂාව", "Meter reading එක", "සියලුම ග්‍රීස් ස්ථාන ග්‍රීස් කිරීම"];
+const FORKLIFT_EN = ["All batteries – water level is correct", "Battery is charged (yes / no)", "Hydraulic oil tank – oil level", "Brake system operation", "Clean the top surface of the battery well", "Oil leaks on the machine (yes / no)", "Engine oil level", "Radiator coolant level", "Check the machine for damage", "Lights, signals and reverse alarm working", "Horn", "Brakes working", "Hoist (lifting mast) working", "Hour meter reading (enter the reading in the remark)", "Grease all grease points"];
+const MACHINES = [
+  {id:"mill1",name:"60 Mill 1",code:"EN/CL/18",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill2",name:"60 Mill 2",code:"EN/CL/19",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill3",name:"60 Mill 3",code:"EN/CL/20",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill4",name:"60 Mill 4",code:"EN/CL/37",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill5",name:"60 Mill 5",code:"EN/CL/41",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill6",name:"60 Mill 6",code:"EN/CL/42",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill7",name:"60 Mill 7",code:"EN/CL/43",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill8",name:"60 Mill 8",code:"Code TBC",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"mill9",name:"60 Mill 9",code:"EN/CL/45",group:"60 Mills",items:MILL_SI,en:MILL_1_4},
+  {id:"ext2",name:"Extruder",code:"EN/CL/15",sub:"S3B1M5",group:"Mixing machines",items:SI_EXT,en:EXTRUDER_2},
+  {id:"thread",name:"Tread Mill",code:"EN/CL/23",group:"Mixing machines",items:THREAD_MILL},
+  {id:"twin",name:"Twin Mill",code:"EN/CL/17",group:"Mixing machines",items:SI_TWIN,en:TWIN_MILL},
+  {id:"bambury",name:"Bambury",code:"EN/CL/01",sub:"S2D2M1",group:"Mixing machines",items:SI_BAMB,en:EN_BAMB},
+  {id:"m84",name:"84\" Mill",code:"EN/CL/02",group:"Mixing machines",items:SI_M84,en:EN_M84},
+  {id:"m84new",name:"84\" New Mill",code:"EN/CL/03",group:"Mixing machines",items:SI_M84N,en:MILL_1_4},
+  {id:"kneader2",name:"Kneader 2",code:"EN/CL/34",group:"Mixing machines",items:KNEADER},
+  {id:"soft",name:"Soft Mill",code:"EN/CL/13",sub:"S3B4M2",group:"Mixing machines",items:SI_SOFT,en:EN_SOFT},
+  {id:"t2mill",name:"T2 Mill",code:"EN/CL/11",sub:"S3B2M3",group:"Mixing machines",items:SI_T2,en:EN_T2},
+  {id:"cal1",name:"Calender Mill",code:"EN/CL/21",sub:"MO389",group:"Mixing machines",items:SI_CAL1,en:EN_CAL1},
+  {id:"cal2",name:"Calender Mill – Second",code:"EN/CL/09",group:"Mixing machines",items:SI_CAL2,en:EN_CAL2},
+  {id:"hydtech",name:"Hydraulic Technician",code:"EN/CL/30",group:"Hydraulic",items:HYD_TECH},
+  {id:"press14",name:"Press Machines – Line 1–4",code:"EN/CL/30",group:"Hydraulic",items:PRESS_1_4},
+  {id:"press57",name:"Press Machines – Line 5–7",code:"EN/CL/30",group:"Hydraulic",items:PRESS_5_7},
+  {id:"e_bamb",name:"Bambury – Electrical",code:"EN/CL/25",group:"Electrical",items:ELEC_BAMB},
+  {id:"e_84m1",name:"84\" Mill 1 – Electrical",code:"EN/CL/26",group:"Electrical",items:ELEC_84_1},
+  {id:"e_84m2",name:"84\" Mill 2 – Electrical",code:"EN/CL/26",group:"Electrical",items:ELEC_84_2},
+  {id:"fl_maximal",name:"2.5 T Maximal",code:"S4F1M5",group:"Forklifts",items:FORKLIFT_SI,en:FORKLIFT_EN},
+  {id:"fl_mitsubishi",name:"2.5 T Mitsubishi",code:"S4F1M5",group:"Forklifts",items:FORKLIFT_SI,en:FORKLIFT_EN},
+  {id:"fl_hyster",name:"2.5 T Hyster",code:"S4F1M5",group:"Forklifts",items:FORKLIFT_SI,en:FORKLIFT_EN},
+  {id:"fl_kalmar6",name:"6 T Kalmar",code:"S4F1M5",group:"Forklifts",items:FORKLIFT_SI,en:FORKLIFT_EN},
+  {id:"fl_mitsu_a",name:"2.5 T Mitsubishi (Zone A)",code:"S4F1M5",group:"Forklifts",items:FORKLIFT_SI,en:FORKLIFT_EN},
+  {id:"e_daily",name:"Electricians' Daily Check List",code:"EN/CL/33",group:"Electrical",items:ELEC_DAILY}
+];
+const byId = Object.fromEntries(MACHINES.map(m=>[m.id,m]));
+
+/* ---------- Storage: shared db when available, else this browser ---------- */
+const LS_KEY="fitl_machine_checks_v1";
+const records = new Map();
+let dbCol=null, downloads=null, mode="local";
+const lsGet=(k)=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function loadLocal(){
+  records.clear();
+  try{const arr=JSON.parse(lsGet(LS_KEY)||"[]");arr.forEach(r=>records.set(r.id,r));}catch(e){}
+}
+function saveLocal(){lsSet(LS_KEY,JSON.stringify([...records.values()]));}
+const statusEl=document.getElementById("storeStatus");
+function setStatus(t){statusEl.textContent=t;}
+
+loadLocal();
+setStatus("Saving to this device only.");
+(async()=>{
+  if(!window.claude||!window.claude.use){return;}
+  try{downloads=await window.claude.use("downloads");}catch(e){downloads=null;}
+  updateCsvBtn();
+  let db=null;
+  try{db=await window.claude.use("db");}catch(e){db=null;}
+  if(!db){setStatus("Saving to this device only. Sign in to share records with the team.");return;}
+  dbCol=db.collection("checks"); mode="db";
+  setStatus("Loading shared records…");
+  let gotLive=false;
+  const t=setTimeout(()=>{if(!gotLive)setStatus("Shared records can’t be reached yet — showing what’s available.");},10000);
+  dbCol.onSnapshot(snap=>{
+    records.clear();
+    snap.docs.forEach(d=>{const v=d.data(); if(v) records.set(d.id,{...v,id:d.id});});
+    if(!snap.metadata.fromCache){gotLive=true;clearTimeout(t);setStatus("Shared records — everyone using this page sees the same data.");}
+    refreshAll();
+  },err=>{clearTimeout(t);setStatus("Shared records stopped updating ("+(err&&err.code||"error")+"). Reload the page to reconnect.");});
+})();
+
+async function putRecord(rec){
+  if(mode==="db"){await dbCol.doc(rec.id).set(rec);}
+  else{records.set(rec.id,rec);saveLocal();}
+}
+async function deleteRecord(id){
+  if(mode==="db"){await dbCol.doc(id).delete();}
+  else{records.delete(id);saveLocal();}
+}
+
+/* ---------- Mark view ---------- */
+const $=s=>document.querySelector(s);
+const recId=(date,sh,mid)=>`${date}_${sh}_${mid}`;
+const fDate=$("#fDate"), fEmp=$("#fEmp");
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
+fDate.value=today();
+fEmp.value=lsGet("fitl_emp")||"";
+let shift=(new Date().getHours()>=19||new Date().getHours()<7)?"Night":"Day";
+let current=null; // {machine, marks:[{status,remark}], stopped, stopReason, stopNote, repairStart, repairEnd}
+let section="machines"; // machines | fork
+const inSection=m=>(m.group==="Forklifts")===(section==="fork");
+
+function setShift(v){shift=v;document.querySelectorAll("#fShift button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));renderMachines();loadExisting();}
+document.querySelectorAll("#fShift button").forEach(b=>b.onclick=()=>setShift(b.dataset.v));
+setShift(shift);
+fDate.onchange=()=>{renderMachines();loadExisting();};
+fEmp.oninput=()=>fEmp.classList.remove("invalid");
+document.getElementById("fMachine").onchange=e=>{if(e.target.value)selectMachine(e.target.value);else{current=null;renderSheet();hideMsg();}};
+
+
+function renderMachines(){
+  const sel=document.getElementById("fMachine");
+  const cur=current?current.machine.id:"";
+  let h=`<option value="">${section==="fork"?"Select forklift":"Select machine"}</option>`;
+  const list=MACHINES.filter(inSection);
+  [...new Set(list.map(m=>m.group))].forEach(g=>{
+    h+=`<optgroup label="${esc(g)}">`;
+    list.filter(m=>m.group===g).forEach(m=>{
+      const done=records.get(recId(fDate.value,shift,m.id));
+      const st=done?(done.stopped?" – stopped":done.notOk?` – ${done.notOk} not OK`:" – done"):"";
+      h+=`<option value="${m.id}" ${m.id===cur?"selected":""}>${esc(m.name)} (${m.code})${st}</option>`;
+    });
+    h+=`</optgroup>`;
+  });
+  sel.innerHTML=h;
+}
+
+function blankMarks(m){return m.items.map(()=>({status:"",remark:""}));}
+function selectMachine(id){
+  const m=byId[id];
+  current={machine:m,marks:blankMarks(m),stopped:false,stopReason:"",stopNote:"",repairStart:"",repairEnd:""};
+  loadExisting(true);
+  renderMachines();renderSheet();
+  hideMsg();
+  setTimeout(()=>document.getElementById("sheetWrap").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}),0);
+}
+function loadExisting(silent){
+  if(!current)return;
+  const ex=records.get(recId(fDate.value,shift,current.machine.id));
+  if(ex&&ex.items&&ex.items.length===current.machine.items.length){
+    current.marks=ex.items.map(i=>({status:i.status==="OK"?"ok":i.status==="NOT OK"?"bad":"",remark:i.remark||""}));
+    current.stopped=!!ex.stopped;current.stopReason=ex.stopReason||"";current.stopNote=ex.stopNote||"";current.repairStart=ex.repairStart||"";current.repairEnd=ex.repairEnd||"";
+    current.existing=ex;
+  }else{
+    current.marks=blankMarks(current.machine);current.stopped=false;current.stopReason="";current.stopNote="";current.repairStart="";current.repairEnd="";current.existing=null;
+  }
+  if(!silent)renderSheet();
+}
+
+function renderSheet(){
+  const wrap=$("#sheetWrap");
+  if(!current){wrap.innerHTML=`<div class="empty">Select a machine to show its checking parameters.</div>`;$("#savebar").hidden=true;return;}
+  const m=current.machine;
+  wrap.innerHTML=`
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h3>${m.name}${m.sub?" <span style='font-weight:500;font-size:1rem'>"+m.sub+"</span>":""}</h3>
+        <div class="code">${m.code} · Daily check list · ${m.items.length} items${current.existing?" · <b>Already saved for this date and shift — editing</b>":""}</div></div>
+      <div class="tools">
+        <button class="btn" id="btnAllOk">Mark all OK</button>
+        <button class="btn" id="btnStop" aria-pressed="${current.stopped}">${current.stopped?"Machine running":"Machine stopped (S)"}</button>
+      </div>
+    </div>
+    <div class="stopbox ${current.stopped?"on":""}">
+      <label>Reason the machine is stopped
+        <select id="stopReason">
+          <option value="">Select reason</option>
+          ${["Breakdown","P.M.","Planned stop"].map(r=>`<option ${current.stopReason===r?"selected":""}>${r}</option>`).join("")}
+        </select>
+      </label>
+      <div class="repair" ${current.stopReason==="Breakdown"?"":"hidden"}>
+        <label>Repair start time<input type="datetime-local" id="repStart" value="${esc(current.repairStart)}"></label>
+        <label>Repair end time<input type="datetime-local" id="repEnd" value="${esc(current.repairEnd)}"></label>
+      </div>
+      <div class="dur" id="repDur" ${current.stopReason==="Breakdown"?"":"hidden"}>${durText(current.repairStart,current.repairEnd)}</div>
+      <input type="text" class="remark" id="stopNote" placeholder="${current.stopReason==="Breakdown"?"Breakdown details / work done":"Remark (optional)"}" value="${esc(current.stopNote)}" style="margin-top:8px">
+    </div>
+    <ol class="rows ${current.stopped?"disabled":""}" id="rows">
+      ${m.items.map((t,i)=>{const mk=current.marks[i];return `
+      <li class="row ${mk.status==="bad"?"is-bad":""}" data-i="${i}">
+        <div class="no">${i+1}</div>
+        <div class="txt">${esc(t)}${m.en?`<div class="en">${esc(m.en[i])}</div>`:""}</div>
+        <div class="ctl">
+          <div class="mark" role="group" aria-label="Result for item ${i+1}">
+            <button type="button" class="ok" aria-pressed="${mk.status==="ok"}">✓ OK</button>
+            <button type="button" class="bad" aria-pressed="${mk.status==="bad"}">✗ Not OK</button>
+          </div>
+          <input type="text" class="remark" placeholder="${mk.status==="bad"?"Remark (required) – what is wrong?":"Remark"}" value="${esc(mk.remark)}" aria-label="Remark for item ${i+1}">
+        </div>
+      </li>`}).join("")}
+    </ol>
+  </div>`;
+  $("#savebar").hidden=false;
+  wrap.querySelectorAll(".row").forEach(row=>{
+    const i=+row.dataset.i;
+    const [okB,badB]=row.querySelectorAll(".mark button");
+    const rem=row.querySelector(".remark");
+    const set=s=>{current.marks[i].status=current.marks[i].status===s?"":s;updateRow(row,i);updateProg();};
+    okB.onclick=()=>set("ok");badB.onclick=()=>set("bad");
+    rem.oninput=()=>{current.marks[i].remark=rem.value;rem.classList.remove("need");};
+  });
+  $("#btnAllOk").onclick=()=>{current.marks.forEach(mk=>{if(!mk.status)mk.status="ok";});renderSheet();};
+  $("#btnStop").onclick=()=>{current.stopped=!current.stopped;renderSheet();};
+  const sr=$("#stopReason");if(sr)sr.onchange=()=>{current.stopReason=sr.value;if(sr.value==="Breakdown"&&!current.repairStart)current.repairStart=nowLocal();renderSheet();};
+  const rs=$("#repStart"),re_=$("#repEnd");
+  const upd=()=>{current.repairStart=rs.value;current.repairEnd=re_.value;rs.classList.remove("invalid");re_.classList.remove("invalid");$("#repDur").textContent=durText(current.repairStart,current.repairEnd);};
+  if(rs){rs.oninput=upd;re_.oninput=upd;}
+  const sn=$("#stopNote");if(sn)sn.oninput=()=>current.stopNote=sn.value;
+  updateProg();
+}
+function updateRow(row,i){
+  const mk=current.marks[i];
+  const [okB,badB]=row.querySelectorAll(".mark button");
+  okB.setAttribute("aria-pressed",mk.status==="ok");badB.setAttribute("aria-pressed",mk.status==="bad");
+  row.classList.toggle("is-bad",mk.status==="bad");row.classList.remove("missing");
+  const rem=row.querySelector(".remark");
+  rem.placeholder=mk.status==="bad"?"Remark (required) – what is wrong?":"Remark";
+  if(mk.status==="bad"&&!mk.remark)rem.focus();
+}
+function updateProg(){
+  if(!current)return;
+  const n=current.marks.length, done=current.marks.filter(m=>m.status).length, bad=current.marks.filter(m=>m.status==="bad").length;
+  $("#prog").innerHTML=current.stopped?`Machine stopped<small>Items are not checked while stopped</small>`:
+    `${done} of ${n} marked${bad?` · <span style="color:var(--bad)">${bad} not OK</span>`:""}<small>Not OK items need a remark</small>`;
+}
+function nowLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+function fmtDT(v){if(!v)return "";const [d,t]=v.split("T");return d+" "+(t||"");}
+function durText(a,b){if(!a)return "";if(!b)return "Repair in progress – enter the end time when the repair is finished.";const m=Math.round((new Date(b)-new Date(a))/60000);if(isNaN(m)||m<0)return "End time is before the start time.";return `Repair time: ${Math.floor(m/60)} h ${m%60} min`;}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+const msgEl=$("#msg");
+function showMsg(t,kind){msgEl.textContent=t;msgEl.className="msg show "+kind;msgEl.scrollIntoView({block:"nearest"});}
+function hideMsg(){msgEl.className="msg";}
+
+$("#btnClear").onclick=()=>{if(!current)return;current.marks=blankMarks(current.machine);current.stopped=false;current.stopReason="";current.stopNote="";current.repairStart="";current.repairEnd="";renderSheet();hideMsg();};
+$("#btnSave").onclick=async()=>{
+  if(!current)return;
+  const errs=[];
+  const emp=fEmp.value.trim();
+  if(!fDate.value)errs.push("Enter the date.");
+  if(!emp){errs.push("Enter your employee number.");fEmp.classList.add("invalid");}
+  if(current.stopped){
+    if(!current.stopReason){errs.push("Select why the machine is stopped.");$("#stopReason").classList.add("invalid");}
+    if(current.stopReason==="Breakdown"){
+      if(!current.repairStart){errs.push("Enter the repair start time.");$("#repStart").classList.add("invalid");}
+      else if(current.repairEnd&&current.repairEnd<current.repairStart){errs.push("Repair end time is before the start time.");$("#repEnd").classList.add("invalid");}
+    }
+  }else{
+    let missing=0,noRemark=0;
+    document.querySelectorAll("#rows .row").forEach(row=>{
+      const mk=current.marks[+row.dataset.i];
+      if(!mk.status){missing++;row.classList.add("missing");}
+      if(mk.status==="bad"&&!mk.remark.trim()){noRemark++;row.querySelector(".remark").classList.add("need");}
+    });
+    if(missing)errs.push(`${missing} item${missing>1?"s are":" is"} not marked.`);
+    if(noRemark)errs.push(`Add a remark for ${noRemark} Not OK item${noRemark>1?"s":""}.`);
+  }
+  if(errs.length){showMsg(errs.join(" "),"err");return;}
+  const m=current.machine, id=recId(fDate.value,shift,m.id);
+  const prev=records.get(id);
+  if(prev&&!current.existing&&!confirm(`${m.name} was already checked for this date and shift by ${prev.emp}. Replace it?`))return;
+  const rec={
+    id,date:fDate.value,shift,emp,machineId:m.id,machineName:m.name,docCode:m.code,
+    stopped:current.stopped,stopReason:current.stopped?current.stopReason:"",stopNote:current.stopped?current.stopNote.trim():"",
+    repairStart:current.stopped&&current.stopReason==="Breakdown"?current.repairStart:"",repairEnd:current.stopped&&current.stopReason==="Breakdown"?current.repairEnd:"",
+    items:m.items.map((t,i)=>({no:i+1,text:t,status:current.stopped?"S":current.marks[i].status==="ok"?"OK":"NOT OK",remark:current.stopped?"":current.marks[i].remark.trim()})),
+    notOk:current.stopped?0:current.marks.filter(x=>x.status==="bad").length,
+    savedAt:new Date().toISOString()
+  };
+  const btn=$("#btnSave");btn.disabled=true;
+  try{
+    await putRecord(rec);
+    lsSet("fitl_emp",emp);
+    showMsg(`Saved ${m.name} — ${rec.date}, ${shift} shift${rec.notOk?`, ${rec.notOk} not OK`:""}.`,"ok");
+    current=null;renderSheet();renderMachines();refreshRecords();
+  }catch(e){showMsg("Couldn’t save: "+(e&&e.message||e&&e.code||"unknown error")+". Try again.","err");}
+  finally{btn.disabled=false;}
+};
+
+/* ---------- Records view ---------- */
+const rMonth=$("#rMonth"), rMachine=$("#rMachine"), rShift=$("#rShift");
+rMonth.value=today().slice(0,7);
+rMachine.innerHTML=MACHINES.map(m=>`<option value="${m.id}">${m.name} (${m.code})</option>`).join("");
+[rMonth,rMachine,rShift,$("#rOnlyBad")].forEach(el=>el.onchange=refreshRecords);
+
+function monthRecs(){return [...records.values()].filter(r=>r.date&&r.date.startsWith(rMonth.value));}
+function refreshRecords(){
+  if(!rMonth.value)return;
+  const m=byId[rMachine.value];
+  const [y,mo]=rMonth.value.split("-").map(Number);
+  const days=new Date(y,mo,0).getDate();
+  const recs=monthRecs().filter(r=>r.machineId===m.id&&r.shift===rShift.value);
+  const byDay={};recs.forEach(r=>byDay[+r.date.slice(8,10)]=r);
+  let h=`<table class="grid"><thead><tr><th>No</th><th style="text-align:left">Item</th>`;
+  for(let d=1;d<=days;d++)h+=`<th>${d}</th>`;
+  h+=`</tr></thead><tbody>`;
+  m.items.forEach((t,i)=>{
+    h+=`<tr><td>${i+1}</td><td class="it">${esc(t)}</td>`;
+    for(let d=1;d<=days;d++){
+      const r=byDay[d];
+      if(!r){h+=`<td></td>`;continue;}
+      const it=r.items&&r.items[i];
+      if(r.stopped)h+=`<td class="c-s" title="${esc(r.stopReason+(r.repairStart?" · repair "+fmtDT(r.repairStart)+" → "+(r.repairEnd?fmtDT(r.repairEnd):"not finished"):""))}">S</td>`;
+      else if(it&&it.status==="OK")h+=`<td class="c-ok">✓</td>`;
+      else if(it)h+=`<td class="c-bad" title="${esc(it.remark)}">✗</td>`;
+      else h+=`<td></td>`;
+    }
+    h+=`</tr>`;
+  });
+  h+=`<tr><td></td><td class="it"><b>Checked by (employee no.)</b></td>`;
+  for(let d=1;d<=days;d++)h+=`<td style="font-size:.75rem">${byDay[d]?esc(byDay[d].emp):""}</td>`;
+  h+=`</tr></tbody></table>`;
+  $("#gridWrap").innerHTML=h;
+
+  const onlyBad=$("#rOnlyBad").checked;
+  let list=monthRecs().sort((a,b)=>(b.date+b.shift).localeCompare(a.date+a.shift)||a.machineName.localeCompare(b.machineName));
+  if(onlyBad)list=list.filter(r=>r.notOk>0);
+  const ul=$("#recList");
+  if(!list.length){ul.innerHTML=`<li class="empty">${onlyBad?"No Not OK items this month.":"No check lists saved for this month yet. Mark one in the first tab."}</li>`;return;}
+  ul.innerHTML=list.map(r=>{
+    const pill=r.stopped?`<span class="pill s">Stopped · ${esc(r.stopReason)}</span>`:r.notOk?`<span class="pill bad">${r.notOk} not OK</span>`:`<span class="pill ok">All OK</span>`;
+    const bad=(r.items||[]).filter(i=>i.status==="NOT OK");
+    return `<li class="rec"><div class="rec-top"><div><b>${esc(r.machineName)}</b> <span class="meta">${esc(r.docCode)} · ${esc(r.date)} · ${esc(r.shift)} shift · Emp ${esc(r.emp)}</span></div>
+      <div>${pill} <button class="linkbtn" data-open="${esc(r.id)}">Open</button><button class="linkbtn del" data-del="${esc(r.id)}">Delete</button></div></div>
+      ${bad.length?`<ul>${bad.map(i=>`<li><b>${i.no}.</b> ${esc(i.text)} — <span style="color:var(--bad)">${esc(i.remark)}</span></li>`).join("")}</ul>`:""}
+      ${r.stopped&&r.repairStart?`<div class="meta" style="margin-top:4px"><b>Repair:</b> ${esc(fmtDT(r.repairStart))} → ${r.repairEnd?esc(fmtDT(r.repairEnd)):"<span style='color:var(--bad)'>not finished</span>"}${r.repairEnd?" · "+esc(durText(r.repairStart,r.repairEnd).replace("Repair time: ","")):""}</div>`:""}
+      ${r.stopped&&r.stopNote?`<div class="meta" style="margin-top:4px">${esc(r.stopNote)}</div>`:""}</li>`;
+  }).join("");
+  ul.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
+    const r=records.get(b.dataset.del);
+    if(!confirm(`Delete ${r.machineName} — ${r.date}, ${r.shift} shift?`))return;
+    try{await deleteRecord(r.id);refreshAll();}catch(e){alert("Couldn’t delete: "+(e&&e.message||e&&e.code));}
+  });
+  ul.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
+    const r=records.get(b.dataset.open);
+    fDate.value=r.date;setShift(r.shift);if(r.emp&&!fEmp.value)fEmp.value=r.emp;
+    showTab(byId[r.machineId]&&byId[r.machineId].group==="Forklifts"?"fork":"mark");selectMachine(r.machineId);
+  });
+}
+
+function updateCsvBtn(){const b=$("#btnCsv");b.hidden=!downloads&&!!(window.claude&&window.claude.use);}
+$("#btnCsv").onclick=async()=>{
+  const rows=[["Date","Shift","Employee No","Machine","Doc code","Item No","Check item","Result","Remark","Repair start","Repair end","Repair hours","Saved at"]];
+  const rep=r=>[r.repairStart?fmtDT(r.repairStart):"",r.repairEnd?fmtDT(r.repairEnd):"",r.repairStart&&r.repairEnd?((new Date(r.repairEnd)-new Date(r.repairStart))/36e5).toFixed(2):""];
+  monthRecs().sort((a,b)=>(a.date+a.shift+a.machineName).localeCompare(b.date+b.shift+b.machineName)).forEach(r=>{
+    if(r.stopped)rows.push([r.date,r.shift,r.emp,r.machineName,r.docCode,"","Machine stopped","S",[r.stopReason,r.stopNote].filter(Boolean).join(" – "),...rep(r),r.savedAt]);
+    else (r.items||[]).forEach(i=>rows.push([r.date,r.shift,r.emp,r.machineName,r.docCode,i.no,i.text,i.status,i.remark,"","","",r.savedAt]));
+  });
+  const csv="﻿"+rows.map(r=>r.map(c=>{c=String(c??"");return /[",\n]/.test(c)?`"${c.replace(/"/g,'""')}"`:c;}).join(",")).join("\r\n");
+  const name=`Machine_checklists_${rMonth.value}.csv`;
+  if(downloads){
+    try{await downloads.save({filename:name,data:csv});}catch(e){if(e&&e.code!=="declined")alert("Download not available: "+(e.message||e.code));}
+  }else{
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=name;a.click();
+  }
+};
+
+/* ---------- Tabs ---------- */
+function showTab(t){
+  ["mark","fork","rec"].forEach(k=>$("#tab-"+k).setAttribute("aria-selected",t===k));
+  const marking=t!=="rec";
+  $("#view-mark").hidden=!marking;$("#view-rec").hidden=marking;
+  if(marking){
+    const ns=t==="fork"?"fork":"machines";
+    if(ns!==section){section=ns;current=null;renderSheet();hideMsg();}
+    $("#markTitle").textContent=section==="fork"?"Forklift daily check sheet":"Check details";
+    $("#machLabel").textContent=section==="fork"?"Forklift":"Machine";
+    renderMachines();
+  }
+  $("#savebar").hidden=!marking||!current;
+  if(t==="rec")refreshRecords();
+}
+$("#tab-mark").onclick=()=>showTab("mark");$("#tab-fork").onclick=()=>showTab("fork");$("#tab-rec").onclick=()=>showTab("rec");
+
+function refreshAll(){renderMachines();if(!$("#view-rec").hidden)refreshRecords();}
+renderMachines();refreshRecords();
+</script>
+</body>
+</html>
