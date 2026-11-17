@@ -37,13 +37,17 @@ const sendShifts = () => { if (capaReady && shiftItems && win('capa')) post('cap
 /* ---- Production Summary workbook -> QC, Defect Analyser, KPI dashboards; downtime / attendance / accidents -> KPI, Mixing ---- */
 let lastWorkbook: Msg | null = null, qcReady = false, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
   lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
-  hrkpiReady = false;
+  hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false;
 function sendMix() {
   if (!mixReady || !win('mixingdash')) return;
   if (lastDowntimeWb) post('mixingdash', lastDowntimeWb);
   if (lastAttendance) post('mixingdash', lastAttendance);
 }
 const sendSg = () => { if (sgReady && lastEmployees && win('shiftgroups')) post('shiftgroups', lastEmployees); };   // HR Attendance -> Shift Groups (the employee list)
+// HR Attendance -> each department's employee roster (QC, Maintenance, Technical)
+const sendQcEmp = () => { if (qcEmpReady && lastEmployees && win('qcemployees')) post('qcemployees', lastEmployees); };
+const sendMaintEmp = () => { if (maintEmpReady && lastEmployees && win('maintemployees')) post('maintemployees', lastEmployees); };
+const sendTechEmp = () => { if (techEmpReady && lastEmployees && win('techemployees')) post('techemployees', lastEmployees); };
 const sendAtt = () => { if (attReady && lastGroups && win('attendance')) post('attendance', lastGroups); };         // Shift Groups -> Attendance (who is in which group)
 function sendPs() {
   if (!psReady || !win('prodsum')) return;
@@ -158,6 +162,15 @@ function onApp(ev: MessageEvent) {
   } else if (m.type === 'fitl-employees' && from === 'attendance') {
     lastEmployees = m;
     if (sgReady) sendSg(); else ensureLoaded('shiftgroups');
+    if (qcEmpReady) sendQcEmp(); else ensureLoaded('qcemployees');
+    if (maintEmpReady) sendMaintEmp(); else ensureLoaded('maintemployees');
+    if (techEmpReady) sendTechEmp(); else ensureLoaded('techemployees');
+  } else if (m.type === 'fitl-qcemployees-ready' && from === 'qcemployees') {
+    qcEmpReady = true; sendQcEmp();
+  } else if (m.type === 'fitl-maintemployees-ready' && from === 'maintemployees') {
+    maintEmpReady = true; sendMaintEmp();
+  } else if (m.type === 'fitl-techemployees-ready' && from === 'techemployees') {
+    techEmpReady = true; sendTechEmp();
   } else if (m.type === 'fitl-shiftgroups' && from === 'shiftgroups') {
     lastGroups = m;
     if (attReady) sendAtt(); else ensureLoaded('attendance');

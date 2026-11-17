@@ -24,21 +24,22 @@ export const APP_TITLES: Record<string, string> = {
   hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB', compoundspec: 'Compound Properties — Spec & QC Dashboard',
   compoundtag: 'Compound Approval Tag', beadringtag: 'Bead Ring Lot Tag', holdcompound: 'Hold Compound Control',
   planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
-  dailycheck: 'Machine Daily Check Lists',
+  dailycheck: 'Machine Daily Check Lists', qcemployees: 'QC Department Employees', maintemployees: 'Maintenance Department Employees',
+  techemployees: 'Technical Department Employees',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
 
 export const SECTIONS: Section[] = [
   { id: 'qc', title: 'QC Department', color: '#DA1B22', icon: 'shield',
-    blurb: 'Press monitoring, tyre QC, defect analyser, CAPA control, internal audit, process FMEA control',
-    tabs: [['press', 'Press Monitoring'], ['qc', 'Tyre QC — Scrap & Repair'], ['defect', 'Defect Analyser'], ['qckpi', 'KPI Dashboard'], ['capa', 'CAPA Control'], ['audit', 'Internal Audit'], ['processcontrol', 'Process Control — FMEA']] },
+    blurb: 'Press monitoring, tyre QC, defect analyser, CAPA control, internal audit, process FMEA control, employees',
+    tabs: [['press', 'Press Monitoring'], ['qc', 'Tyre QC — Scrap & Repair'], ['defect', 'Defect Analyser'], ['qckpi', 'KPI Dashboard'], ['capa', 'CAPA Control'], ['audit', 'Internal Audit'], ['processcontrol', 'Process Control — FMEA'], ['qcemployees', 'Employees']] },
   { id: 'apps', title: 'Working Apps', color: '#2563EB', icon: 'cog',
     blurb: 'Live monitoring, loading, pallet labels, press trace, gauge calibration',
     tabs: [['live', 'Live & Tyre Production Monitoring'], ['loading', 'Loading Report'], ['pallet', 'Pallet Label Generator'], ['trace', 'Press Trace'], ['calib', 'Temperature Gauge Calibration']] },
   { id: 'maint', title: 'Maintenance Department', color: '#D97706', icon: 'wrench',
-    blurb: 'Maintenance dashboard, KPI, waste removing records, machine daily check lists',
-    tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing'], ['dailycheck', 'Machine Daily Check Lists']] },
+    blurb: 'Maintenance dashboard, KPI, waste removing records, machine daily check lists, employees',
+    tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing'], ['dailycheck', 'Machine Daily Check Lists'], ['maintemployees', 'Employees']] },
   { id: 'prod', title: 'Production Department', color: '#16A34A', icon: 'factory',
     blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups',
     tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups']] },
@@ -64,8 +65,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Manuals, policy, SOPs, work instructions and sectional documents — view and download',
     tabs: [['library', 'Document Library']] },
   { id: 'technical', title: 'Technical Department', color: '#4F46E5', icon: 'db',
-    blurb: 'Customer claim records, compound properties, QC spec management, lot/approval tags and hold compound control',
-    tabs: [['claimdb', 'Claim Record DB'], ['compoundspec', 'Compound Spec & QC'], ['compoundtag', 'Compound Approval Tag'], ['beadringtag', 'Bead Ring Lot Tag'], ['holdcompound', 'Hold Compound Control']] },
+    blurb: 'Customer claim records, compound properties, QC spec management, lot/approval tags, hold compound control and employees',
+    tabs: [['claimdb', 'Claim Record DB'], ['compoundspec', 'Compound Spec & QC'], ['compoundtag', 'Compound Approval Tag'], ['beadringtag', 'Bead Ring Lot Tag'], ['holdcompound', 'Hold Compound Control'], ['techemployees', 'Employees']] },
 ];
 
 export const sectionById = (id: string) => SECTIONS.find((s) => s.id === id);
