@@ -346,7 +346,7 @@
         </div>
         <div class="dash-section">
           <div class="dash-body">
-            <p class="hint">One group per department/section, matching the printed form: tick Y against each employee for the Training Needs that apply (the Training Need choices come from the Annual Training Plan). The department groups (QC, Maintenance, Technical, Planning, HR and Stores) are loaded automatically from each department's own Employees tab, and keep picking up anyone newly registered there — you can still add or remove an employee row by hand, or add/remove a department group of your own.</p>
+            <p class="hint">One group per department/section, matching the printed form: tick Y against each employee for the Training Needs that apply (the Training Need choices come from the Annual Training Plan). The department groups (QC, Maintenance, Technical, Planning, HR and Stores) are loaded automatically from each department's own Employees tab; Production has no Employees tab of its own, so it is loaded group-wise instead, straight from the Production Department's Shift Groups tab — one group here for Shift Group A, B and C, Mixing, and Base Building. All of these keep picking up anyone newly registered there — you can still add or remove an employee row by hand, or add/remove a department group of your own.</p>
             <div class="dash-toolbar no-print">
               <button class="btn" onclick="syncRecord4FromRosters()">🔄 Refresh from Employee rosters</button>
               <button class="btn" onclick="addRecord4Group()">+ Add Department / Section</button>
@@ -1206,9 +1206,14 @@ let R4_CONFIGURING = null;   // index of the group whose "choose needs" panel is
    Employees tab (QC/Maintenance/Technical/Planning/HR save to this
    same browser's localStorage, which the host syncs to the server
    under its own key; Stores keeps its roster in MongoDB behind the
-   API). A record4 group with a `source` is kept in step with one of
-   these; groups without one are plain hand-made groups.
+   API). Production has no separate Employees tab — its people are
+   assigned to Shift Group A/B/C, Mixing or Base Building on the
+   Production Department's own "Shift Groups" tab, so each of those
+   becomes its own group here too. A record4 group with a `source` is
+   kept in step with one of these; groups without one are plain
+   hand-made groups.
    --------------------------------------------------------------------- */
+const R4_SHIFTGROUPS_LS = 'fitl_shiftgroups_v1';
 const R4_DEPT_SOURCES = [
   {key:'qc', name:'QC Department', ls:'fitl_qc_employees_v1'},
   {key:'maint', name:'Maintenance Department', ls:'fitl_maint_employees_v1'},
@@ -1216,6 +1221,11 @@ const R4_DEPT_SOURCES = [
   {key:'planning', name:'Planning Department', ls:'fitl_planning_employees_v1'},
   {key:'hr', name:'HR Department', ls:'fitl_hr_employees_v1'},
   {key:'stores', name:'Stores Department', api:'/api/stores/employees'},
+  {key:'prod-a', name:'Production Department — Shift Group A', shiftgroup:'A'},
+  {key:'prod-b', name:'Production Department — Shift Group B', shiftgroup:'B'},
+  {key:'prod-c', name:'Production Department — Shift Group C', shiftgroup:'C'},
+  {key:'prod-mix', name:'Production Department — Mixing', shiftgroup:'MIX'},
+  {key:'prod-base', name:'Production Department — Base Building', shiftgroup:'BASE'},
 ];
 function r4ReadLsRoster(lsKey){
   try{
@@ -1223,6 +1233,14 @@ function r4ReadLsRoster(lsKey){
     if(!raw) return [];
     const s = JSON.parse(raw), POOL = s.POOL||{}, ASSIGN = s.ASSIGN||{};
     return Object.keys(ASSIGN).map(no=>({epf:no, name:(POOL[no]||{}).name||no}));
+  }catch(e){ return []; }
+}
+function r4ReadShiftGroupRoster(letter){
+  try{
+    const raw = localStorage.getItem(R4_SHIFTGROUPS_LS);
+    if(!raw) return [];
+    const s = JSON.parse(raw), POOL = s.POOL||{}, ASSIGN = s.ASSIGN||{};
+    return Object.keys(ASSIGN).filter(no=>ASSIGN[no].g===letter).map(no=>({epf:no, name:(POOL[no]||{}).name||no}));
   }catch(e){ return []; }
 }
 async function r4ReadApiRoster(url){
@@ -1233,7 +1251,11 @@ async function r4ReadApiRoster(url){
     return (j.employees||[]).map(e=>({epf:e.code, name:e.name}));
   }catch(e){ return []; }
 }
-async function r4RosterFor(src){ return src.ls ? r4ReadLsRoster(src.ls) : await r4ReadApiRoster(src.api); }
+async function r4RosterFor(src){
+  if(src.ls) return r4ReadLsRoster(src.ls);
+  if(src.shiftgroup) return r4ReadShiftGroupRoster(src.shiftgroup);
+  return await r4ReadApiRoster(src.api);
+}
 
 /* Adds any department group that doesn't exist yet, and adds any registered employee not
    already in that group. Never removes or edits a row — manual add/remove stays untouched. */
