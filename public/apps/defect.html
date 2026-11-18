@@ -10,12 +10,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--bg:#f5f6f8;--fg:#1c2330;--card:#fff;--bd:#dde1e8;--mut:#6a7384;--acc:#1f4e8c;--s:#d64545;--M:#e08a1e;--m:#3b82c4;
---c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4;--c6:#008300;--c7:#6250d6;--c8:#e34948;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8;
---c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767}}
-:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8;
---c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8}}
+:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -41,6 +38,7 @@ th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mut)}
 .bar{display:flex;height:9px;min-width:90px;border-radius:3px;overflow:hidden;background:var(--bd)}
 .bar i{display:block}
 .leg span{margin-right:12px;font-size:12px;color:var(--mut)}.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.leg span[data-tgl]{cursor:pointer;user-select:none}.leg span[data-tgl].off{opacity:.4;text-decoration:line-through}
 #msg{color:var(--mut)}
 .sel{background:rgba(31,78,140,.2)}tr[data-r]{cursor:pointer}tr[data-r]:hover{background:rgba(31,78,140,.1)}
 </style>
@@ -83,6 +81,7 @@ th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mut)}
 <script>
 const $=id=>document.getElementById(id), DAY=864e5;
 let recs=[], mode='week', anchor=null, view=null, selDef=null, dataMin=null, dataMax=null;
+let chartOff={S:false,M:false,m:false};
 const KEYS={S:'Scrap',M:'Major repair',m:'Minor repair'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const iso=d=>d.toISOString().slice(0,10);
@@ -214,34 +213,34 @@ function dtbl(det,lim){
 function monthlyGroupChart(name){
   const rows=recs.filter(r=>r.r===name);
   if(!rows.length||dataMin==null)return'';
-  const groups=[...new Set(rows.map(r=>r.g))].sort((a,b)=>a.localeCompare(b));
-  const gc=new Map(groups.map((g,i)=>[g,'var(--c'+(i%8+1)+')']));
+  const TYPES=['S','M','m'], COL={S:'var(--s)',M:'var(--M)',m:'var(--m)'};
+  const shown=TYPES.filter(t=>!chartOff[t]);
   const mm=new Map();
   rows.forEach(r=>{const d=new Date(r.t),k=d.getUTCFullYear()+'-'+d.getUTCMonth();
-    if(!mm.has(k))mm.set(k,new Map());
-    const o=mm.get(k);o.set(r.g,(o.get(r.g)||0)+r.q);});
+    if(!mm.has(k))mm.set(k,{S:0,M:0,m:0});
+    mm.get(k)[r.type]+=r.q;});
   const months=[];
   const se=new Date(dataMin),ee=new Date(dataMax);
-  let y=se.getUTCFullYear(),m=se.getUTCMonth();
-  while(y<ee.getUTCFullYear()||(y===ee.getUTCFullYear()&&m<=ee.getUTCMonth())){
-    const g=mm.get(y+'-'+m)||new Map();
-    months.push({y,m,g,tot:[...g.values()].reduce((a,b)=>a+b,0)});
-    m++;if(m>11){m=0;y++;}
+  let y=se.getUTCFullYear(),mo=se.getUTCMonth();
+  while(y<ee.getUTCFullYear()||(y===ee.getUTCFullYear()&&mo<=ee.getUTCMonth())){
+    months.push({y,m:mo,...(mm.get(y+'-'+mo)||{S:0,M:0,m:0})});
+    mo++;if(mo>11){mo=0;y++;}
   }
-  const max=Math.max(1,...months.map(x=>x.tot));
-  const pad={l:40,r:10,t:16,b:34},bw=56,ih=180,W=pad.l+pad.r+bw*months.length,H=pad.t+pad.b+ih,gap=Math.min(18,bw*0.3);
+  const max=shown.length?Math.max(1,...months.map(x=>Math.max(...shown.map(t=>x[t])))):1;
+  const pad={l:40,r:10,t:16,b:34},clusterW=Math.max(44,shown.length*20+12),ih=180,W=pad.l+pad.r+clusterW*months.length,H=pad.t+pad.b+ih;
+  const inner=clusterW-12,barGap=4,barW=shown.length?Math.max(6,(inner-barGap*(shown.length-1))/shown.length):inner;
   const grid=[0,.25,.5,.75,1].map(f=>{const yy=(pad.t+ih-ih*f).toFixed(1);
     return`<line x1="${pad.l}" x2="${W-pad.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)" stroke-width="1"/><text x="${pad.l-6}" y="${(+yy+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--mut)">${Math.round(max*f)}</text>`;}).join('');
   const bars=months.map((x,i)=>{
-    let y0=pad.t+ih,segs='';
-    groups.forEach(gn=>{const v=x.g.get(gn)||0;if(!v)return;const h=v/max*ih;y0-=h;
-      segs+=`<rect x="${(pad.l+i*bw+gap/2).toFixed(1)}" y="${y0.toFixed(1)}" width="${(bw-gap).toFixed(1)}" height="${h.toFixed(1)}" fill="${gc.get(gn)}"><title>${esc(gn)}: ${v} (${MON[x.m]} ${x.y})</title></rect>`;});
-    const lx=(pad.l+i*bw+bw/2).toFixed(1);
-    return segs+`<text x="${lx}" y="${(pad.t+ih+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mut)">${MON[x.m].slice(0,3)} ${String(x.y).slice(2)}</text>`+
-      (x.tot?`<text x="${lx}" y="${Math.max(pad.t+8,pad.t+ih-x.tot/max*ih-4).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--fg)">${x.tot}</text>`:'');
+    const baseX=pad.l+i*clusterW+6;
+    const segs=shown.map((t,j)=>{const v=x[t]||0,h=v/max*ih,xx=baseX+j*(barW+barGap),yy=pad.t+ih-h;
+      return`<rect x="${xx.toFixed(1)}" y="${yy.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${COL[t]}"><title>${KEYS[t]}: ${v} (${MON[x.m]} ${x.y})</title></rect>`+
+        (v?`<text x="${(xx+barW/2).toFixed(1)}" y="${Math.max(pad.t+8,yy-4).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--fg)">${v}</text>`:'');}).join('');
+    const lx=(pad.l+i*clusterW+clusterW/2).toFixed(1);
+    return segs+`<text x="${lx}" y="${(pad.t+ih+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mut)">${MON[x.m].slice(0,3)} ${String(x.y).slice(2)}</text>`;
   }).join('');
-  const legend=groups.map(gn=>`<span><i style="background:${gc.get(gn)}"></i>${esc(gn)}</span>`).join('');
-  return`<div class="card"><h2>Monthly occurrence by shift group &mdash; ${esc(name)}</h2><div class="sc" style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="min-width:${W}px;display:block">${grid}${bars}</svg></div><p class="leg" style="margin:8px 0 0">${legend}</p></div>`;
+  const legend=TYPES.map(t=>`<span data-tgl="${t}" class="${chartOff[t]?'off':''}"><i style="background:${COL[t]}"></i>${esc(KEYS[t])}</span>`).join('');
+  return`<div class="card"><h2>Monthly occurrence &mdash; ${esc(name)}</h2><div class="sc" style="overflow-x:auto">${shown.length?`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="min-width:${W}px;display:block">${grid}${bars}</svg>`:'<p style="color:var(--mut)">All series hidden &mdash; click a legend item to show it.</p>'}</div><p class="leg" style="margin:8px 0 0">${legend}<span style="color:var(--mut);font-size:12px">Click a label to show/hide it.</span></p></div>`;
 }
 function render(){
   const [s,e]=period();
@@ -558,7 +557,9 @@ $('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
 $('latest').onclick=()=>{anchor=new Date(dataMax);render();};
 $('shiftSel').onchange=render;
 $('out').addEventListener('change',ev=>{if(ev.target.id==='defSel'){selDef=ev.target.value||null;render();}});
-$('out').addEventListener('click',ev=>{const tr=ev.target.closest('tr[data-r]');if(tr){selDef=tr.dataset.r;render();const d=$('defSel');if(d)d.scrollIntoView({block:'start'});}});
+$('out').addEventListener('click',ev=>{
+  const tgl=ev.target.closest('[data-tgl]');if(tgl){chartOff[tgl.dataset.tgl]=!chartOff[tgl.dataset.tgl];render();return;}
+  const tr=ev.target.closest('tr[data-r]');if(tr){selDef=tr.dataset.r;render();const d=$('defSel');if(d)d.scrollIntoView({block:'start'});}});
 $('dt').onchange=ev=>{const v=ev.target.value;if(!v)return;anchor=mode==='month'?new Date(v+'-01T00:00:00Z'):new Date(v+'T00:00:00Z');render();};
 $('pdf').onclick=()=>{$('pdf').disabled=true;makePDF().finally(()=>{$('pdf').disabled=!(view&&view.list.length);});};
 
