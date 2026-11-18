@@ -346,8 +346,9 @@
         </div>
         <div class="dash-section">
           <div class="dash-body">
-            <p class="hint">One group per department/section, matching the printed form: tick Y against each employee for the Training Needs that apply (the Training Need choices come from the Annual Training Plan). Filled in by hand — adding or removing a group, its Training Needs, or an employee row needs the System Coordinator's password; ticking Y does not.</p>
+            <p class="hint">One group per department/section, matching the printed form: tick Y against each employee for the Training Needs that apply (the Training Need choices come from the Annual Training Plan). The department groups (QC, Maintenance, Technical, Planning, HR and Stores) are loaded automatically from each department's own Employees tab, and keep picking up anyone newly registered there — you can still add or remove an employee row by hand, or add/remove a department group of your own.</p>
             <div class="dash-toolbar no-print">
+              <button class="btn" onclick="syncRecord4FromRosters()">🔄 Refresh from Employee rosters</button>
               <button class="btn" onclick="addRecord4Group()">+ Add Department / Section</button>
               <button class="btn" onclick="exportCsv('record4')">⬇ CSV</button>
               <button class="btn primary" onclick="downloadRecord4Pdf()">⬇ Download PDF (FIT/Q/FO-HR-10)</button>
@@ -1200,6 +1201,55 @@ const RECORD4_KEY = 'record4-groups';
 let RECORD4_GROUPS = [];
 let R4_CONFIGURING = null;   // index of the group whose "choose needs" panel is open, or null
 
+/* ---------------------------------------------------------------------
+   AUTO-LOADED DEPARTMENT ROSTERS — each department keeps its own
+   Employees tab (QC/Maintenance/Technical/Planning/HR save to this
+   same browser's localStorage, which the host syncs to the server
+   under its own key; Stores keeps its roster in MongoDB behind the
+   API). A record4 group with a `source` is kept in step with one of
+   these; groups without one are plain hand-made groups.
+   --------------------------------------------------------------------- */
+const R4_DEPT_SOURCES = [
+  {key:'qc', name:'QC Department', ls:'fitl_qc_employees_v1'},
+  {key:'maint', name:'Maintenance Department', ls:'fitl_maint_employees_v1'},
+  {key:'tech', name:'Technical Department', ls:'fitl_tech_employees_v1'},
+  {key:'planning', name:'Planning Department', ls:'fitl_planning_employees_v1'},
+  {key:'hr', name:'HR Department', ls:'fitl_hr_employees_v1'},
+  {key:'stores', name:'Stores Department', api:'/api/stores/employees'},
+];
+function r4ReadLsRoster(lsKey){
+  try{
+    const raw = localStorage.getItem(lsKey);
+    if(!raw) return [];
+    const s = JSON.parse(raw), POOL = s.POOL||{}, ASSIGN = s.ASSIGN||{};
+    return Object.keys(ASSIGN).map(no=>({epf:no, name:(POOL[no]||{}).name||no}));
+  }catch(e){ return []; }
+}
+async function r4ReadApiRoster(url){
+  try{
+    const r = await fetch(url, {credentials:'same-origin', headers:{'X-FIT-Request':'1'}});
+    if(!r.ok) return [];
+    const j = await r.json();
+    return (j.employees||[]).map(e=>({epf:e.code, name:e.name}));
+  }catch(e){ return []; }
+}
+async function r4RosterFor(src){ return src.ls ? r4ReadLsRoster(src.ls) : await r4ReadApiRoster(src.api); }
+
+/* Adds any department group that doesn't exist yet, and adds any registered employee not
+   already in that group. Never removes or edits a row — manual add/remove stays untouched. */
+async function syncRecord4FromRosters(){
+  let changed = false;
+  for(const src of R4_DEPT_SOURCES){
+    let g = RECORD4_GROUPS.find(x=>x.source===src.key);
+    if(!g){ g = {id:uid(), name:src.name, source:src.key, needIds:[], employees:[]}; RECORD4_GROUPS.push(g); changed = true; }
+    const roster = await r4RosterFor(src);
+    if(!roster.length) continue;
+    const have = new Set(g.employees.map(e=>e.epf));
+    roster.forEach(r=>{ if(!have.has(r.epf)){ g.employees.push({epf:r.epf, name:r.name, marks:{}}); have.add(r.epf); changed = true; } });
+  }
+  if(changed){ renderRecord4(); await saveRecord4(true); }
+}
+
 async function loadRecord4(){
   try{
     const r = await storageGet(RECORD4_KEY, true);
@@ -1207,6 +1257,7 @@ async function loadRecord4(){
   }catch(e){ RECORD4_GROUPS = []; }
   RECORD4_GROUPS.forEach(g=>{ if(!g.id) g.id = uid(); if(!g.needIds) g.needIds = []; if(!g.employees) g.employees = []; });
   renderRecord4();
+  await syncRecord4FromRosters();
 }
 async function saveRecord4(silent){
   try{ await storageSet(RECORD4_KEY, JSON.stringify(RECORD4_GROUPS), true); }
@@ -1290,8 +1341,9 @@ function renderRecord4(){
 
     const configuring = R4_CONFIGURING === gi ? renderNeedsConfigurator(gi) : '';
 
+    const srcTag = g.source ? ' <span style="font-weight:400;font-size:12px;color:#888;">(auto-loaded from the '+escapeHtml((R4_DEPT_SOURCES.find(s=>s.key===g.source)||{}).name||g.source)+' Employees tab)</span>' : '';
     return '<div class="r4-group">'+
-      '<div class="r4-group-head"><h4>'+escapeHtml(g.name)+' — '+g.employees.length+' employee(s), '+g.needIds.length+' training need(s)</h4>'+
+      '<div class="r4-group-head"><h4>'+escapeHtml(g.name)+srcTag+' — '+g.employees.length+' employee(s), '+g.needIds.length+' training need(s)</h4>'+
         '<div class="btns">'+
           '<button onclick="openConfigureNeeds('+gi+')">Choose Training Needs</button>'+
           '<button onclick="addRecord4Employee('+gi+')">+ Employee</button>'+
