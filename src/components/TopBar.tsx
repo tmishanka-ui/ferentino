@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   '/stores/issue': ['Stores Department', 'Issue'],
   '/stores/stock': ['Stores Department', 'Stock'],
   '/stores/movements': ['Stores Department', 'Movements'],
+  '/stores/employees': ['Stores Department', 'Employees'],
   '/stores/backup': ['Stores Department', 'Backup'],
 };
 

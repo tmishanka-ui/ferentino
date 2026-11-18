@@ -216,19 +216,21 @@ export async function listTxns(c: Ctx) {
 /* ---------------- backup / restore ---------------- */
 export async function backup(c: Ctx) {
   needUser(c);
-  const [its, txns] = await Promise.all([c.s.storesItems.find().toArray(), c.s.storesTxns.find().toArray()]);
+  const [its, txns, emps] = await Promise.all([c.s.storesItems.find().toArray(), c.s.storesTxns.find().toArray(), c.s.storesEmployees.find().toArray()]);
   const items: Record<string, unknown> = {};
   for (const it of its) items[it._id] = { code: it._id, name: it.name, category: it.category, unit: it.unit, location: it.location, minLevel: it.minLevel, createdAt: it.createdAt };
   const out: Record<string, unknown> = {};
   for (const t of txns) out[t._id] = { id: t._id, code: t.code, type: t.type, date: t.date, ts: t.ts, qty: t.qty, ref: t.ref, party: t.party, person: t.person, remarks: t.remarks };
-  return json(200, { app: 'fitl-stores', version: 1, exported: iso(), items, txns: out });
+  const employees: Record<string, unknown> = {};
+  for (const e of emps) employees[e._id] = { code: e._id, name: e.name, designation: e.designation, contact: e.contact, joinedDate: e.joinedDate, remarks: e.remarks, createdAt: e.createdAt };
+  return json(200, { app: 'fitl-stores', version: 1, exported: iso(), items, txns: out, employees });
 }
 
 export async function restore(c: Ctx) {
   const u = needUser(c);
   const b = await c.json();
   if (b.app !== 'fitl-stores' || !b.items || !b.txns) throw new ApiError(400, 'That is not a Stores backup file.');
-  let items = 0, txns = 0;
+  let items = 0, txns = 0, employees = 0;
   for (const code of Object.keys(b.items)) {
     const raw = b.items[code] || {};
     const name = clip(raw.name, 160);
@@ -256,5 +258,18 @@ export async function restore(c: Ctx) {
     }, { upsert: true });
     txns++;
   }
-  return json(200, { ok: true, items, txns });
+  for (const code of Object.keys(b.employees || {})) {
+    const raw = b.employees[code] || {};
+    const name = clip(raw.name, 160);
+    if (!code || !name) continue;
+    await c.s.storesEmployees.updateOne({ _id: clip(code, 40).toUpperCase() }, {
+      $set: {
+        name, designation: clip(raw.designation, 80), contact: clip(raw.contact, 40),
+        joinedDate: clip(raw.joinedDate, 10), remarks: clip(raw.remarks, 400),
+      },
+      $setOnInsert: { createdAt: str(raw.createdAt) || iso(), createdBy: u.name },
+    }, { upsert: true });
+    employees++;
+  }
+  return json(200, { ok: true, items, txns, employees });
 }

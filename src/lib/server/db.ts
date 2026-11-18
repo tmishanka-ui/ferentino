@@ -41,6 +41,11 @@ export interface StoreTxn {
   _id: string; code: string; type: 'R' | 'I'; date: string; ts: number; qty: number;
   ref: string; party: string; person: string; remarks: string; enteredBy: string;
 }
+export interface StoreEmployee {
+  _id: string; // employee code, e.g. FITL-SE-00001
+  name: string; designation: string; contact: string; joinedDate: string; remarks: string;
+  createdAt: string; createdBy: string;
+}
 /* The Press Downtime import can be too large for a browser's localStorage (which the generic
    data_items/localStorage sync is built around and would otherwise try to mirror into every
    signed-in browser), so it gets its own small dedicated storage instead: one small metadata
@@ -138,6 +143,7 @@ export interface Store {
   files: GridFSBucket;
   storesItems: Collection<StoreItem>;
   storesTxns: Collection<StoreTxn>;
+  storesEmployees: Collection<StoreEmployee>;
   downtimeMeta: Collection<DowntimeMeta>;
   downtimeRecords: Collection<DowntimeRecord>;
   pressKv: Collection<PressKv>;
@@ -178,6 +184,7 @@ async function connect(): Promise<Store> {
     files: new GridFSBucket(db, { bucketName: 'files' }),
     storesItems: db.collection<StoreItem>('stores_items'),
     storesTxns: db.collection<StoreTxn>('stores_txns'),
+    storesEmployees: db.collection<StoreEmployee>('stores_employees'),
     downtimeMeta: db.collection<DowntimeMeta>('downtime_meta'),
     downtimeRecords: db.collection<DowntimeRecord>('downtime_records'),
     pressKv: db.collection<PressKv>('press_kv'),
@@ -202,6 +209,7 @@ async function connect(): Promise<Store> {
     s.storesTxns.createIndex({ code: 1 }),
     s.storesTxns.createIndex({ date: 1 }),
     s.storesTxns.createIndex({ code: 1, date: 1, ts: 1 }),
+    s.storesEmployees.createIndex({ name: 1 }),
     s.downtimeRecords.createIndex({ src: 1 }),
   ]);
   await firstStart(s);

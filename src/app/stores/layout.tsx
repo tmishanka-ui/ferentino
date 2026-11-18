@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const TABS: [string, string][] = [['receive', 'Receive'], ['issue', 'Issue'], ['stock', 'Stock'], ['movements', 'Movements'], ['backup', 'Backup']];
+const TABS: [string, string][] = [['receive', 'Receive'], ['issue', 'Issue'], ['stock', 'Stock'], ['movements', 'Movements'], ['employees', 'Employees'], ['backup', 'Backup']];
 
 export default function StoresLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

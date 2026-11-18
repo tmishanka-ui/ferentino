@@ -7,6 +7,10 @@ export interface StoreTxnRow {
   ref: string; party: string; person: string; remarks: string; enteredBy: string; balanceAfter: number;
 }
 export interface MovementRow extends StoreTxnRow { itemName: string; unit: string }
+export interface StoreEmployeeOut {
+  code: string; name: string; designation: string; contact: string; joinedDate: string; remarks: string;
+  createdAt: string; createdBy: string;
+}
 
 export const UNITS = ['Nos', 'kg', 'g', 'L', 'ml', 'm', 'Box', 'Roll', 'Set', 'Pair', 'Packet', 'Drum'];
 export const DEPARTMENTS = ['Production', 'Mixing', 'Curing', 'Maintenance', 'QC / QA', 'Boiler', 'HR', 'Planning', 'Finance', 'Export', 'Stores'];

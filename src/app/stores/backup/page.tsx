@@ -34,7 +34,7 @@ export default function BackupTab() {
       const res = await api('POST', '/api/stores/restore', data);
       setBusy(false);
       if (!res.ok) { setMsg(res.j.error || 'Could not restore that backup.'); return; }
-      setMsg(`Restored ${res.j.items} items and ${res.j.txns} movements.`);
+      setMsg(`Restored ${res.j.items} items, ${res.j.txns} movements and ${res.j.employees ?? 0} employees.`);
     };
     r.readAsText(f);
   }
@@ -43,7 +43,7 @@ export default function BackupTab() {
     <div className="panel" style={{ marginTop: 0 }}>
       <div style={{ flex: 1, minWidth: 260 }}>
         <h3>Stores backup</h3>
-        <p>One file holds every item and every receipt/issue in Stores. Keep a copy regularly; use Restore to bring in data recorded during a trial, or to move it to another system.</p>
+        <p>One file holds every item, every receipt/issue and every employee in Stores. Keep a copy regularly; use Restore to bring in data recorded during a trial, or to move it to another system.</p>
         <p className="msg" style={{ color: msg.startsWith('Restored') || msg === 'Backup downloaded.' ? 'var(--ok)' : undefined }} role="status">{msg}</p>
       </div>
       <div className="row" style={{ margin: 0 }}>
