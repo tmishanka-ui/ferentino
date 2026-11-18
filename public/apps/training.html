@@ -204,6 +204,16 @@
   .lightbox img{max-width:100%; max-height:100%; border-radius:6px;}
   .lightbox .close{position:absolute; top:20px; right:26px; color:#fff; font-size:30px; cursor:pointer; background:none; border:none;}
 
+  .name-link{cursor:pointer; color:var(--amber-deep); text-decoration:underline; text-decoration-style:dotted;}
+  .name-link:hover{color:var(--brand-red);}
+  .survey-veil{display:none; position:fixed; inset:0; background:rgba(31,42,51,.55); z-index:900; align-items:flex-start; justify-content:center; padding:30px 16px; overflow:auto;}
+  .survey-veil.show{display:flex;}
+  .survey-modal{background:var(--panel); border-radius:10px; max-width:900px; width:100%; margin:auto; padding:22px 26px 30px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .survey-modal .close-x{position:absolute; top:14px; right:16px; font-size:24px; line-height:1; background:none; border:none; cursor:pointer; color:#888;}
+  .survey-modal .close-x:hover{color:var(--brand-red);}
+  .survey-modal table.rate input[type=radio]{pointer-events:none;}
+  .survey-modal .section{box-shadow:none;}
+
   /* ---- print ---- */
   @media print{
     body{background:#fff; padding:0;}
@@ -417,6 +427,10 @@
 <div class="lightbox no-print" id="lightbox" onclick="closeLightbox()">
   <button class="close" onclick="closeLightbox(event)">&times;</button>
   <img id="lightbox-img" src="">
+</div>
+
+<div class="survey-veil no-print" id="survey-view-veil" onclick="if(event.target===this) closeSurveyView();">
+  <div class="survey-modal" id="survey-view-modal"></div>
 </div>
 
 <script>
@@ -1157,21 +1171,51 @@ function sectionScoresFor(submission){
   return out;
 }
 
+let R2_ROWS = [];   // the sorted submissions currently shown in the record2 table, indexed for openSurveyView()
+
 function renderRecord2(){
   const table = document.getElementById('record2-table');
   const sectionKeys = Object.keys(SECTIONS);
   let head = '<thead><tr><th>Year</th><th>EPF No</th><th>Employee Name</th><th>Department</th>' +
     sectionKeys.map(sk=>'<th>'+escapeHtml(SECTIONS[sk].title.en)+'</th>').join('') + '</tr></thead>';
-  let rows = ALL_SUBMISSIONS.slice().sort((a,b)=>a.deptIndex-b.deptIndex || a.name.localeCompare(b.name)).map(s=>{
+  R2_ROWS = ALL_SUBMISSIONS.slice().sort((a,b)=>a.deptIndex-b.deptIndex || a.name.localeCompare(b.name));
+  let rows = R2_ROWS.map((s,ri)=>{
     const scores = sectionScoresFor(s);
     const cells = sectionKeys.map(sk=>{
       const v = scores[sk];
       return '<td class="'+scoreCellClass(v)+'">'+fmt(v)+'</td>';
     }).join('');
-    return '<tr><td>'+(s.year||'')+'</td><td>'+s.epf+'</td><td class="name-col">'+escapeHtml(s.name)+'</td><td>'+escapeHtml(s.deptName)+'</td>'+cells+'</tr>';
+    return '<tr><td>'+(s.year||'')+'</td><td>'+s.epf+'</td><td class="name-col"><span class="name-link" title="View this employee\'s submitted survey" onclick="openSurveyView('+ri+')">'+escapeHtml(s.name)+'</span></td><td>'+escapeHtml(s.deptName)+'</td>'+cells+'</tr>';
   }).join('');
   if(!rows) rows = '<tr><td colspan="'+(4+sectionKeys.length)+'" style="padding:20px;color:#999;">No survey submissions yet.</td></tr>';
   table.innerHTML = head + '<tbody>'+rows+'</tbody>';
+}
+
+/* Read-only popup of one employee's submitted survey, reusing the same section/rating-table
+   markup as the live questionnaire (sectionBlockHtml), just fed that submission's saved answers. */
+function surveyViewHtml(s){
+  const dept = DEPARTMENTS[s.deptIndex];
+  const keys = resolveSectionKeys(dept ? dept.sections : []);
+  const infoKeys = ['epf','name','dept','designation','years','qualification','supervisor','date','year'];
+  const infoVals = {epf:s.epf, name:s.name, dept:s.deptName, designation:s.designation, years:s.years, qualification:s.qualification, supervisor:s.supervisor, date:s.date, year:s.year};
+  const infoHtml = '<div class="info-grid" style="margin-bottom:18px;">' + infoKeys.map(k=>
+    '<div class="field"><label>'+escapeHtml(t(UI.fields[k]))+'</label><input disabled value="'+escapeAttr(infoVals[k]||'')+'"></div>'
+  ).join('') + '</div>';
+  const sectionsHtml = keys.map(k=> SECTIONS[k] ? sectionBlockHtml(k, SECTIONS[k], s.answers||{}) : '').join('');
+  return '<button class="close-x" onclick="closeSurveyView()" title="Close">&times;</button>'+
+    '<h2 style="margin:0 0 4px;">'+escapeHtml(s.name)+' — Submitted Survey</h2>'+
+    '<p style="color:#777;font-size:12.5px;margin:0 0 4px;">Doc No: FIT/Q/GL-HR-07'+(s.submittedAt ? ' · Submitted '+new Date(s.submittedAt).toLocaleString() : '')+'</p>'+
+    infoHtml + (sectionsHtml || '<p class="hint">No sections apply to this employee\'s department.</p>');
+}
+function openSurveyView(ri){
+  const s = R2_ROWS[ri];
+  if(!s) return;
+  document.getElementById('survey-view-modal').innerHTML = surveyViewHtml(s);
+  document.getElementById('survey-view-veil').classList.add('show');
+}
+function closeSurveyView(){
+  document.getElementById('survey-view-veil').classList.remove('show');
+  document.getElementById('survey-view-modal').innerHTML = '';
 }
 
 function topNeedsFor(submission, limit){
@@ -1743,6 +1787,11 @@ function closeLightbox(e){
   if(e) e.stopPropagation();
   document.getElementById('lightbox').classList.remove('show');
 }
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  document.getElementById('lightbox').classList.remove('show');
+  closeSurveyView();
+});
 
 /* =========================================================================
    CSV EXPORT
