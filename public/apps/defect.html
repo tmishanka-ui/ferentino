@@ -10,9 +10,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--bg:#f5f6f8;--fg:#1c2330;--card:#fff;--bd:#dde1e8;--mut:#6a7384;--acc:#1f4e8c;--s:#d64545;--M:#e08a1e;--m:#3b82c4;
+--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4;--c6:#008300;--c7:#6250d6;--c8:#e34948;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8}}
-:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8;
+--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767}}
+:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9ef;--card:#1b212b;--bd:#2e3745;--mut:#99a3b5;--acc:#6aa3e8;
+--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -208,6 +211,38 @@ function dtbl(det,lim){
   det.slice(0,lim).map(o=>`<tr><td>${o.d}</td><td ${L}>${esc(o.sh)}</td><td ${L}>${esc(o.g)}</td><td ${L}>${esc(o.p)}</td><td style="text-align:left;white-space:normal;min-width:160px">${esc(o.y)}</td><td>${o.S}</td><td>${o.M}</td><td>${o.m}</td><td><b>${o.tot}</b></td><td>${n1(o.kg)}</td></tr>`).join('')+
   `<tr><td><b>Total</b></td><td></td><td></td><td></td><td></td><td><b>${t.S}</b></td><td><b>${t.M}</b></td><td><b>${t.m}</b></td><td><b>${t.tot}</b></td><td><b>${n1(t.kg)}</b></td></tr></tbody></table></div>`;
 }
+function monthlyGroupChart(name){
+  const rows=recs.filter(r=>r.r===name);
+  if(!rows.length||dataMin==null)return'';
+  const groups=[...new Set(rows.map(r=>r.g))].sort((a,b)=>a.localeCompare(b));
+  const gc=new Map(groups.map((g,i)=>[g,'var(--c'+(i%8+1)+')']));
+  const mm=new Map();
+  rows.forEach(r=>{const d=new Date(r.t),k=d.getUTCFullYear()+'-'+d.getUTCMonth();
+    if(!mm.has(k))mm.set(k,new Map());
+    const o=mm.get(k);o.set(r.g,(o.get(r.g)||0)+r.q);});
+  const months=[];
+  const se=new Date(dataMin),ee=new Date(dataMax);
+  let y=se.getUTCFullYear(),m=se.getUTCMonth();
+  while(y<ee.getUTCFullYear()||(y===ee.getUTCFullYear()&&m<=ee.getUTCMonth())){
+    const g=mm.get(y+'-'+m)||new Map();
+    months.push({y,m,g,tot:[...g.values()].reduce((a,b)=>a+b,0)});
+    m++;if(m>11){m=0;y++;}
+  }
+  const max=Math.max(1,...months.map(x=>x.tot));
+  const pad={l:40,r:10,t:16,b:34},bw=56,ih=180,W=pad.l+pad.r+bw*months.length,H=pad.t+pad.b+ih,gap=Math.min(18,bw*0.3);
+  const grid=[0,.25,.5,.75,1].map(f=>{const yy=(pad.t+ih-ih*f).toFixed(1);
+    return`<line x1="${pad.l}" x2="${W-pad.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)" stroke-width="1"/><text x="${pad.l-6}" y="${(+yy+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--mut)">${Math.round(max*f)}</text>`;}).join('');
+  const bars=months.map((x,i)=>{
+    let y0=pad.t+ih,segs='';
+    groups.forEach(gn=>{const v=x.g.get(gn)||0;if(!v)return;const h=v/max*ih;y0-=h;
+      segs+=`<rect x="${(pad.l+i*bw+gap/2).toFixed(1)}" y="${y0.toFixed(1)}" width="${(bw-gap).toFixed(1)}" height="${h.toFixed(1)}" fill="${gc.get(gn)}"><title>${esc(gn)}: ${v} (${MON[x.m]} ${x.y})</title></rect>`;});
+    const lx=(pad.l+i*bw+bw/2).toFixed(1);
+    return segs+`<text x="${lx}" y="${(pad.t+ih+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--mut)">${MON[x.m].slice(0,3)} ${String(x.y).slice(2)}</text>`+
+      (x.tot?`<text x="${lx}" y="${Math.max(pad.t+8,pad.t+ih-x.tot/max*ih-4).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--fg)">${x.tot}</text>`:'');
+  }).join('');
+  const legend=groups.map(gn=>`<span><i style="background:${gc.get(gn)}"></i>${esc(gn)}</span>`).join('');
+  return`<div class="card"><h2>Monthly occurrence by shift group &mdash; ${esc(name)}</h2><div class="sc" style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="min-width:${W}px;display:block">${grid}${bars}</svg></div><p class="leg" style="margin:8px 0 0">${legend}</p></div>`;
+}
 function render(){
   const [s,e]=period();
   const list=recs.filter(r=>r.t>=+s&&r.t<=+e);
@@ -230,7 +265,8 @@ function render(){
   if(selDef&&!rs.some(r=>r.name===selDef))selDef=null;
   h+=`<div class="card"><h2>Defect drill-down: press, date, shift and group</h2><div class="row"><select id="defSel" style="max-width:100%"><option value="">Select a defect…</option>${rs.map(r=>`<option value="${esc(r.name)}"${r.name===selDef?' selected':''}>${esc(r.name)} (${r.tot})</option>`).join('')}</select><span style="color:var(--mut)">or click a row in the reason table below. Included in the PDF and Excel workbook when selected.</span></div>`;
   if(selDef){const D=drillData(list),t2=totals(D.det);
-    h+=`<p style="margin:10px 0"><b>${esc(selDef)}</b> &mdash; scrap ${t2.S}, major ${t2.M}, minor ${t2.m}, total ${t2.tot}, scrap kg ${n1(t2.kg)}</p><div class="grid">`+
+    h+=`<p style="margin:10px 0"><b>${esc(selDef)}</b> &mdash; scrap ${t2.S}, major ${t2.M}, minor ${t2.m}, total ${t2.tot}, scrap kg ${n1(t2.kg)}</p>`+
+      monthlyGroupChart(selDef)+`<div class="grid">`+
       D.parts.map(x=>`<div class="card"><h2>${x.title}</h2>${tbl(x.label,x.rows,true,false,x.xl||'')}</div>`).join('')+
       `</div><h2>Detail: date / shift / group / press / tyre description</h2>${dtbl(D.det,500)}`+(D.det.length>500?'<p style="color:var(--mut)">Showing first 500 of '+D.det.length+' rows.</p>':'');}
   h+='</div>';
