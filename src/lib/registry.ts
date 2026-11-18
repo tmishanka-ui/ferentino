@@ -25,7 +25,7 @@ export const APP_TITLES: Record<string, string> = {
   compoundtag: 'Compound Approval Tag', beadringtag: 'Bead Ring Lot Tag', holdcompound: 'Hold Compound Control',
   planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
   dailycheck: 'Machine Daily Check Lists', qcemployees: 'QC Department Employees', maintemployees: 'Maintenance Department Employees',
-  techemployees: 'Technical Department Employees',
+  techemployees: 'Technical Department Employees', planningemployees: 'Planning Department Employees', hremployees: 'HR Department Employees',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -44,11 +44,11 @@ export const SECTIONS: Section[] = [
     blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups',
     tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups']] },
   { id: 'planning', title: 'Planning Department', color: '#7C3AED', icon: 'calendar',
-    blurb: 'Production planner — tyre building press allocation and cycle times, planned vs actual production and shipment load',
-    tabs: [['planner', 'Production Planner'], ['planproduction', 'Planned vs Actual Production']] },
+    blurb: 'Production planner — tyre building press allocation and cycle times, planned vs actual production and shipment load, employees',
+    tabs: [['planner', 'Production Planner'], ['planproduction', 'Planned vs Actual Production'], ['planningemployees', 'Employees']] },
   { id: 'hr', title: 'HR Department', color: '#DB2777', icon: 'users',
-    blurb: 'Training records and reports, housekeeping checklist, accident registry, attendance, waste disposal, KPI dashboard',
-    tabs: [['training', 'Training Section'], ['housekeeping', 'Housekeeping Checklist'], ['accidents', 'Accident Registry'], ['attendance', 'Attendance'], ['wastedisp', 'Waste Disposal'], ['hrkpi', 'KPI Dashboard']] },
+    blurb: 'Training records and reports, housekeeping checklist, accident registry, attendance, waste disposal, KPI dashboard, employees',
+    tabs: [['training', 'Training Section'], ['housekeeping', 'Housekeeping Checklist'], ['accidents', 'Accident Registry'], ['attendance', 'Attendance'], ['wastedisp', 'Waste Disposal'], ['hrkpi', 'KPI Dashboard'], ['hremployees', 'Employees']] },
   { id: 'finance', title: 'Finance Department', color: '#0D9488', icon: 'coins',
     blurb: 'Firewood receiving ledger — gate, boiler check, accounts, exit',
     tabs: [['firewood', 'Firewood Ledger']] },

@@ -51,6 +51,7 @@
 'use strict';
 const $=id=>document.getElementById(id),KEY='fitl_maint_employees_v1';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const normLoc=l=>String(l==null?'':l).replace(/\s+/g,' ').trim();
 let POOL={},ASSIGN={},PICK=new Set();const F={q:'',loc:'',un:true};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){POOL=s.POOL||{};ASSIGN=s.ASSIGN||{}}}catch(_){}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -71,10 +72,10 @@ function deleteEmployee(no){
   delete POOL[no];delete ASSIGN[no];PICK.delete(no);save();render()
 }
 function render(){
-  const locs=[...new Set(Object.values(POOL).map(p=>p.loc).filter(Boolean))].sort();
-  $('lf').innerHTML='<option value="">All locations</option>'+locs.map(l=>'<option'+(l===F.loc?' selected':'')+'>'+esc(l)+'</option>').join('');
+  const locs=[...new Set(Object.values(POOL).map(p=>normLoc(p.loc)).filter(Boolean))].sort();
+  $('lf').innerHTML='<option value="">All locations</option>'+locs.map(l=>'<option value="'+esc(l)+'"'+(l===F.loc?' selected':'')+'>'+esc(l)+'</option>').join('');
   const q=F.q.trim().toLowerCase();
-  const rows=Object.keys(POOL).filter(no=>(!F.un||!ASSIGN[no])&&(!F.loc||POOL[no].loc===F.loc)&&(!q||(no+' '+POOL[no].name).toLowerCase().includes(q))).sort((a,b)=>(POOL[a].loc||'').localeCompare(POOL[b].loc||'')||POOL[a].name.localeCompare(POOL[b].name));
+  const rows=Object.keys(POOL).filter(no=>(!F.un||!ASSIGN[no])&&(!F.loc||normLoc(POOL[no].loc)===F.loc)&&(!q||(no+' '+POOL[no].name).toLowerCase().includes(q))).sort((a,b)=>(POOL[a].loc||'').localeCompare(POOL[b].loc||'')||POOL[a].name.localeCompare(POOL[b].name));
   $('pool').innerHTML=rows.slice(0,700).map(no=>'<tr><td><input type="checkbox" data-pick="'+no+'"'+(PICK.has(no)?' checked':'')+'></td>'+
     '<td><input class="einp" data-eno="'+esc(no)+'" value="'+esc(no)+'" style="width:76px"></td>'+
     '<td><input class="einp" data-ename="'+esc(no)+'" value="'+esc(POOL[no].name)+'" style="min-width:150px"></td>'+
@@ -109,7 +110,7 @@ $('xl').onclick=()=>{const rows=Object.keys(ASSIGN).sort((a,b)=>nm(a).localeComp
   if(!rows.length){toast('No employees are assigned yet');return}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Maintenance roster');XLSX.writeFile(wb,'Maintenance_employees_'+new Date().toISOString().slice(0,10)+'.xlsx')};
 /* the employee list arrives from the HR Attendance tab, through the host page */
 addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
-  if(m&&m.type==='fitl-employees'&&Array.isArray(m.items)){let changed=false;m.items.forEach(i=>{if(!i.no)return;const o=POOL[i.no],nw={name:i.name||(o&&o.name)||i.no,loc:i.loc||(o&&o.loc)||'',manual:o&&o.manual&&!i.name};if(!o||o.name!==nw.name||o.loc!==nw.loc){POOL[i.no]=nw;changed=true}});if(changed){save();render()}$('src').textContent=m.items.length+' employees received from the attendance reports (HR Department · Attendance).'}});
+  if(m&&m.type==='fitl-employees'&&Array.isArray(m.items)){let changed=false;m.items.forEach(i=>{if(!i.no)return;const o=POOL[i.no],nw={name:i.name||(o&&o.name)||i.no,loc:normLoc(i.loc)||(o&&o.loc)||'',manual:o&&o.manual&&!i.name};if(!o||o.name!==nw.name||o.loc!==nw.loc){POOL[i.no]=nw;changed=true}});if(changed){save();render()}$('src').textContent=m.items.length+' employees received from the attendance reports (HR Department · Attendance).'}});
 render();
 try{parent.postMessage({type:'fitl-maintemployees-ready'},'*')}catch(_){}
 })();
