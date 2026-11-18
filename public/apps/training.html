@@ -324,6 +324,7 @@
             <div class="dash-toolbar no-print">
               <div class="year-field"><label for="plan-year">Plan Year</label><input type="number" id="plan-year" min="2020" max="2100" step="1" onchange="planYearChange(this)"></div>
               <button class="btn primary" onclick="newAnnualPlan()">🆕 New Annual Plan (from Surveys)</button>
+              <button class="btn" onclick="loadDefaultPlan()">↺ Load Standard Plan</button>
               <button class="btn" onclick="addPlanRow()">+ Add Row</button>
               <button class="btn" onclick="savePlan()">💾 Save Changes</button>
               <button class="btn" onclick="exportCsv('plan')">⬇ CSV</button>
@@ -745,15 +746,24 @@ async function loadSectionOverrides(){
   applySectionOverrides(SECTION_OVERRIDES);
 }
 
-/* Training Need rows for the Annual Training Plan: one row per questionnaire item, grouped under
-   its section, so "Section" is a section of the questionnaire and "Training Need" is one of its
-   subsections (items) — rebuilt from the live, possibly Coordinator-edited, questionnaire. */
+/* Training Need rows for the Annual Training Plan: the starting set the plan is seeded with
+   (and what "Reset All Data" puts back), matching the printed FIT/Q/RG-HR-06 plan layout.
+   Each entry can be freely edited, added to or deleted from the plan table afterwards. */
+const DEFAULT_PLAN_ITEMS = {
+  'Technical Skills': ['Chemical weighing process','Chemical Handling Process','Raw material identification','Compound preparation','Machine operation','Machine setup','Preventive maintenance','Basic electrical knowledge','Hydraulic systems','Pneumatic systems','Tyre manufacturing process','Tyre building process','Compound preparation','Hydraulic systems','Pneumatic systems'],
+  'Quality Management': ['ISO 9001 requirements','Quality inspection','Defect identification','Statistical Process Control (SPC)','Root Cause Analysis','7 QC Tools','Corrective and Preventive Action (CAPA)','Internal Quality Audits','Calibration of measuring equipment'],
+  'Safety': ['Occupational Safety','Fire Safety','Emergency Response','Chemical Handling','Personal Protective Equipment','First Aid','Hazard Identification','Risk Assessment','Lock Out Tag Out (LOTO)','Machine Safety'],
+  'Lean Manufacturing': ['5S','Kaizen','Lean Manufacturing','Waste Reduction','Visual Management','Six Sigma Basics','OEE Improvement'],
+  'Maintenance Skills': ['Preventive Maintenance','Predictive Maintenance','Machine Troubleshooting','Bearing Replacement','Lubrication Systems','Electrical Troubleshooting','Mechanical Maintenance'],
+  'Soft Skills': ['Communication Skills','Teamwork','Leadership','Problem Solving','Decision Making','Conflict Management','Time Management','Stress Management','Report Writing','Presentation Skills'],
+  'Computer Skills': ['Microsoft Excel','Microsoft Word','PowerPoint','Microsoft Access','SAP','Data Entry','Email Communication','Use of AI'],
+  'General': ['Technical Skills','Quality Awareness','Safety Compliance','Productivity','Teamwork','Problem Solving','Attendance','Discipline']
+};
 function buildDefaultPlanRows(){
   const rows = [];
-  Object.keys(SECTIONS).forEach(sk=>{
-    const sec = SECTIONS[sk];
-    sec.items.forEach(item=>{
-      rows.push({ id: uid(), section: sec.title.en, sectionKey: sk, need: item.en, type:'Internal', resource:'', months:[], date:'', description:'' });
+  Object.keys(DEFAULT_PLAN_ITEMS).forEach(section=>{
+    DEFAULT_PLAN_ITEMS[section].forEach(need=>{
+      rows.push({ id: uid(), section: section, sectionKey: '', need: need, type:'Internal', resource:'', months:[], date:'', description:'' });
     });
   });
   return rows;
@@ -1455,6 +1465,16 @@ function planFieldChange(el){
 function addPlanRow(){
   PLAN_ROWS.push({id: uid(), section:'', need:'', sectionKey:'', type:'Internal', resource:'', months:[], date:'', description:''});
   renderPlanTable();
+}
+/* Replaces the rows in the editor with the standard FIT/Q/RG-HR-06 training plan (Technical Skills,
+   Quality Management, Safety, Lean Manufacturing, Maintenance Skills, Soft Skills, Computer Skills,
+   General). Nothing is saved until "Save Changes" is pressed, so this can be reviewed/edited first,
+   and it does not touch surveys, Record 4 groups or training record photo logs. */
+function loadDefaultPlan(){
+  if(!confirm('Replace the rows below with the standard FIT/Q/RG-HR-06 training plan? This discards unsaved changes to the plan table — press Save Changes afterwards to keep it. Surveys and other records are not affected.')) return;
+  PLAN_ROWS = buildDefaultPlanRows();
+  renderPlanTable();
+  renderRecord4();
 }
 function deletePlanRow(ri){
   PLAN_ROWS.splice(ri,1);
