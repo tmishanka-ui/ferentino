@@ -21,7 +21,7 @@ export const APP_TITLES: Record<string, string> = {
   housekeeping: 'Housekeeping and Safety Check List', mixingdash: 'Mixing Department', library: 'Document Library', planner: 'Production Planner',
   firewood: 'Firewood Ledger', custsat: 'Customer Satisfaction', wastedisp: 'Waste Disposal', qckpi: 'QC KPI Dashboard', mkpi: 'Maintenance KPI',
   accidents: 'Accident Registry', attendance: 'Daily Attendance', shiftgroups: 'Shift Groups', audit: 'Internal Audit',
-  hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB', compoundspec: 'Compound Properties — Spec & QC Dashboard',
+  hrkpi: 'HR KPI Dashboard', claimdb: 'Claim Record DB',
   compoundtag: 'Compound Approval Tag', beadringtag: 'Bead Ring Lot Tag', holdcompound: 'Hold Compound Control',
   planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
   dailycheck: 'Machine Daily Check Lists', qcemployees: 'QC Department Employees', maintemployees: 'Maintenance Department Employees',
@@ -65,8 +65,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Manuals, policy, SOPs, work instructions and sectional documents — view and download',
     tabs: [['library', 'Document Library']] },
   { id: 'technical', title: 'Technical Department', color: '#4F46E5', icon: 'db',
-    blurb: 'Customer claim records, compound properties, QC spec management, lot/approval tags, hold compound control and employees',
-    tabs: [['claimdb', 'Claim Record DB'], ['compoundspec', 'Compound Spec & QC'], ['compoundtag', 'Compound Approval Tag'], ['beadringtag', 'Bead Ring Lot Tag'], ['holdcompound', 'Hold Compound Control'], ['techemployees', 'Employees']] },
+    blurb: 'Customer claim records, lot/approval tags, hold compound control and employees',
+    tabs: [['claimdb', 'Claim Record DB'], ['compoundtag', 'Compound Approval Tag'], ['beadringtag', 'Bead Ring Lot Tag'], ['holdcompound', 'Hold Compound Control'], ['techemployees', 'Employees']] },
 ];
 
 export const sectionById = (id: string) => SECTIONS.find((s) => s.id === id);
