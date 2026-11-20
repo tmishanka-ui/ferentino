@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
 export interface AuthUser {
-  id: number; name: string; email: string; designation: string; department: string; role: 'admin' | 'executive' | 'manager'; mustChange: boolean;
+  id: number; name: string; email: string; designation: string; department: string; role: 'admin' | 'executive' | 'manager' | 'user';
+  sections: string[]; apps: string[]; mustChange: boolean;
 }
 
 export interface SignRequest { type: string; id?: string | number; purpose: string; ref: string; summary?: string; content?: string }

@@ -2,10 +2,15 @@ import { env } from './env';
 import { Ctx, ApiError, clip, iso, json, needAdmin, needUser, now, setCookie, str } from './http';
 import { Store, User, Signature, nextId } from './db';
 import { checkPassword, hashPassword, policy, resetCode, sha256, tempPassword, token } from './security';
+import { SECTIONS, APP_KEYS } from '@/lib/registry';
 
 const MAX_FAILS = 5, LOCK_MINUTES = 15;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ROLES = ['admin', 'executive', 'manager'];
+const ROLES = ['admin', 'executive', 'manager', 'user'];
+const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
+const APP_KEY_SET = new Set(APP_KEYS);
+const ids = (v: unknown, allowed: Set<string>): string[] =>
+  Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && allowed.has(x)))] : [];
 const HITS = new Map<string, { n: number; until: number }>();
 let dummyHash: Promise<string> | null = null;   // unknown e-mails take as long as real ones
 
@@ -15,7 +20,8 @@ export async function log(s: Store, userId: number | null, action: string, detai
 }
 
 const publicUser = (u: User) => ({
-  id: u._id, name: u.name, email: u.email, designation: u.designation, department: u.department, role: u.role, mustChange: !!u.must_change,
+  id: u._id, name: u.name, email: u.email, designation: u.designation, department: u.department, role: u.role,
+  sections: u.sections ?? [], apps: u.apps ?? [], mustChange: !!u.must_change,
 });
 
 async function adminContact(s: Store): Promise<string> {
@@ -140,7 +146,8 @@ export async function reset(c: Ctx) {
 
 /* ---------------- administrator: people ---------------- */
 const userOut = (u: User) => ({
-  id: u._id, email: u.email, name: u.name, designation: u.designation, department: u.department, role: u.role, active: !!u.active,
+  id: u._id, email: u.email, name: u.name, designation: u.designation, department: u.department, role: u.role,
+  sections: u.sections ?? [], apps: u.apps ?? [], active: !!u.active,
   mustChange: !!u.must_change, locked: u.locked_until > now(), resetRequested: u.reset_requested_at, createdAt: u.created_at, lastLogin: u.last_login,
 });
 
@@ -169,6 +176,7 @@ export async function addUser(c: Ctx) {
   const pw = tempPassword();
   const doc: User = {
     _id: await nextId(c.s, 'users'), email, name, designation: clip(b.designation, 120), department: clip(b.department, 120), role: role as User['role'],
+    sections: role === 'executive' ? ids(b.sections, SECTION_IDS) : [], apps: role === 'user' ? ids(b.apps, APP_KEY_SET) : [],
     pass_hash: await hashPassword(pw), must_change: true, active: true, failed: 0, locked_until: 0, reset_requested_at: null, created_at: iso(), last_login: null,
   };
   try { await c.s.users.insertOne(doc); }
@@ -190,8 +198,10 @@ export async function editUser(c: Ctx) {
   if (email !== u.email && await c.s.users.findOne({ email, _id: { $ne: id } })) throw new ApiError(409, 'There is already a person with that e-mail address.');
   const admins = await c.s.users.countDocuments({ role: 'admin', active: true, _id: { $ne: id } });
   if (u.role === 'admin' && u.active && (role !== 'admin' || !active) && admins === 0) throw new ApiError(400, 'There must always be at least one active administrator.');
+  const sections = role === 'executive' ? ids('sections' in b ? b.sections : u.sections, SECTION_IDS) : [];
+  const apps = role === 'user' ? ids('apps' in b ? b.apps : u.apps, APP_KEY_SET) : [];
   await c.s.users.updateOne({ _id: id }, { $set: {
-    email, name, role: role as User['role'], active,
+    email, name, role: role as User['role'], active, sections, apps,
     designation: 'designation' in b ? clip(b.designation, 120) : u.designation,
     department: 'department' in b ? clip(b.department, 120) : u.department,
   } });

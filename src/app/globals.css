@@ -52,6 +52,11 @@ h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 500; lett
 }
 .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .hint { margin: 6px 0 0; font-size: 12.5px; color: var(--text-2); }
+.check-list { max-height: 220px; overflow: auto; padding: 8px 10px; background: var(--bg-page); border: 1px solid var(--border-strong); border-radius: 8px; }
+.check-list > div + div { margin-top: 10px; }
+.check-list b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-2); margin-bottom: 2px; }
+.check { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13.5px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--text); }
+.check input { margin: 0; }
 .msg { min-height: 20px; margin: 12px 0 0; font-size: 13px; color: var(--bad); }
 .msg.ok { color: var(--ok); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }

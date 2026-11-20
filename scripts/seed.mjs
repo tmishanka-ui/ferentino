@@ -47,9 +47,9 @@ const nextId = async (name) => (await counters.findOneAndUpdate({ _id: name }, {
 
 /* ---------- the demonstration people ---------- */
 const PEOPLE = [
-  { email: 'nimal.perera@ferentino.demo', name: 'Nimal Perera', designation: 'Quality Manager', department: 'Quality', role: 'manager' },
-  { email: 'kumari.silva@ferentino.demo', name: 'Kumari Silva', designation: 'Production Executive', department: 'Production', role: 'executive' },
-  { email: 'ruwan.fernando@ferentino.demo', name: 'Ruwan Fernando', designation: 'Maintenance Manager', department: 'Maintenance', role: 'manager' },
+  { email: 'nimal.perera@ferentino.demo', name: 'Nimal Perera', designation: 'Quality Manager', department: 'Quality', role: 'manager', sections: [], apps: [] },
+  { email: 'kumari.silva@ferentino.demo', name: 'Kumari Silva', designation: 'Production Executive', department: 'Production', role: 'executive', sections: ['prod'], apps: [] },
+  { email: 'ruwan.fernando@ferentino.demo', name: 'Ruwan Fernando', designation: 'Maintenance Manager', department: 'Maintenance', role: 'manager', sections: [], apps: [] },
 ];
 
 /* ---------- Accident Registry (fitl_accidents_v1) ---------- */

@@ -5,12 +5,16 @@ import { api, fmtAt } from '@/lib/client/api';
 import { mailtoLink, sysUrl } from '@/lib/client/auth';
 import { Modal } from '@/components/Modal';
 import { toast } from '@/lib/client/store';
+import { SECTIONS } from '@/lib/registry';
 
 interface Person {
-  id: number; email: string; name: string; designation: string; department: string; role: 'admin' | 'executive' | 'manager';
+  id: number; email: string; name: string; designation: string; department: string; role: 'admin' | 'executive' | 'manager' | 'user';
+  sections: string[]; apps: string[];
   active: boolean; mustChange: boolean; locked: boolean; resetRequested: string | null; lastLogin: string | null;
 }
-const ROLE = { admin: 'Administrator', executive: 'Executive', manager: 'Manager' } as const;
+const ROLE = { admin: 'Administrator', executive: 'Executive', manager: 'Manager', user: 'Normal User' } as const;
+const sectionTitle = (id: string) => SECTIONS.find((s) => s.id === id)?.title ?? id;
+const appLabel = (key: string) => SECTIONS.flatMap((s) => s.tabs).find((t) => t[0] === key)?.[1] ?? key;
 
 interface Secret { title: string; secret: string; note: string; email: string; subject: string; body: string }
 
@@ -75,7 +79,11 @@ export default function People() {
                 <tr key={p.id}>
                   <td><b>{p.name}</b><div className="sub">{p.designation}{p.department ? ' · ' + p.department : ''}</div></td>
                   <td>{p.email}</td>
-                  <td>{ROLE[p.role]}</td>
+                  <td>
+                    {ROLE[p.role]}
+                    {p.role === 'executive' && <div className="sub">{p.sections.length ? p.sections.map(sectionTitle).join(', ') : 'No departments assigned'}</div>}
+                    {p.role === 'user' && <div className="sub">{p.apps.length ? p.apps.map(appLabel).join(', ') : 'No apps assigned'}</div>}
+                  </td>
                   <td>
                     {p.active ? <span className="tag ok">Active</span> : <span className="tag">Inactive</span>}{' '}
                     {p.locked && <span className="tag bad">Locked</span>}{' '}
@@ -116,12 +124,17 @@ function PersonForm({ person, onClose, onSaved }: { person: Person | null; onClo
   const [name, setName] = useState(person?.name ?? ''), [email, setEmail] = useState(person?.email ?? '');
   const [designation, setDesignation] = useState(person?.designation ?? ''), [department, setDepartment] = useState(person?.department ?? '');
   const [role, setRole] = useState(person?.role ?? 'manager');
+  const [sections, setSections] = useState<string[]>(person?.sections ?? []);
+  const [apps, setApps] = useState<string[]>(person?.apps ?? []);
   const [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
+
+  const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
+    set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   async function go(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg('');
-    const body = { name, email, designation, department, role };
+    const body = { name, email, designation, department, role, sections, apps };
     const r = await api(person ? 'PUT' : 'POST', person ? '/api/users/' + person.id : '/api/users', body);
     setBusy(false);
     if (!r.ok) { setMsg(r.j.error || 'Could not save.'); return; }
@@ -134,7 +147,7 @@ function PersonForm({ person, onClose, onSaved }: { person: Person | null; onClo
   }
 
   return (
-    <Modal title={person ? `Edit ${person.name}` : 'Add a person'} onClose={onClose}>
+    <Modal title={person ? `Edit ${person.name}` : 'Add a person'} onClose={onClose} wide={role === 'user' || role === 'executive'}>
       <form onSubmit={go}>
         <div className="grid2">
           <label className="field"><span>Name</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
@@ -147,6 +160,29 @@ function PersonForm({ person, onClose, onSaved }: { person: Person | null; onClo
             {(Object.keys(ROLE) as (keyof typeof ROLE)[]).map((r) => <option key={r} value={r}>{ROLE[r]}</option>)}
           </select>
         </label>
+        {role === 'executive' && (
+          <div className="field"><span>Departments this Executive can see and edit</span>
+            <div className="check-list">
+              {SECTIONS.map((s) => (
+                <label key={s.id} className="check"><input type="checkbox" checked={sections.includes(s.id)} onChange={() => toggle(sections, setSections, s.id)} />{s.title}</label>
+              ))}
+            </div>
+          </div>
+        )}
+        {role === 'user' && (
+          <div className="field"><span>Apps this Normal User can use</span>
+            <div className="check-list">
+              {SECTIONS.map((s) => (
+                <div key={s.id}>
+                  <b>{s.title}</b>
+                  {s.tabs.map(([key, label]) => (
+                    <label key={key} className="check"><input type="checkbox" checked={apps.includes(key)} onChange={() => toggle(apps, setApps, key)} />{label}</label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {!person && <p className="hint">A temporary password is made for them; you hand it over once.</p>}
         <p className="msg" role="alert">{msg}</p>
         <div className="row" style={{ marginTop: 6 }}><button className="btn red" disabled={busy}>{person ? 'Save' : 'Add the person'}</button><button type="button" className="btn" onClick={onClose}>Cancel</button></div>

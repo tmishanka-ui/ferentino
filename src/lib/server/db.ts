@@ -8,7 +8,9 @@ export interface User {
   name: string;
   designation: string;
   department: string;
-  role: 'admin' | 'executive' | 'manager';
+  role: 'admin' | 'executive' | 'manager' | 'user';
+  sections: string[];   // department ids from registry.ts SECTIONS — used when role is 'executive'
+  apps: string[];       // app/tab keys from registry.ts APP_KEYS — used when role is 'user'
   pass_hash: string;
   must_change: boolean;
   active: boolean;
@@ -240,7 +242,7 @@ async function firstStart(s: Store) {
   const id = await nextId(s, 'users');
   try {
     await s.users.insertOne({
-      _id: id, email, name: env.adminName, designation: 'Administrator', department: 'Quality', role: 'admin',
+      _id: id, email, name: env.adminName, designation: 'Administrator', department: 'Quality', role: 'admin', sections: [], apps: [],
       pass_hash: await hashPassword(pw), must_change: true, active: true, failed: 0, locked_until: 0,
       reset_requested_at: null, created_at: new Date().toISOString(), last_login: null,
     });

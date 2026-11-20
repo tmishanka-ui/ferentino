@@ -2,9 +2,9 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { SECTIONS } from '@/lib/registry';
 import { useStore, toast } from '@/lib/client/store';
 import { downloadBackup, restoreBackup } from '@/lib/client/backup';
+import { visibleSections, visibleTabs } from '@/lib/client/access';
 import { Icon } from '@/components/Icon';
 
 export default function Home() {
@@ -12,6 +12,7 @@ export default function Home() {
   const file = useRef<HTMLInputElement>(null);
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const sections = visibleSections(user);
 
   return (
     <>
@@ -21,14 +22,17 @@ export default function Home() {
       </div>
 
       <div className="cards">
-        {SECTIONS.map((s) => (
-          <Link key={s.id} href={`/d/${s.id}`} className="card" style={{ ['--c' as string]: s.color }}>
-            <span className="ico"><Icon name={s.icon} size={22} /></span>
-            <h3>{s.title}</h3>
-            <p>{s.blurb}</p>
-            <span className="meta"><span>{s.tabs.length} {s.tabs.length === 1 ? 'app' : 'apps'}</span><Icon name="arrow" size={16} /></span>
-          </Link>
-        ))}
+        {sections.map((s) => {
+          const tabs = visibleTabs(user, s);
+          return (
+            <Link key={s.id} href={`/d/${s.id}`} className="card" style={{ ['--c' as string]: s.color }}>
+              <span className="ico"><Icon name={s.icon} size={22} /></span>
+              <h3>{s.title}</h3>
+              <p>{s.blurb}</p>
+              <span className="meta"><span>{tabs.length} {tabs.length === 1 ? 'app' : 'apps'}</span><Icon name="arrow" size={16} /></span>
+            </Link>
+          );
+        })}
         <Link href="/stores" className="card" style={{ ['--c' as string]: '#CA8A04' }}>
           <span className="ico"><Icon name="box" size={22} /></span>
           <h3>Stores Department</h3>
@@ -37,17 +41,19 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="panel">
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <h3>Backup of the whole system</h3>
-          <p>One file holds everything in all departments. Download it regularly; upload it to restore or to move to another computer.</p>
+      {user?.role === 'admin' && (
+        <div className="panel">
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <h3>Backup of the whole system</h3>
+            <p>One file holds everything in all departments. Download it regularly; upload it to restore or to move to another computer.</p>
+          </div>
+          <div className="row" style={{ margin: 0 }}>
+            <button className="btn" onClick={() => downloadBackup(toast)}><Icon name="download" size={16} />Download backup</button>
+            <button className="btn" onClick={() => { if (file.current) { file.current.value = ''; file.current.click(); } }}><Icon name="upload" size={16} />Upload backup</button>
+            <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) restoreBackup(f, toast); }} />
+          </div>
         </div>
-        <div className="row" style={{ margin: 0 }}>
-          <button className="btn" onClick={() => downloadBackup(toast)}><Icon name="download" size={16} />Download backup</button>
-          <button className="btn" onClick={() => { if (file.current) { file.current.value = ''; file.current.click(); } }}><Icon name="upload" size={16} />Upload backup</button>
-          <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) restoreBackup(f, toast); }} />
-        </div>
-      </div>
+      )}
     </>
   );
 }

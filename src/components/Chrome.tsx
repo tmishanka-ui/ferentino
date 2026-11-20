@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SECTIONS, sectionById } from '@/lib/registry';
+import { sectionById } from '@/lib/registry';
 import { initFrames, setActive } from '@/lib/client/frames';
 import { useStore } from '@/lib/client/store';
+import { visibleSections, visibleTabs } from '@/lib/client/access';
 import { Icon } from './Icon';
 import { TopBar } from './TopBar';
 import { SyncBar } from './SyncBar';
@@ -19,10 +20,16 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
   const ready = useStore((s) => s.frames.ready);
   const hostRef = useRef<HTMLDivElement>(null);
 
+  const sections = visibleSections(user);
   const parts = pathname.split('/').filter(Boolean);
-  const section = parts[0] === 'd' ? sectionById(parts[1]) : undefined;
-  const appKey = section ? (section.tabs.some((t) => t[0] === parts[2]) ? parts[2] : lastTab[section.id] ?? section.tabs[0][0]) : null;
-  const tabLabel = section?.tabs.find((t) => t[0] === appKey)?.[1];
+  const rawSection = parts[0] === 'd' ? sectionById(parts[1]) : undefined;
+  const section = rawSection && sections.some((s) => s.id === rawSection.id) ? rawSection : undefined;
+  const notAuthorized = !!rawSection && !section;
+  const tabs = section ? visibleTabs(user, section) : [];
+  const appKey = section
+    ? (tabs.some((t) => t[0] === parts[2]) ? parts[2] : (lastTab[section.id] && tabs.some((t) => t[0] === lastTab[section.id]) ? lastTab[section.id] : tabs[0]?.[0] ?? null))
+    : null;
+  const tabLabel = tabs.find((t) => t[0] === appKey)?.[1];
 
   useEffect(() => { if (hostRef.current) initFrames(hostRef.current); }, []);
   useEffect(() => {
@@ -48,11 +55,15 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
             <span className="nav-ico"><Icon name="home" size={16} /></span><span className="t">Home</span>
           </Link>
           <div className="side-label">Departments</div>
-          {SECTIONS.map((s) => (
-            <Link key={s.id} href={`/d/${s.id}/${lastTab[s.id] ?? s.tabs[0][0]}`} className={'nav-link' + (section?.id === s.id ? ' on' : '')} style={{ ['--dot' as string]: s.color }}>
-              <span className="nav-ico"><Icon name={s.icon} size={16} /></span><span className="t">{s.title}</span>
-            </Link>
-          ))}
+          {sections.map((s) => {
+            const t = visibleTabs(user, s);
+            const firstKey = lastTab[s.id] && t.some((x) => x[0] === lastTab[s.id]) ? lastTab[s.id] : t[0][0];
+            return (
+              <Link key={s.id} href={`/d/${s.id}/${firstKey}`} className={'nav-link' + (section?.id === s.id ? ' on' : '')} style={{ ['--dot' as string]: s.color }}>
+                <span className="nav-ico"><Icon name={s.icon} size={16} /></span><span className="t">{s.title}</span>
+              </Link>
+            );
+          })}
           <Link href="/stores/receive" className={'nav-link' + (pathname.startsWith('/stores') ? ' on' : '')} style={{ ['--dot' as string]: '#CA8A04' }}>
             <span className="nav-ico"><Icon name="box" size={16} /></span><span className="t">Stores Department</span>
           </Link>
@@ -78,7 +89,7 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
         <SyncBar />
         {section && (
           <nav className="tabs" aria-label={section.title}>
-            {section.tabs.map(([key, label]) => (
+            {tabs.map(([key, label]) => (
               <Link key={key} href={`/d/${section.id}/${key}`} className={'tab' + (key === appKey ? ' on' : '')} aria-current={key === appKey ? 'page' : undefined}>{label}</Link>
             ))}
           </nav>
@@ -88,7 +99,8 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
             <div ref={hostRef} className="frame-slot" />
             {loadingApp && <div className="stage-loading"><div><div className="spin" /><div>Loading…</div></div></div>}
           </div>
-          {!section && <div className="page"><div className="page-in">{children}</div></div>}
+          {notAuthorized && <div className="page"><div className="page-in"><h2>Not available</h2><p>You don&apos;t have access to this department. Ask an administrator to assign it to you.</p></div></div>}
+          {!section && !notAuthorized && <div className="page"><div className="page-in">{children}</div></div>}
         </div>
       </div>
     </div>

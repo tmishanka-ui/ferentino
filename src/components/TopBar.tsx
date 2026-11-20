@@ -75,9 +75,11 @@ function UserMenu() {
           <button onClick={() => { setPos(null); setPw(true); }}>Change password</button>
           <Link href="/signatures" onClick={() => setPos(null)}>Signature log</Link>
           {user.role === 'admin' && <Link href="/admin/people" onClick={() => setPos(null)}>People and passwords</Link>}
-          <hr />
-          <button onClick={() => { setPos(null); downloadBackup(toast); }}>Download backup<small>Everything in all departments, as one file</small></button>
-          <button onClick={() => { setPos(null); if (file.current) { file.current.value = ''; file.current.click(); } }}>Upload backup…<small>Restore from a backup file; replaces the saved data</small></button>
+          {user.role === 'admin' && <>
+            <hr />
+            <button onClick={() => { setPos(null); downloadBackup(toast); }}>Download backup<small>Everything in all departments, as one file</small></button>
+            <button onClick={() => { setPos(null); if (file.current) { file.current.value = ''; file.current.click(); } }}>Upload backup…<small>Restore from a backup file; replaces the saved data</small></button>
+          </>}
           <hr />
           <button onClick={() => { setPos(null); signOut(); }}>Sign out</button>
         </div>
