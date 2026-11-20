@@ -300,7 +300,6 @@
       <a href="#weekly">Weekly</a>
       <a href="#defects">Defects</a>
       <a href="#matrix">Shift × Month Matrix</a>
-      <a href="#production">Production</a>
     </nav>
     <div class="topbar-right">
       <div class="autosave-badge" id="autosave-badge" hidden><span class="dot" id="autosave-dot"></span><span id="autosave-text">Autosaved</span></div>
@@ -347,14 +346,22 @@
       <div>
         <span class="eyebrow">Section 01</span>
         <h3>Shift-wise performance — Monthly</h3>
-        <p class="desc">Scrap, and Repair split into Major / Minor, per shift, across every month in the report.</p>
+        <p class="desc">Scrap, and Repair split into Major / Minor, per shift, across every month in the report — clustered bars, side by side.</p>
       </div>
-      <div class="controls">
+      <div class="controls" style="justify-content:flex-end;">
         <div class="seg" id="monthly-toggle">
           <button data-mode="all" class="active">All</button>
           <button data-mode="scrap">Scrap</button>
           <button data-mode="major">Repair · Major</button>
           <button data-mode="minor">Repair · Minor</button>
+        </div>
+        <div class="seg" id="monthly-metric-toggle">
+          <button data-metric="qty" class="active">Quantity</button>
+          <button data-metric="pctWeight">% of weight</button>
+        </div>
+        <div class="seg" id="monthly-pctbase-toggle" hidden>
+          <button data-base="shift" class="active">This shift's production</button>
+          <button data-base="month">Month total production</button>
         </div>
       </div>
     </div>
@@ -480,93 +487,6 @@
     </div>
   </section>
 
-  <!-- PRODUCTION -->
-  <section class="block" id="production">
-    <div class="block-head">
-      <div>
-        <span class="eyebrow">Section 05</span>
-        <h3>Production — Quantity &amp; weight, by group</h3>
-        <p class="desc">Tyres pressed and their weight, split by crew group (A/B/C), at weekly and monthly grain. Group is resolved from the inspection log's roster for each date + shift.</p>
-      </div>
-      <div class="controls">
-        <div class="seg" id="production-metric-toggle">
-          <button data-metric="qty" class="active">Quantity</button>
-          <button data-metric="weight">Weight (kg)</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-title"><span>Weekly, by group</span></div>
-    <div class="panel">
-      <div class="chart-wrap" style="height:300px;"><canvas id="chart-production-weekly"></canvas></div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="chart-title"><span>Weekly figures by group</span></div>
-      <div class="table-scroll" style="max-height:420px;">
-        <table id="production-weekly-table">
-          <thead id="production-weekly-thead"></thead>
-          <tbody id="production-weekly-tbody"></tbody>
-          <tfoot id="production-weekly-tfoot"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div class="chart-title" style="margin-top:24px;"><span>Monthly, by group</span></div>
-    <div class="panel">
-      <div class="chart-wrap" style="height:300px;"><canvas id="chart-production-monthly"></canvas></div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="chart-title"><span>Monthly figures by group</span></div>
-      <div class="table-scroll" style="max-height:420px;">
-        <table id="production-monthly-table">
-          <thead id="production-monthly-thead"></thead>
-          <tbody id="production-monthly-tbody"></tbody>
-          <tfoot id="production-monthly-tfoot"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div class="block-head" style="margin-top:32px;">
-      <div>
-        <h3 style="font-size:16px;">Shifts worked, by group</h3>
-        <p class="desc">Number of Day/Night shifts each crew group worked. Factory week runs Sunday's Day shift through Saturday's Night shift.</p>
-      </div>
-    </div>
-
-    <div class="chart-title"><span>Weekly shift count, by group</span></div>
-    <div class="panel">
-      <div class="chart-wrap" style="height:260px;"><canvas id="chart-shifts-weekly"></canvas></div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="table-scroll" style="max-height:360px;">
-        <table id="shifts-weekly-table">
-          <thead id="shifts-weekly-thead"></thead>
-          <tbody id="shifts-weekly-tbody"></tbody>
-          <tfoot id="shifts-weekly-tfoot"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div class="chart-title" style="margin-top:24px;"><span>Monthly shift count, by group</span></div>
-    <div class="panel">
-      <div class="chart-wrap" style="height:260px;"><canvas id="chart-shifts-monthly"></canvas></div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
-      <div class="table-scroll" style="max-height:360px;">
-        <table id="shifts-monthly-table">
-          <thead id="shifts-monthly-thead"></thead>
-          <tbody id="shifts-monthly-tbody"></tbody>
-          <tfoot id="shifts-monthly-tfoot"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <div class="spec-note" id="production-unmatched-note" style="margin-top:16px; display:none;">
-      <div class="label">Heads up</div>
-      <ul><li id="production-unmatched-text"></li></ul>
-    </div>
-  </section>
-
   <footer>
     <span id="footer-source">Source: uploaded workbook · quantities in tyre pieces</span>
     <span id="footer-generated"></span>
@@ -603,6 +523,7 @@
     'DEFECT COD': 'defectCode', 'DEFECT CODE': 'defectCode',
     'DEFECT DESCRIPTION': 'defectDesc',
     QUANTITY: 'qty', QTY: 'qty',
+    "SCRAP'S KG": 'weight', 'SCRAPS KG': 'weight', 'NET WEIGHT': 'weight', 'NET WEIGHT / KG': 'weight', 'NET WEIGHT/KG': 'weight', 'NET WEIGHT (KG)': 'weight', WEIGHT: 'weight',
     WEEK: 'week',
     MONTH: 'month',
     YEAR: 'year',
@@ -754,6 +675,7 @@
           const defectDesc = String(row[qColIndex.defectDesc] ?? '').trim();
           const defectCode = qColIndex.defectCode != null ? String(row[qColIndex.defectCode] ?? '').trim() : defectDesc;
           if (!defectDesc || !Number.isFinite(qty) || !Number.isFinite(week) || !Number.isFinite(month) || !Number.isFinite(year)) continue;
+          const weight = qColIndex.weight != null ? Number(row[qColIndex.weight]) : NaN;
           records.push({
             shift: shift || '?',
             classification,
@@ -761,6 +683,7 @@
             defectCode: defectCode || defectDesc,
             defectDesc,
             qty,
+            weight: Number.isFinite(weight) ? weight : 0,
             week,
             month,
             year,
@@ -1083,6 +1006,7 @@
   // AGGREGATION HELPERS (operate on RECORDS)
   // =========================================================================
   function sumQty(recs) { return recs.reduce((s, r) => s + r.qty, 0); }
+  function sumWeight(recs) { return recs.reduce((s, r) => s + (r.weight || 0), 0); }
 
   function classify(r) {
     // 'scrap' | 'repairMajor' | 'repairMinor'
@@ -1133,8 +1057,6 @@
     renderWeeklySection(weeks, shifts);
     renderDefectSection();
     renderMatrixSection(months);
-    renderProductionSection();
-    renderShiftCoverageSection();
   }
 
   function renderKPIs() {
@@ -1182,9 +1104,20 @@
     }, overrides || {});
   }
 
+  // Production weight (from the Daily Production report) used as the denominator for a % of weight view —
+  // either that one shift group's own production that month, or the whole month's production across every group.
+  function prodWeightByGroup(monthLbl, group) {
+    return sumWeight(PRODUCTION_RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && r.group === group));
+  }
+  function prodWeightMonthTotal(monthLbl) {
+    return sumWeight(PRODUCTION_RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl));
+  }
+
   // ---------- Monthly ----------
   function renderMonthlySection(months, shifts) {
     let mode = 'all';
+    let metric = 'qty'; // 'qty' | 'pctWeight'
+    let pctBase = 'shift'; // 'shift' | 'month' — only meaningful when metric === 'pctWeight'
     function hexToRgba(hex, alpha) {
       const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
       return `rgba(${r},${g},${b},${alpha})`;
@@ -1192,19 +1125,24 @@
     function seriesQty(monthLbl, shift, kind) {
       return sumQty(RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && r.shift === shift && classify(r) === kind));
     }
+    function seriesPctWeight(monthLbl, shift, kind) {
+      const w = sumWeight(RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && r.shift === shift && classify(r) === kind));
+      const base = pctBase === 'shift' ? prodWeightByGroup(monthLbl, shift) : prodWeightMonthTotal(monthLbl);
+      return base ? (w / base * 100) : 0;
+    }
     function shiftColor(s) { return s === 'A' ? COLORS.shiftA : s === 'B' ? COLORS.shiftB : COLORS.shiftC; }
 
     function buildDatasets() {
       const kinds = mode === 'all' ? ['scrap', 'repairMajor', 'repairMinor'] : [mode === 'scrap' ? 'scrap' : mode === 'major' ? 'repairMajor' : 'repairMinor'];
       const alphaFor = { scrap: 1, repairMajor: 0.75, repairMinor: 0.5 };
+      const valueFor = metric === 'pctWeight' ? seriesPctWeight : seriesQty;
       const ds = [];
       shifts.forEach((s) => {
         kinds.forEach((kind) => {
           ds.push({
             label: `Shift ${s} · ${kind === 'scrap' ? 'Scrap' : kind === 'repairMajor' ? 'Repair Major' : 'Repair Minor'}`,
-            data: months.map((m) => seriesQty(m, s, kind)),
-            backgroundColor: hexToRgba(shiftColor(s), mode === 'all' ? alphaFor[kind] : 1),
-            stack: mode === 'all' ? kind : 'main',
+            data: months.map((m) => valueFor(m, s, kind)),
+            backgroundColor: hexToRgba(shiftColor(s), alphaFor[kind]),
             borderRadius: 2,
           });
         });
@@ -1220,11 +1158,19 @@
         options: baseBarOptions({
           plugins: {
             legend: { position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, color: COLORS.text, font: { size: 10.5 } } },
-            tooltip: { backgroundColor: '#0E1015', borderColor: COLORS.grid, borderWidth: 1, padding: 10 },
+            tooltip: {
+              backgroundColor: '#0E1015', borderColor: COLORS.grid, borderWidth: 1, padding: 10,
+              callbacks: metric === 'pctWeight' ? { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } : undefined,
+            },
           },
           scales: {
-            x: { stacked: mode === 'all', grid: { display: false }, ticks: { color: COLORS.text }, border: { color: COLORS.grid } },
-            y: { stacked: mode === 'all', grid: { color: COLORS.grid }, ticks: { color: COLORS.text }, border: { color: COLORS.grid }, beginAtZero: true },
+            x: { stacked: false, grid: { display: false }, ticks: { color: COLORS.text }, border: { color: COLORS.grid } },
+            y: {
+              stacked: false, grid: { color: COLORS.grid }, ticks: {
+                color: COLORS.text,
+                callback: metric === 'pctWeight' ? (v) => v + '%' : undefined,
+              }, border: { color: COLORS.grid }, beginAtZero: true,
+            },
           },
         }),
       });
@@ -1237,6 +1183,25 @@
       toggle.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       mode = btn.dataset.mode;
+      draw();
+    };
+    const metricToggle = document.getElementById('monthly-metric-toggle');
+    const pctBaseToggle = document.getElementById('monthly-pctbase-toggle');
+    metricToggle.onclick = (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      metricToggle.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      metric = btn.dataset.metric;
+      pctBaseToggle.hidden = metric !== 'pctWeight';
+      draw();
+    };
+    pctBaseToggle.onclick = (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      pctBaseToggle.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      pctBase = btn.dataset.base;
       draw();
     };
     draw();
@@ -1511,271 +1476,6 @@
       };
     });
     renderTable();
-  }
-
-  // ---------- Production ----------
-  function sumProd(recs, field) { return recs.reduce((s, r) => s + (r[field] || 0), 0); }
-
-  function getProductionGroups() {
-    const found = Array.from(new Set(PRODUCTION_RECORDS.map((r) => r.group)));
-    const order = ['A', 'B', 'C'];
-    found.sort((a, b) => {
-      if (a === 'UNK') return 1;
-      if (b === 'UNK') return -1;
-      const ia = order.indexOf(a), ib = order.indexOf(b);
-      if (ia === -1 && ib === -1) return a.localeCompare(b);
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
-    return found;
-  }
-  function getProductionWeeks() {
-    return Array.from(new Set(PRODUCTION_RECORDS.map((r) => r.week))).sort((a, b) => a - b);
-  }
-  function getProductionMonths() {
-    const set = new Set(PRODUCTION_RECORDS.map((r) => monthLabel(r.year, r.month)));
-    return Array.from(set).sort((a, b) => {
-      const ra = PRODUCTION_RECORDS.find((r) => monthLabel(r.year, r.month) === a);
-      const rb = PRODUCTION_RECORDS.find((r) => monthLabel(r.year, r.month) === b);
-      return ra.year - rb.year || ra.month - rb.month;
-    });
-  }
-
-  function renderProductionSection() {
-    const section = document.getElementById('production');
-    const navLink = document.querySelector('#main-tabs a[href="#production"]');
-    if (!PRODUCTION_RECORDS.length) {
-      section.style.display = 'none';
-      if (navLink) navLink.style.display = 'none';
-      return;
-    }
-    section.style.display = '';
-    if (navLink) navLink.style.display = '';
-
-    const groups = getProductionGroups();
-    const weeks = getProductionWeeks();
-    const months = getProductionMonths();
-
-    const unmatchedCount = PRODUCTION_RECORDS.filter((r) => r.group === 'UNK').reduce((n, r) => n + (r.n || 1), 0);
-    const noteEl = document.getElementById('production-unmatched-note');
-    const noteText = document.getElementById('production-unmatched-text');
-    if (unmatchedCount) {
-      noteEl.style.display = '';
-      noteText.textContent = `${unmatchedCount.toLocaleString()} production row(s) could not be matched to a crew group (no inspection roster entry for that date + shift) and are shown as "Unmatched".`;
-    } else {
-      noteEl.style.display = 'none';
-    }
-
-    let metric = 'qty'; // 'qty' | 'weight' — drives the two charts; tables always show both
-
-    function groupClass(g) { return g === 'A' ? 'shift-group-A' : g === 'B' ? 'shift-group-B' : g === 'C' ? 'shift-group-C' : ''; }
-    function groupColor(g) { return g === 'A' ? COLORS.shiftA : g === 'B' ? COLORS.shiftB : g === 'C' ? COLORS.shiftC : COLORS.text; }
-    function groupLabel(g) { return g === 'UNK' ? 'Unmatched' : ('Group ' + g); }
-
-    function prodSumWeek(week, group, field) {
-      return sumProd(PRODUCTION_RECORDS.filter((r) => r.week === week && r.group === group), field);
-    }
-    function prodSumMonth(monthLbl, group, field) {
-      return sumProd(PRODUCTION_RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && r.group === group), field);
-    }
-
-    function hexToRgba(hex, alpha) {
-      const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r},${g},${b},${alpha})`;
-    }
-
-    function drawChart(canvasKey, canvasId, periods, periodLabelFn, sumFn) {
-      destroyChart(canvasKey);
-      const datasets = groups.map((g) => ({
-        label: groupLabel(g),
-        data: periods.map((p) => sumFn(p, g, metric)),
-        backgroundColor: hexToRgba(groupColor(g), g === 'UNK' ? 0.4 : 0.85),
-        borderRadius: 2,
-      }));
-      charts[canvasKey] = new Chart(document.getElementById(canvasId), {
-        type: 'bar',
-        data: { labels: periods.map(periodLabelFn), datasets },
-        options: baseBarOptions({
-          plugins: {
-            legend: { position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, color: COLORS.text, font: { size: 10.5 } } },
-            tooltip: { backgroundColor: '#0E1015', borderColor: COLORS.grid, borderWidth: 1, padding: 10 },
-          },
-        }),
-      });
-    }
-
-    function buildTable(theadId, tbodyId, tfootId, periods, periodLabelFn, sumFn, rowHeaderLabel) {
-      const theadRow1 = [`<th rowspan="2">${rowHeaderLabel}</th>`]
-        .concat(groups.map((g) => `<th colspan="2" class="${groupClass(g)}">${groupLabel(g)}</th>`))
-        .concat([`<th colspan="2" class="shift-group-total">All groups</th>`])
-        .join('');
-      const subCols = ['Qty', 'Weight (kg)'];
-      const theadRow2 = groups.concat(['ALL']).map((g) => {
-        return subCols.map((label, i) => `<th class="num${i === 0 ? ' ' + groupClass(g) : ''}">${label}</th>`).join('');
-      }).join('');
-      document.getElementById(theadId).innerHTML = `<tr>${theadRow1}</tr><tr>${theadRow2}</tr>`;
-      document.getElementById(theadId).className = 'two-row';
-
-      function rowFor(period) {
-        const cells = [`<td>${periodLabelFn(period)}</td>`];
-        let allQty = 0, allWeight = 0;
-        groups.forEach((g) => {
-          const qty = sumFn(period, g, 'qty');
-          const weight = sumFn(period, g, 'weight');
-          allQty += qty; allWeight += weight;
-          cells.push(`<td class="num ${groupClass(g)}">${qty ? qty.toLocaleString() : '—'}</td><td class="num">${weight ? Math.round(weight).toLocaleString() : '—'}</td>`);
-        });
-        cells.push(`<td class="num shift-group-total">${allQty ? allQty.toLocaleString() : '—'}</td><td class="num">${allWeight ? Math.round(allWeight).toLocaleString() : '—'}</td>`);
-        return `<tr>${cells.join('')}</tr>`;
-      }
-      document.getElementById(tbodyId).innerHTML = periods.map(rowFor).join('');
-
-      const footCells = ['<td>Total</td>'];
-      let grandQty = 0, grandWeight = 0;
-      groups.forEach((g) => {
-        const qty = sumProd(PRODUCTION_RECORDS.filter((r) => r.group === g), 'qty');
-        const weight = sumProd(PRODUCTION_RECORDS.filter((r) => r.group === g), 'weight');
-        grandQty += qty; grandWeight += weight;
-        footCells.push(`<td class="num">${qty.toLocaleString()}</td><td class="num">${Math.round(weight).toLocaleString()}</td>`);
-      });
-      footCells.push(`<td class="num">${grandQty.toLocaleString()}</td><td class="num">${Math.round(grandWeight).toLocaleString()}</td>`);
-      document.getElementById(tfootId).innerHTML = `<tr>${footCells.join('')}</tr>`;
-    }
-
-    function drawAll() {
-      drawChart('productionWeekly', 'chart-production-weekly', weeks, (w) => 'Wk ' + w, prodSumWeek);
-      drawChart('productionMonthly', 'chart-production-monthly', months, (m) => m, prodSumMonth);
-      buildTable('production-weekly-thead', 'production-weekly-tbody', 'production-weekly-tfoot', weeks, (w) => 'Wk ' + w, prodSumWeek, 'Week');
-      buildTable('production-monthly-thead', 'production-monthly-tbody', 'production-monthly-tfoot', months, (m) => m, prodSumMonth, 'Month');
-    }
-
-    const toggle = document.getElementById('production-metric-toggle');
-    toggle.onclick = (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      toggle.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      metric = btn.dataset.metric;
-      drawChart('productionWeekly', 'chart-production-weekly', weeks, (w) => 'Wk ' + w, prodSumWeek);
-      drawChart('productionMonthly', 'chart-production-monthly', months, (m) => m, prodSumMonth);
-    };
-
-    drawAll();
-  }
-
-  // ---------- Shift coverage (how many shifts each group worked) ----------
-  // Factory week: Sunday's Day shift through Saturday's Night shift.
-  function weekStartDayIdx(dayIdx) {
-    const ms = dayIdx * 86400000;
-    const dow = new Date(ms).getUTCDay(); // 0 = Sunday
-    return dayIdx - dow;
-  }
-  function formatWeekLabel(sundayDayIdx) {
-    const d = new Date(sundayDayIdx * 86400000);
-    return 'Wk of ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  }
-  function monthKeyFromDayIdx(dayIdx) {
-    const d = new Date(dayIdx * 86400000);
-    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
-  }
-  function formatMonthLabel(monthKey) {
-    const [y, m] = monthKey.split('-').map(Number);
-    const d = new Date(Date.UTC(y, m - 1, 1));
-    return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' });
-  }
-
-  function renderShiftCoverageSection() {
-    if (!SHIFT_INSTANCES.length) return; // Production section itself is already hidden with no data
-
-    const groups = Array.from(new Set(SHIFT_INSTANCES.map((s) => s.group))).sort((a, b) => {
-      if (a === 'UNK') return 1;
-      if (b === 'UNK') return -1;
-      const order = ['A', 'B', 'C'];
-      const ia = order.indexOf(a), ib = order.indexOf(b);
-      if (ia === -1 && ib === -1) return a.localeCompare(b);
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
-
-    function groupClass(g) { return g === 'A' ? 'shift-group-A' : g === 'B' ? 'shift-group-B' : g === 'C' ? 'shift-group-C' : ''; }
-    function groupColor(g) { return g === 'A' ? COLORS.shiftA : g === 'B' ? COLORS.shiftB : g === 'C' ? COLORS.shiftC : COLORS.text; }
-    function groupLabel(g) { return g === 'UNK' ? 'Unmatched' : ('Group ' + g); }
-    function hexToRgba(hex, alpha) {
-      const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r},${g},${b},${alpha})`;
-    }
-
-    const weekBuckets = {}; // sundayDayIdx -> { group: count }
-    const monthBuckets = {}; // 'YYYY-MM' -> { group: count }
-    SHIFT_INSTANCES.forEach((s) => {
-      const wKey = weekStartDayIdx(s.dayIdx);
-      weekBuckets[wKey] = weekBuckets[wKey] || {};
-      weekBuckets[wKey][s.group] = (weekBuckets[wKey][s.group] || 0) + 1;
-
-      const mKey = monthKeyFromDayIdx(s.dayIdx);
-      monthBuckets[mKey] = monthBuckets[mKey] || {};
-      monthBuckets[mKey][s.group] = (monthBuckets[mKey][s.group] || 0) + 1;
-    });
-
-    const weekKeys = Object.keys(weekBuckets).map(Number).sort((a, b) => a - b);
-    const monthKeys = Object.keys(monthBuckets).sort();
-
-    function countFor(bucket, group) { return (bucket && bucket[group]) || 0; }
-
-    function drawCountChart(canvasKey, canvasId, keys, bucketMap, labelFn) {
-      destroyChart(canvasKey);
-      const datasets = groups.map((g) => ({
-        label: groupLabel(g),
-        data: keys.map((k) => countFor(bucketMap[k], g)),
-        backgroundColor: hexToRgba(groupColor(g), g === 'UNK' ? 0.4 : 0.85),
-        borderRadius: 2,
-      }));
-      charts[canvasKey] = new Chart(document.getElementById(canvasId), {
-        type: 'bar',
-        data: { labels: keys.map(labelFn), datasets },
-        options: baseBarOptions({
-          plugins: {
-            legend: { position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, color: COLORS.text, font: { size: 10.5 } } },
-            tooltip: { backgroundColor: '#0E1015', borderColor: COLORS.grid, borderWidth: 1, padding: 10 },
-          },
-        }),
-      });
-    }
-
-    function buildCountTable(theadId, tbodyId, tfootId, keys, bucketMap, labelFn, rowHeaderLabel) {
-      const headCells = [`<th>${rowHeaderLabel}</th>`]
-        .concat(groups.map((g) => `<th class="num ${groupClass(g)}">${groupLabel(g)}</th>`))
-        .concat([`<th class="num shift-group-total">Total</th>`])
-        .join('');
-      document.getElementById(theadId).innerHTML = `<tr>${headCells}</tr>`;
-
-      function rowFor(k) {
-        const bucket = bucketMap[k];
-        let total = 0;
-        const cells = groups.map((g) => {
-          const c = countFor(bucket, g);
-          total += c;
-          return `<td class="num ${groupClass(g)}">${c || '—'}</td>`;
-        });
-        return `<tr><td>${labelFn(k)}</td>${cells.join('')}<td class="num shift-group-total">${total}</td></tr>`;
-      }
-      document.getElementById(tbodyId).innerHTML = keys.map(rowFor).join('');
-
-      let grandTotal = 0;
-      const footCells = groups.map((g) => {
-        const c = SHIFT_INSTANCES.filter((s) => s.group === g).length;
-        grandTotal += c;
-        return `<td class="num">${c}</td>`;
-      });
-      document.getElementById(tfootId).innerHTML = `<tr><td>Total</td>${footCells.join('')}<td class="num">${grandTotal}</td></tr>`;
-    }
-
-    drawCountChart('shiftsWeekly', 'chart-shifts-weekly', weekKeys, weekBuckets, formatWeekLabel);
-    drawCountChart('shiftsMonthly', 'chart-shifts-monthly', monthKeys, monthBuckets, formatMonthLabel);
-    buildCountTable('shifts-weekly-thead', 'shifts-weekly-tbody', 'shifts-weekly-tfoot', weekKeys, weekBuckets, formatWeekLabel, 'Week (Sun–Sat)');
-    buildCountTable('shifts-monthly-thead', 'shifts-monthly-tbody', 'shifts-monthly-tfoot', monthKeys, monthBuckets, formatMonthLabel, 'Month');
   }
 
   // In-page nav: scroll to the section instead of changing the URL hash —
