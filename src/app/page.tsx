@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { useStore, toast } from '@/lib/client/store';
 import { downloadBackup, restoreBackup } from '@/lib/client/backup';
-import { visibleSections, visibleTabs } from '@/lib/client/access';
+import { visibleSections, visibleTabs, canEditSection } from '@/lib/client/access';
 import { Icon } from '@/components/Icon';
 
 export default function Home() {
@@ -24,10 +24,11 @@ export default function Home() {
       <div className="cards">
         {sections.map((s) => {
           const tabs = visibleTabs(user, s);
+          const sectionViewOnly = user?.role === 'executive' && !canEditSection(user, s.id);
           return (
             <Link key={s.id} href={`/d/${s.id}`} className="card" style={{ ['--c' as string]: s.color }}>
               <span className="ico"><Icon name={s.icon} size={22} /></span>
-              <h3>{s.title}</h3>
+              <h3>{s.title}{sectionViewOnly && <small className="view-only-tag" style={{ marginLeft: 8, verticalAlign: 'middle' }}>View only</small>}</h3>
               <p>{s.blurb}</p>
               <span className="meta"><span>{tabs.length} {tabs.length === 1 ? 'app' : 'apps'}</span><Icon name="arrow" size={16} /></span>
             </Link>

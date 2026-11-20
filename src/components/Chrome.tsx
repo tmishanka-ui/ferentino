@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { sectionById } from '@/lib/registry';
 import { initFrames, setActive } from '@/lib/client/frames';
 import { useStore } from '@/lib/client/store';
-import { visibleSections, visibleTabs } from '@/lib/client/access';
+import { visibleSections, visibleTabs, canEditSection } from '@/lib/client/access';
 import { Icon } from './Icon';
 import { TopBar } from './TopBar';
 import { SyncBar } from './SyncBar';
@@ -25,6 +25,7 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
   const rawSection = parts[0] === 'd' ? sectionById(parts[1]) : undefined;
   const section = rawSection && sections.some((s) => s.id === rawSection.id) ? rawSection : undefined;
   const notAuthorized = !!rawSection && !section;
+  const viewOnly = !!section && user?.role === 'executive' && !canEditSection(user, section.id);
   const tabs = section ? visibleTabs(user, section) : [];
   const appKey = section
     ? (tabs.some((t) => t[0] === parts[2]) ? parts[2] : (lastTab[section.id] && tabs.some((t) => t[0] === lastTab[section.id]) ? lastTab[section.id] : tabs[0]?.[0] ?? null))
@@ -58,9 +59,11 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
           {sections.map((s) => {
             const t = visibleTabs(user, s);
             const firstKey = lastTab[s.id] && t.some((x) => x[0] === lastTab[s.id]) ? lastTab[s.id] : t[0][0];
+            const sectionViewOnly = user?.role === 'executive' && !canEditSection(user, s.id);
             return (
               <Link key={s.id} href={`/d/${s.id}/${firstKey}`} className={'nav-link' + (section?.id === s.id ? ' on' : '')} style={{ ['--dot' as string]: s.color }}>
                 <span className="nav-ico"><Icon name={s.icon} size={16} /></span><span className="t">{s.title}</span>
+                {sectionViewOnly && <small className="view-only-tag">View only</small>}
               </Link>
             );
           })}
@@ -95,6 +98,7 @@ export function Chrome({ pathname, children }: { pathname: string; children: Rea
           </nav>
         )}
         <div className="content">
+          {viewOnly && <div className="view-only-banner">You can view this department, but editing is limited to the departments assigned to you. Ask an administrator if you need to edit it.</div>}
           <div className="stage" hidden={!section}>
             <div ref={hostRef} className="frame-slot" />
             {loadingApp && <div className="stage-loading"><div><div className="spin" /><div>Loading…</div></div></div>}

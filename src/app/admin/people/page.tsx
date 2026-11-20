@@ -81,7 +81,7 @@ export default function People() {
                   <td>{p.email}</td>
                   <td>
                     {ROLE[p.role]}
-                    {p.role === 'executive' && <div className="sub">{p.sections.length ? p.sections.map(sectionTitle).join(', ') : 'No departments assigned'}</div>}
+                    {p.role === 'executive' && <div className="sub">Can edit: {p.sections.length ? p.sections.map(sectionTitle).join(', ') : 'none (view only everywhere)'}</div>}
                     {p.role === 'user' && <div className="sub">{p.apps.length ? p.apps.map(appLabel).join(', ') : 'No apps assigned'}</div>}
                   </td>
                   <td>
@@ -161,7 +161,8 @@ function PersonForm({ person, onClose, onSaved }: { person: Person | null; onClo
           </select>
         </label>
         {role === 'executive' && (
-          <div className="field"><span>Departments this Executive can see and edit</span>
+          <div className="field"><span>Departments this Executive can edit</span>
+            <p className="hint" style={{ marginTop: -2, marginBottom: 8 }}>An Executive can see every department; ticking one here also lets them edit it.</p>
             <div className="check-list">
               {SECTIONS.map((s) => (
                 <label key={s.id} className="check"><input type="checkbox" checked={sections.includes(s.id)} onChange={() => toggle(sections, setSections, s.id)} />{s.title}</label>
