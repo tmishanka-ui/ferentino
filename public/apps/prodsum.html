@@ -159,7 +159,6 @@ async function core(XLSX,file){
   rels.replace(/<Relationship\b[^>]*>/g,t=>{const i=/\bId="([^"]+)"/.exec(t),g=/\bTarget="([^"]+)"/.exec(t);if(i&&g)rid[i[1]]=g[1].replace(/^\//,'').replace(/^(?!xl\/)/,'xl/');return t});
   const sheets={};wbx.replace(/<sheet\b[^>]*>/g,t=>{const n=/\bname="([^"]*)"/.exec(t),r=/\br:id="([^"]+)"/.exec(t);if(n&&r)sheets[unesc(n[1])]=rid[r[1]];return t});
   const have=TARGETS.filter(n=>sheets[n]&&idx[sheets[n]]);
-  if(!have.length)return passThrough();
   // ---- shared strings ----
   const ss=[];(await text('xl/sharedStrings.xml')).replace(/<si\b[^>]*>([\s\S]*?)<\/si>/g,(m,b)=>{let s='';b.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g,(x,t)=>{s+=t;return x});ss.push(unesc(s));return m});
   // one cell's value, whatever the way it is stored (shared string, inline, formula text, number)
@@ -198,12 +197,33 @@ async function core(XLSX,file){
         if(any)out.push(a)}
       if(r.done)break}
     return out}
+  // A standalone Daily Production export can use any sheet name at all — even the default "Sheet1" — since it is
+  // no longer cut from the one fixed-format factory report. So when none of the named targets are present, look at
+  // every other sheet's own columns instead: one with DATE, SHIFT and QTY columns is the production sheet by shape,
+  // whatever its tab is called, and gets written out under the canonical "Daily Tyres Production" name so every
+  // page downstream (which still looks the sheet up by that name) keeps working unchanged.
+  let altProd=null;
+  if(!have.includes('Daily Tyres Production')&&!have.includes('Production')){
+    for(const n in sheets){
+      if(have.includes(n))continue;
+      try{
+        const rows=await readSheet(n,true),hdr=(rows[0]||[]).map(up);
+        if(hdr.includes('QTY')&&hdr.includes('DATE')&&hdr.includes('SHIFT')){altProd={name:n,rows};break}
+      }catch(_){}
+    }
+  }
+  if(!have.length&&!altProd)return passThrough();
   const book=XLSX.utils.book_new(),info=[];
   for(const n of have){
     if(n==='Total Waste'){XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(await readGrid(n)),n);info.push('Total Waste');continue}
     const rows=await readSheet(n,n!=='Daily Quality'),ws=XLSX.utils.aoa_to_sheet(rows);
     (rows[0]||[]).map(up).forEach((h,c)=>{if(h.indexOf('DATE')>=0)for(let r=1;r<rows.length;r++){const cell=ws[XLSX.utils.encode_cell({r:r,c:c})];if(cell&&cell.t==='n')cell.z='yyyy-mm-dd'}});
     XLSX.utils.book_append_sheet(book,ws,n);info.push(n+': '+(rows.length-1).toLocaleString()+' rows')}
+  if(altProd){
+    const rows=altProd.rows,ws=XLSX.utils.aoa_to_sheet(rows);
+    (rows[0]||[]).map(up).forEach((h,c)=>{if(h.indexOf('DATE')>=0)for(let r=1;r<rows.length;r++){const cell=ws[XLSX.utils.encode_cell({r:r,c:c})];if(cell&&cell.t==='n')cell.z='yyyy-mm-dd'}});
+    XLSX.utils.book_append_sheet(book,ws,'Daily Tyres Production');
+    info.push('Daily Tyres Production (from "'+altProd.name+'"): '+(rows.length-1).toLocaleString()+' rows')}
   const x=XLSX.write(book,{type:'array',bookType:'xlsx',compression:true});
   return{kind:'slim',buf:x instanceof ArrayBuffer?x:x.buffer.slice(x.byteOffset,x.byteOffset+x.byteLength),info:info}
 }
