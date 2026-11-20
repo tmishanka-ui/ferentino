@@ -297,6 +297,7 @@
     <nav class="tabs" id="main-tabs" hidden>
       <a href="#overview">Overview</a>
       <a href="#monthly">Monthly</a>
+      <a href="#monthlytotals">Monthly Totals</a>
       <a href="#weekly">Weekly</a>
       <a href="#defects">Defects</a>
       <a href="#matrix">Shift × Month Matrix</a>
@@ -376,11 +377,31 @@
     </div>
   </section>
 
+  <!-- MONTHLY TOTALS -->
+  <section class="block" id="monthlytotals">
+    <div class="block-head">
+      <div>
+        <span class="eyebrow">Section 02</span>
+        <h3>Scrap & Repair — Monthly totals</h3>
+        <p class="desc">All shifts combined — total Scrap, total Repair Major and total Repair Minor, month by month.</p>
+      </div>
+      <div class="controls" style="justify-content:flex-end;">
+        <div class="seg" id="monthlytotals-metric-toggle">
+          <button data-metric="qty" class="active">Quantity</button>
+          <button data-metric="pctWeight">% of weight</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="chart-wrap" style="height:340px;"><canvas id="chart-monthlytotals"></canvas></div>
+    </div>
+  </section>
+
   <!-- WEEKLY -->
   <section class="block" id="weekly">
     <div class="block-head">
       <div>
-        <span class="eyebrow">Section 02</span>
+        <span class="eyebrow">Section 03</span>
         <h3>Shift-wise performance — Weekly</h3>
         <p class="desc">Same view at week granularity, so a bad shift on a bad week doesn't hide in a monthly average.</p>
       </div>
@@ -412,7 +433,7 @@
   <section class="block" id="defects">
     <div class="block-head">
       <div>
-        <span class="eyebrow">Section 03</span>
+        <span class="eyebrow">Section 04</span>
         <h3>Defect breakdown</h3>
         <p class="desc">Every defect code, ranked by total tyres affected, split by Scrap and Repair severity.</p>
       </div>
@@ -449,7 +470,7 @@
   <section class="block" id="matrix">
     <div class="block-head">
       <div>
-        <span class="eyebrow">Section 04</span>
+        <span class="eyebrow">Section 05</span>
         <h3>Defect × Shift, by month</h3>
         <p class="desc">Which shift produces which defect, month by month — filter to isolate one shift or one month.</p>
       </div>
@@ -1076,6 +1097,7 @@
     const shifts = getShifts();
 
     renderMonthlySection(months, shifts);
+    renderMonthlyTotalsSection(months);
     renderWeeklySection(weeks, shifts);
     renderDefectSection();
     renderMatrixSection(months);
@@ -1213,6 +1235,68 @@
     };
     draw();
     buildPeriodTable('monthly', months, (m) => m, 'Month', shifts, seriesQty);
+  }
+
+  // ---------- Monthly totals (all shifts combined) ----------
+  function renderMonthlyTotalsSection(months) {
+    let metric = 'qty'; // 'qty' | 'pctWeight'
+    const KINDS = [['scrap', 'Scrap', COLORS.scrap], ['repairMajor', 'Repair Major', COLORS.repairMajor], ['repairMinor', 'Repair Minor', COLORS.repairMinor]];
+
+    function totalQty(monthLbl, kind) {
+      return sumQty(RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && classify(r) === kind));
+    }
+    function totalPctWeight(monthLbl, kind) {
+      const w = sumWeight(RECORDS.filter((r) => monthLabel(r.year, r.month) === monthLbl && classify(r) === kind));
+      const base = prodWeightMonthTotal(monthLbl);
+      return base ? (w / base * 100) : 0;
+    }
+
+    function buildDatasets() {
+      const valueFor = metric === 'pctWeight' ? totalPctWeight : totalQty;
+      return KINDS.map(([kind, label, color]) => ({
+        label,
+        data: months.map((m) => valueFor(m, kind)),
+        backgroundColor: color,
+        borderRadius: 2,
+      }));
+    }
+
+    function draw() {
+      destroyChart('monthlytotals');
+      charts.monthlytotals = new Chart(document.getElementById('chart-monthlytotals'), {
+        type: 'bar',
+        data: { labels: months, datasets: buildDatasets() },
+        options: baseBarOptions({
+          plugins: {
+            legend: { position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, color: COLORS.text, font: { size: 10.5 } } },
+            tooltip: {
+              backgroundColor: '#0E1015', borderColor: COLORS.grid, borderWidth: 1, padding: 10,
+              callbacks: metric === 'pctWeight' ? { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } : undefined,
+            },
+          },
+          scales: {
+            x: { stacked: false, grid: { display: false }, ticks: { color: COLORS.text }, border: { color: COLORS.grid } },
+            y: {
+              stacked: false, grid: { color: COLORS.grid }, ticks: {
+                color: COLORS.text,
+                callback: metric === 'pctWeight' ? (v) => v + '%' : undefined,
+              }, border: { color: COLORS.grid }, beginAtZero: true,
+            },
+          },
+        }),
+      });
+    }
+
+    const metricToggle = document.getElementById('monthlytotals-metric-toggle');
+    metricToggle.onclick = (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      metricToggle.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      metric = btn.dataset.metric;
+      draw();
+    };
+    draw();
   }
 
   // ---------- Weekly ----------
