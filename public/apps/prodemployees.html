@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Department Employees — FIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{--bg:#F2F0EB;--card:#fff;--ink:#1D2127;--soft:#5E6772;--line:#DDD8CF;--line2:#ECE8E0;--accent:#16A34A;--accent-d:#15803D;--head:'Barlow Condensed','Arial Narrow',sans-serif}
+  *{box-sizing:border-box}[hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Inter',system-ui,sans-serif}
+  button,input,select{font:inherit;color:inherit}h1,h2,h3{font-family:var(--head);font-weight:600;margin:0}
+  header{background:var(--card);border-bottom:3px solid var(--accent);padding:12px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  h1{font-size:26px;text-transform:uppercase;line-height:1}.sub{color:var(--soft);font-size:12.5px;margin-top:3px}.grow{flex:1;min-width:240px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;cursor:pointer;font-weight:500}.btn:hover{border-color:#B9B2A6}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.go{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{padding:16px 22px 50px;max-width:1000px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:16px}
+  .pn{padding:14px 16px}.pn h2{font-size:20px;text-transform:uppercase;margin-bottom:8px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .bar select,.bar input,.add input{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 8px}
+  .tw{max-height:560px;overflow:auto;border:1px solid var(--line2);border-radius:8px}
+  table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 9px;border-bottom:1px solid var(--line2);text-align:left}
+  th{position:sticky;top:0;background:#F7F4EE;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);z-index:1}
+  .gh{padding:12px 16px;border-left:8px solid var(--accent);display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;background:#FBFAF7;border-bottom:1px solid var(--line2)}
+  .gh h2{font-size:22px;text-transform:uppercase}.gh .who{font-size:13px;color:var(--soft)}.gh .who b{color:var(--ink)}
+  .empty{padding:22px;text-align:center;color:var(--soft)}.note{color:var(--soft);font-size:12.5px;margin:6px 0 0}
+  .add{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  #toast{position:fixed;right:18px;bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:60;pointer-events:none}#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><div class="grow"><h1>Production Department — Employees</h1><div class="sub">Placed here by HR — see the HR Department · Employees tab to change who is assigned</div></div><button class="btn" id="xl">Download roster (Excel)</button></header>
+<main>
+ <section class="card pn"><h2>Report a new employee</h2>
+  <p class="note" style="margin:0 0 8px">Spotted a new hire first? Report them here — HR places them into a department from the HR Department · Employees tab.</p>
+  <div class="add"><input id="mn" placeholder="Employee no" style="width:120px"><input id="mm" placeholder="Name" style="min-width:160px"><button class="btn sm go" id="ma">Report to HR</button></div>
+ </section>
+ <section class="card"><div class="gh"><h2>Production Department roster</h2><span class="who"><b id="cnt">0</b> placed</span></div><div id="roster"></div></section>
+</main>
+<div id="toast"></div>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id),KEY='fitl_prod_employees_v1',DEPT='production';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ROSTER=[],PENDING=[];
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){ROSTER=s.ROSTER||[];PENDING=s.PENDING||[]}}catch(_){}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({ROSTER,PENDING}))}catch(_){}}
+function render(){
+  const known=new Set(ROSTER.map(r=>r.no));
+  PENDING=PENDING.filter(p=>!known.has(p.no));   // HR has since confirmed these — drop the optimistic copy
+  const rows=ROSTER.concat(PENDING.map(p=>Object.assign({loc:'',title:'(waiting for HR to place)'},p))).sort((a,b)=>a.name.localeCompare(b.name));
+  $('cnt').textContent=ROSTER.length;
+  $('roster').innerHTML=rows.length?'<div class="tw" style="border:0;border-radius:0;max-height:560px"><table><thead><tr><th>No</th><th>Name</th><th>Location</th><th>Title</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td>'+esc(r.no)+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.loc||'')+'</td><td>'+esc(r.title||'')+'</td></tr>').join('')+'</tbody></table></div>'
+    :'<div class="empty">Nobody is placed in the Production Department yet — set this from the HR Department · Employees tab.</div>';
+}
+$('ma').onclick=()=>{
+  const no=$('mn').value.trim().toUpperCase(),n=$('mm').value.trim();
+  if(!no||!n){toast('Enter the employee number and name');return}
+  if(!ROSTER.some(r=>r.no===no)&&!PENDING.some(p=>p.no===no))PENDING.push({no,name:n});
+  $('mn').value=$('mm').value='';save();render();
+  try{parent.postMessage({type:'fitl-dept-employee-add',dept:DEPT,no,name:n},'*')}catch(_){}
+  toast(n+' reported to HR')
+};
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
+$('xl').onclick=()=>{if(!ROSTER.length){toast('Nobody is placed here yet');return}
+  const rows=ROSTER.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(r=>({'Employee no':r.no,Name:r.name,Location:r.loc||'',Title:r.title||''}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Production roster');XLSX.writeFile(wb,'Production_employees_'+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* the roster arrives from HR's Employees tab (the placement authority), through the host page */
+addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
+  if(m&&m.type==='fitl-hr-placements-slice'&&Array.isArray(m.items)){ROSTER=m.items;save();render()}});
+render();
+try{parent.postMessage({type:'fitl-prodemployees-ready'},'*')}catch(_){}
+})();
+</script>
+</body>
+</html>

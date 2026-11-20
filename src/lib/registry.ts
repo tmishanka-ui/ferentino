@@ -26,6 +26,7 @@ export const APP_TITLES: Record<string, string> = {
   planproduction: 'Planned vs Actual Production', processcontrol: 'Process Control — Solid Tyre FMEA',
   dailycheck: 'Machine Daily Check Lists', qcemployees: 'QC Department Employees', maintemployees: 'Maintenance Department Employees',
   techemployees: 'Technical Department Employees', planningemployees: 'Planning Department Employees', hremployees: 'HR Department Employees',
+  prodemployees: 'Production Department Employees',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -41,8 +42,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Maintenance dashboard, KPI, waste removing records, machine daily check lists, employees',
     tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing'], ['dailycheck', 'Machine Daily Check Lists'], ['maintemployees', 'Employees']] },
   { id: 'prod', title: 'Production Department', color: '#16A34A', icon: 'factory',
-    blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups',
-    tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups']] },
+    blurb: 'Press downtime, production KPIs, press operation board, production summary, shift groups, employees',
+    tabs: [['downtime', 'Press Downtime Dashboard'], ['kpi', 'Production KPI Dashboard'], ['opboard', 'Press Operation & Downtime'], ['prodsum', 'Production Summary'], ['shiftgroups', 'Shift Groups'], ['prodemployees', 'Employees']] },
   { id: 'planning', title: 'Planning Department', color: '#7C3AED', icon: 'calendar',
     blurb: 'Production planner — tyre building press allocation and cycle times, planned vs actual production and shipment load, employees',
     tabs: [['planner', 'Production Planner'], ['planproduction', 'Planned vs Actual Production'], ['planningemployees', 'Employees']] },

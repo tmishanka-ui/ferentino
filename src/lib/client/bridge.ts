@@ -39,7 +39,7 @@ const sendShifts = () => { if (capaReady && shiftItems && win('capa')) post('cap
    -> Defect Analyser, Production Summary; downtime / attendance / accidents -> KPI, Mixing ---- */
 let lastWorkbook: Msg | null = null, lastQcWorkbook: Msg | null = null, qcReady = false, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
   lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastAttendanceDays: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
-  hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false, planningEmpReady = false, hrEmpReady = false;
+  hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false, planningEmpReady = false, hrEmpReady = false, prodEmpReady = false;
 let lastHrPlacements: Record<string, unknown[]> = {};
 const deptEmployeeAdds: Msg[] = [];   // a new hire reported by a department, waiting for HR's Employees tab to open
 function sendMix() {
@@ -48,11 +48,12 @@ function sendMix() {
   if (lastAttendance) post('mixingdash', lastAttendance);
 }
 const sendSg = () => { if (sgReady && lastEmployees && win('shiftgroups')) post('shiftgroups', lastEmployees); };   // HR Attendance -> Shift Groups (the employee list)
-// HR's Employees tab (the placement authority) -> each department's own employee roster (QC, Maintenance, Technical, Planning)
+// HR's Employees tab (the placement authority) -> each department's own employee roster (QC, Maintenance, Technical, Planning, Production)
 const sendQcEmp = () => { if (qcEmpReady && win('qcemployees')) post('qcemployees', { type: 'fitl-hr-placements-slice', items: lastHrPlacements.qc || [] }); };
 const sendMaintEmp = () => { if (maintEmpReady && win('maintemployees')) post('maintemployees', { type: 'fitl-hr-placements-slice', items: lastHrPlacements.maintenance || [] }); };
 const sendTechEmp = () => { if (techEmpReady && win('techemployees')) post('techemployees', { type: 'fitl-hr-placements-slice', items: lastHrPlacements.technical || [] }); };
 const sendPlanningEmp = () => { if (planningEmpReady && win('planningemployees')) post('planningemployees', { type: 'fitl-hr-placements-slice', items: lastHrPlacements.planning || [] }); };
+const sendProdEmp = () => { if (prodEmpReady && win('prodemployees')) post('prodemployees', { type: 'fitl-hr-placements-slice', items: lastHrPlacements.production || [] }); };
 // HR Attendance -> HR's own Employees tab: the base name/location feed, and which dates/shifts each employee clocked in
 const sendHrEmp = () => {
   if (!hrEmpReady || !win('hremployees')) return;
@@ -198,7 +199,8 @@ function onApp(ev: MessageEvent) {
     if (maintEmpReady) sendMaintEmp(); else ensureLoaded('maintemployees');
     if (techEmpReady) sendTechEmp(); else ensureLoaded('techemployees');
     if (planningEmpReady) sendPlanningEmp(); else ensureLoaded('planningemployees');
-  } else if (m.type === 'fitl-dept-employee-add' && (from === 'qcemployees' || from === 'maintemployees' || from === 'techemployees' || from === 'planningemployees')) {
+    if (prodEmpReady) sendProdEmp(); else ensureLoaded('prodemployees');
+  } else if (m.type === 'fitl-dept-employee-add' && (from === 'qcemployees' || from === 'maintemployees' || from === 'techemployees' || from === 'planningemployees' || from === 'prodemployees')) {
     // a department spotted a new hire first: it flows up to HR, who places them from there
     if (hrEmpReady && win('hremployees')) post('hremployees', m); else { deptEmployeeAdds.push(m); ensureLoaded('hremployees'); }
   } else if (m.type === 'fitl-qcemployees-ready' && from === 'qcemployees') {
@@ -209,6 +211,8 @@ function onApp(ev: MessageEvent) {
     techEmpReady = true; sendTechEmp();
   } else if (m.type === 'fitl-planningemployees-ready' && from === 'planningemployees') {
     planningEmpReady = true; sendPlanningEmp();
+  } else if (m.type === 'fitl-prodemployees-ready' && from === 'prodemployees') {
+    prodEmpReady = true; sendProdEmp();
   } else if (m.type === 'fitl-hremployees-ready' && from === 'hremployees') {
     hrEmpReady = true;
     deptEmployeeAdds.splice(0).forEach((x) => post('hremployees', x));
