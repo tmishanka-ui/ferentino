@@ -18,12 +18,13 @@ const sendCandidates = (src: string) => { if (rcaReady && win('rca') && rcaCandi
 
 /* ---- Press Monitoring -> CAPA / Agenda, Housekeeping + Internal Audit -> Agenda, Agenda <-> CAPA ---- */
 let shiftItems: unknown[] | null = null, capaReady = false, lastHkReq: Msg | null = null, agendaReady = false, meetStatus: Msg | null = null, lastCapaReq: Msg | null = null;
-const auditWmm: Msg[] = [], meetCapa: Msg[] = [], capaAcks: Msg[] = [], rcaDone: Msg[] = [];
+const auditWmm: Msg[] = [], meetCapa: Msg[] = [], capaAcks: Msg[] = [], rcaDone: Msg[] = [], accidentWmm: Msg[] = [];
 function sendAgenda() {
   if (!agendaReady || !win('agenda')) return;
   if (shiftItems) post('agenda', { type: 'fitl-shifts', items: shiftItems });
   if (lastHkReq) post('agenda', lastHkReq);
   auditWmm.splice(0).forEach((x) => post('agenda', x));    // internal audit NCs sent on purpose
+  accidentWmm.splice(0).forEach((x) => post('agenda', x)); // a recorded accident, sent on purpose
   capaAcks.splice(0).forEach((x) => post('agenda', x));    // CAPA's answer: issue and action plan codes
   rcaDone.splice(0).forEach((x) => post('agenda', x));     // an RCA was finished: the issue goes to CAPA
 }
@@ -113,6 +114,9 @@ function onApp(ev: MessageEvent) {
     if (agendaReady) sendAgenda(); else ensureLoaded('agenda');
   } else if (m.type === 'fitl-wmm-requirements' && from === 'audit' && items) {
     auditWmm.push(m);
+    if (agendaReady) sendAgenda(); else ensureLoaded('agenda');
+  } else if (m.type === 'fitl-wmm-requirements' && from === 'accidents' && items) {
+    accidentWmm.push(m);
     if (agendaReady) sendAgenda(); else ensureLoaded('agenda');
   } else if (m.type === 'fitl-agenda-ready' && from === 'agenda') {
     agendaReady = true; sendAgenda();

@@ -75,6 +75,18 @@ try{A=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){A=[]}
 try{const t=parseFloat(localStorage.getItem(TKEY));TARGET=isFinite(t)&&t>=0?t:0}catch(_){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(A))}catch(_){toast('Could not save — browser storage is full or blocked. Download a backup.')}publish()};
 function publish(){try{if(parent!==window)parent.postMessage({type:'fitl-accidents',items:A.map(a=>({id:a.id,date:a.date,dept:a.dept,sev:a.sev,lost:+a.lost||0,status:a.status}))},'*')}catch(_){}}
+/* raise a requirement in the Weekly Management Meeting (the Management Agenda) the moment an accident is recorded */
+function sendWmm(rec){
+  if(parent===window)return;
+  const s=sevOf(rec.sev);
+  try{parent.postMessage({type:'fitl-wmm-requirements',source:'Accident Registry',items:[{
+    key:'accident:'+rec.id,date:rec.date,manual:true,department:(rec.dept||'').toUpperCase(),topicCategory:'ACCIDENT',
+    issueType:(rec.sev==='lt'||rec.sev==='fat')?'02. Management Issue':'05. Other',
+    issueDescription:s[1]+' — '+rec.name+(rec.job?' ('+rec.job+')':'')+(rec.area?' at '+rec.area:'')+': '+rec.desc,
+    impact:'Recorded in the Accident Registry on '+rec.date+(rec.lost?', '+rec.lost+' day'+(rec.lost===1?'':'s')+' lost':'')+'.',
+    actionRequired:'Agree the corrective action, the owner and the date'+(rec.action?' — immediate action taken: '+rec.action:'')+'.',
+    name:rec.by||'Accident Registry',responsibility:rec.dept||''}]},'*')}catch(_){}
+}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),3000)}
 const sevOf=k=>SEV.find(s=>s[0]===k)||SEV[0];
 
@@ -128,7 +140,7 @@ function openForm(id){
   $('g_ok').onclick=()=>{
     const g=k=>$('g_'+k).value.trim();if(!g('date')||!g('name')||!g('desc')){toast('Date, injured person and “What happened” are needed');return}
     const rec={id:id||('a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),date:g('date'),time:g('time'),shift:g('shift'),dept:g('dept'),area:g('area'),name:g('name'),epf:g('epf'),job:g('job'),sev:g('sev'),lost:Math.max(0,parseInt(g('lost'),10)||0),body:g('body'),nature:g('nature'),cause:g('cause'),desc:g('desc'),action:g('action'),ref:g('ref'),by:g('by'),status:g('status')};
-    if(id)A[A.findIndex(x=>x.id===id)]=rec;else A.push(rec);save();$('host').innerHTML='';fillFilters();render();toast(id?'Saved':'Accident recorded')};
+    if(id)A[A.findIndex(x=>x.id===id)]=rec;else{A.push(rec);sendWmm(rec)}save();$('host').innerHTML='';fillFilters();render();toast(id?'Saved':'Accident recorded — raised in the Weekly Management Meeting')};
 }
 document.addEventListener('click',e=>{
   const ed=e.target.closest('[data-edit]');if(ed){openForm(ed.dataset.edit);return}
