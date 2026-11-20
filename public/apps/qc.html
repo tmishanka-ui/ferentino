@@ -647,6 +647,13 @@
         const field = QUALITY_HEADER_MAP[h];
         if (field && !(field in qColIndex)) qColIndex[field] = i;
       });
+      // The weight column's apostrophe/wording varies between reports (e.g. "Scrap's Kg", "Scraps Kg", a curly
+      // apostrophe, or just "Weight") — matched by prefix, the same way the Defect Analyser finds it, rather than
+      // an exact name, so this doesn't silently stop working on a report with a slightly different header.
+      if (!('weight' in qColIndex)) {
+        const wi = headers.findIndex((h) => h.startsWith('SCRAP') || h.startsWith('NET WEIGHT') || h === 'WEIGHT');
+        if (wi >= 0) qColIndex.weight = wi;
+      }
       if (QUALITY_REQUIRED_FIELDS.every((f) => f in qColIndex)) {
         sheetsUsed.push(sheetName);
         for (let r = 1; r < rows.length; r++) {
@@ -902,7 +909,7 @@
       const m = ev.data;
       if (m && m.type === 'fitl-workbook' && Array.isArray(m.files)) {
         const files = m.files.map((f) => new File([f.buffer], f.name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-        handleFiles(files);
+        handleRelayedFiles(files);
       }
     });
     try { window.parent.postMessage({ type: 'fitl-qc-ready' }, '*'); } catch (_) { /* standalone */ }
@@ -960,6 +967,25 @@
       .catch((err) => {
         setStatus(err.message || 'Could not parse this workbook.', 'error');
       });
+  }
+
+  // A workbook relayed from elsewhere (the Production Summary page's Daily Production upload, forwarded through
+  // the host): only its production rows (and shift roster, if present) are used here — this page's own Daily
+  // Quality records always come from this page's own upload, never from a relay, so they're left untouched.
+  function handleRelayedFiles(fileList) {
+    parseWorkbookFiles(Array.from(fileList))
+      .then(({ productionRecords, shiftInstances, productionSheetsUsed, rosterSheetsUsed }) => {
+        let changed = false;
+        if (productionSheetsUsed && productionSheetsUsed.length) { PRODUCTION_RECORDS = productionRecords || []; changed = true; }
+        if (rosterSheetsUsed && rosterSheetsUsed.length) { SHIFT_INSTANCES = shiftInstances || []; changed = true; }
+        if (!changed || el.dashboardMain.hidden) return;
+        const fileName = el.sourceFilename.textContent;
+        saveToStorage({ records: RECORDS, productionRecords: PRODUCTION_RECORDS, shiftInstances: SHIFT_INSTANCES, fileName });
+        el.footerGenerated.textContent = `${RECORDS.length.toLocaleString()} inspection records`
+          + (PRODUCTION_RECORDS.length ? ` · ${PRODUCTION_RECORDS.reduce((n, r) => n + (r.n || 1), 0).toLocaleString()} production records` : '');
+        render();
+      })
+      .catch(() => { /* a relay that doesn't parse is simply ignored */ });
   }
 
   function loadDashboard(records, productionRecords, shiftInstances, fileName, doSave) {

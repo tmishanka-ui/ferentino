@@ -34,9 +34,9 @@ function sendCapaMeet() {
 }
 const sendShifts = () => { if (capaReady && shiftItems && win('capa')) post('capa', { type: 'fitl-shifts', items: shiftItems }); };
 
-/* ---- Production Summary (Daily Production) -> Defect Analyser, KPI dashboards; QC (Daily Quality) -> Defect Analyser, Production Summary;
-   downtime / attendance / accidents -> KPI, Mixing ---- */
-let lastWorkbook: Msg | null = null, lastQcWorkbook: Msg | null = null, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
+/* ---- Production Summary (Daily Production) -> Defect Analyser, KPI dashboards, QC (its % of weight view); QC (Daily Quality)
+   -> Defect Analyser, Production Summary; downtime / attendance / accidents -> KPI, Mixing ---- */
+let lastWorkbook: Msg | null = null, lastQcWorkbook: Msg | null = null, qcReady = false, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
   lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
   hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false, planningEmpReady = false, hrEmpReady = false;
 function sendMix() {
@@ -133,10 +133,12 @@ function onApp(ev: MessageEvent) {
 
   // production workbooks, downtime, accidents, attendance
   if (m.type === 'fitl-workbook' && from === 'prodsum') {
-    // Production Summary's own upload: the Daily Production report. Feeds Defect Analyser and the KPI dashboards;
-    // no longer sent to QC, which now uploads its own Daily Quality report directly.
+    // Production Summary's own upload: the Daily Production report. Feeds Defect Analyser and the KPI dashboards,
+    // and QC (which only reads its production rows from this, for the % of weight view — it never touches QC's
+    // own Daily Quality records, since QC merges this in separately rather than replacing its own upload).
     lastWorkbook = m;
     if (defectReady && win('defect')) post('defect', m); else ensureLoaded('defect');
+    if (qcReady && win('qc')) post('qc', m); else ensureLoaded('qc');
     if (qckReady && win('qckpi')) post('qckpi', m); else ensureLoaded('qckpi');
     if (kpiReady) sendKpi(); else ensureLoaded('kpi');
     if (psReady) sendPs(); else ensureLoaded('prodsum');
@@ -149,6 +151,9 @@ function onApp(ev: MessageEvent) {
   } else if (m.type === 'fitl-qckpi-ready' && from === 'qckpi') {
     qckReady = true;
     if (lastWorkbook) post('qckpi', lastWorkbook);
+  } else if (m.type === 'fitl-qc-ready' && from === 'qc') {
+    qcReady = true;
+    if (lastWorkbook) post('qc', lastWorkbook);
   } else if (m.type === 'fitl-defect-ready' && from === 'defect') {
     defectReady = true;
     if (lastWorkbook) post('defect', lastWorkbook);
