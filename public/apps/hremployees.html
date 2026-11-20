@@ -68,7 +68,7 @@ const $=id=>document.getElementById(id),KEY='fitl_hr_employees_v1';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const normLoc=l=>String(l==null?'':l).replace(/\s+/g,' ').trim();
 const DEPTS=[['hr','HR'],['admin','Admin'],['production','Production'],['planning','Planning'],['technical','Technical'],['finance','Finance'],['maintenance','Maintenance'],['qc','QC']];
-const LOCATIONS=['Shift A','Shift B','Shift C','Mixing','Base Building','Stores','Procurement','SAP','Mould Section','General'];
+const LOCATIONS=['Shift A','Shift B','Shift C','Mixing','Base Building','Stores','Procurement','SAP','Mould Section','Process Controlling','Finishing','General'];
 const deptLabel=id=>(DEPTS.find(d=>d[0]===id)||[,id])[1]||'(unplaced)';
 let POOL={};const F={q:'',dept:'',loc:'',un:false};
 let ATT_DAYS={};const V={date:'',shift:'Day'};
