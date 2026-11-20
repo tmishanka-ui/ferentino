@@ -304,18 +304,24 @@
     </nav>
     <div class="topbar-right">
       <div class="autosave-badge" id="autosave-badge" hidden><span class="dot" id="autosave-dot"></span><span id="autosave-text">Autosaved</span></div>
-      <button class="btn ghost" id="btn-upload-new" hidden></button>
+      <button class="btn ghost" id="btn-upload-new" hidden>Upload a new report</button>
     </div>
   </div>
 </div>
 
-<!-- ================= DATA SOURCE (no import here any more) ================= -->
+<!-- ================= DATA SOURCE ================= -->
 <div class="upload-shell" id="upload-shell">
   <div class="upload-card">
     <span class="upload-eyebrow">Data source</span>
-    <h2>Fed from the<br>Production Summary report.</h2>
-    <p class="lede">There is no import on this page. The <b>Daily Quality</b> and <b>Daily Tyres Production</b> sheets of the production summary report are read once on the <b>Production Summary</b> page (Production Department) and passed on to this page and to the Defect Analyser automatically.</p>
-    <div class="upload-status" id="upload-status">Waiting for the production summary report — upload it on the Production Summary page.</div>
+    <h2>Insert the<br>Daily Quality report.</h2>
+    <p class="lede">Upload the <b>Daily Quality</b> Excel sheet to load scrap and repair data on this page. It is also passed on to the Defect Analyser automatically.</p>
+    <div class="dropzone" id="dropzone">
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4M7 9l5-5 5 5M4.5 15v4.5A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5V15"/></svg></div>
+      <div class="title">Drop the Daily Quality workbook here, or click to choose a file</div>
+      <div class="hint">.xlsx or .xls — reads the "Daily Quality" sheet (and "Daily Tyres Production" / shift roster sheets, if present)</div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" multiple>
+    </div>
+    <div class="upload-status" id="upload-status" hidden></div>
   </div>
 </div>
 
@@ -965,6 +971,8 @@
     const saved = loadFromStorage();
     if (saved && saved.records && saved.records.length) {
       loadDashboard(saved.records, saved.productionRecords || [], saved.shiftInstances || [], saved.fileName, false);
+    } else {
+      setStatus('Waiting for a Daily Quality workbook.', '');
     }
     window.addEventListener('message', (ev) => {
       if (ev.source !== window.parent) return;
@@ -975,6 +983,18 @@
       }
     });
     try { window.parent.postMessage({ type: 'fitl-qc-ready' }, '*'); } catch (_) { /* standalone */ }
+
+    el.dropzone.addEventListener('click', () => el.fileInput.click());
+    el.fileInput.addEventListener('change', () => { handleDirectUpload(el.fileInput.files); el.fileInput.value = ''; });
+    ['dragover', 'dragenter'].forEach((t) => el.dropzone.addEventListener(t, (e) => { e.preventDefault(); el.dropzone.classList.add('drag-over'); }));
+    ['dragleave', 'drop'].forEach((t) => el.dropzone.addEventListener(t, (e) => { e.preventDefault(); el.dropzone.classList.remove('drag-over'); }));
+    el.dropzone.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.files.length) handleDirectUpload(e.dataTransfer.files); });
+    el.btnUploadNew.addEventListener('click', () => {
+      el.dashboardMain.hidden = true;
+      el.mainTabs.hidden = true;
+      el.uploadShell.hidden = false;
+      setStatus('Waiting for a Daily Quality workbook.', '');
+    });
   }
 
   function setStatus(msg, kind) {
@@ -983,8 +1003,13 @@
     el.uploadStatus.className = 'upload-status' + (kind ? ' ' + kind : '');
   }
 
-  // Hands the uploaded workbook(s) to the host page, which passes them on to the
-  // Defect Analyser tab so it loads automatically (it has no upload of its own).
+  // A file chosen or dropped right here: load it into this page, and also hand it to the host
+  // page, which passes it on to the Defect Analyser tab so it loads automatically.
+  function handleDirectUpload(fileList) {
+    handleFiles(fileList);
+    forwardWorkbooksToHost(Array.from(fileList));
+  }
+
   function forwardWorkbooksToHost(files) {
     if (window.parent === window) return;
     Promise.all(files.map((f) => readFileAsArrayBuffer(f).then((buffer) => ({ name: f.name, buffer }))))
@@ -1029,7 +1054,7 @@
     el.uploadShell.hidden = true;
     el.dashboardMain.hidden = false;
     el.mainTabs.hidden = false;
-    el.btnUploadNew.hidden = true;
+    el.btnUploadNew.hidden = false;
     el.sourceFilename.textContent = fileName || 'uploaded workbook';
     el.footerSource.textContent = `Source: ${fileName || 'uploaded workbook'} · quantities in tyre pieces`;
     el.footerGenerated.textContent = `${records.length.toLocaleString()} inspection records`

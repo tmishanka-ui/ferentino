@@ -34,8 +34,9 @@ function sendCapaMeet() {
 }
 const sendShifts = () => { if (capaReady && shiftItems && win('capa')) post('capa', { type: 'fitl-shifts', items: shiftItems }); };
 
-/* ---- Production Summary workbook -> QC, Defect Analyser, KPI dashboards; downtime / attendance / accidents -> KPI, Mixing ---- */
-let lastWorkbook: Msg | null = null, qcReady = false, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
+/* ---- Production Summary (Daily Production) -> Defect Analyser, KPI dashboards; QC (Daily Quality) -> Defect Analyser, Production Summary;
+   downtime / attendance / accidents -> KPI, Mixing ---- */
+let lastWorkbook: Msg | null = null, lastQcWorkbook: Msg | null = null, qckReady = false, defectReady = false, lastDowntimeWb: Msg | null = null, kpiReady = false, psReady = false,
   lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
   hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false, planningEmpReady = false, hrEmpReady = false;
 function sendMix() {
@@ -54,6 +55,7 @@ const sendAtt = () => { if (attReady && lastGroups && win('attendance')) post('a
 function sendPs() {
   if (!psReady || !win('prodsum')) return;
   if (lastWorkbook) post('prodsum', lastWorkbook);
+  if (lastQcWorkbook) post('prodsum', lastQcWorkbook);
   if (lastDowntimeWb) post('prodsum', lastDowntimeWb);
 }
 function sendKpi() {
@@ -131,21 +133,26 @@ function onApp(ev: MessageEvent) {
 
   // production workbooks, downtime, accidents, attendance
   if (m.type === 'fitl-workbook' && from === 'prodsum') {
+    // Production Summary's own upload: the Daily Production report. Feeds Defect Analyser and the KPI dashboards;
+    // no longer sent to QC, which now uploads its own Daily Quality report directly.
     lastWorkbook = m;
     if (defectReady && win('defect')) post('defect', m); else ensureLoaded('defect');
-    if (qcReady && win('qc')) post('qc', m); else ensureLoaded('qc');
     if (qckReady && win('qckpi')) post('qckpi', m); else ensureLoaded('qckpi');
     if (kpiReady) sendKpi(); else ensureLoaded('kpi');
+    if (psReady) sendPs(); else ensureLoaded('prodsum');
+  } else if (m.type === 'fitl-workbook' && from === 'qc') {
+    // QC's own upload: the Daily Quality report. Feeds Defect Analyser and Production Summary
+    // (which shows scrap tyre weight by shift group from this sheet).
+    lastQcWorkbook = m;
+    if (defectReady && win('defect')) post('defect', m); else ensureLoaded('defect');
     if (psReady) sendPs(); else ensureLoaded('prodsum');
   } else if (m.type === 'fitl-qckpi-ready' && from === 'qckpi') {
     qckReady = true;
     if (lastWorkbook) post('qckpi', lastWorkbook);
-  } else if (m.type === 'fitl-qc-ready' && from === 'qc') {
-    qcReady = true;
-    if (lastWorkbook) post('qc', lastWorkbook);
   } else if (m.type === 'fitl-defect-ready' && from === 'defect') {
     defectReady = true;
     if (lastWorkbook) post('defect', lastWorkbook);
+    if (lastQcWorkbook) post('defect', lastQcWorkbook);
   } else if (m.type === 'fitl-downtime-workbook' && from === 'downtime' && Array.isArray(m.files)) {
     lastDowntimeWb = m;
     if (kpiReady) sendKpi(); else ensureLoaded('kpi');
