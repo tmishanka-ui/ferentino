@@ -140,7 +140,13 @@ function publishEmp(){
   if(parent===window)return;
   try{parent.postMessage({type:'fitl-employees',items:Object.keys(NAMES).map(no=>({no,name:NAMES[no],loc:(EMPLOC[no]||{}).loc||'',dept:(EMPLOC[no]||{}).dept||''}))},'*')}catch(_){}
 }
-function publish(){publishAtt();publishEmp()}
+/* which employees clocked in on which date, Day or Night — HR's Employees tab uses this for its present/absent indicator */
+function publishDays(){
+  if(parent===window)return;
+  try{const days={};Object.keys(DAYS).forEach(d=>{const o={};Object.values(DAYS[d]).forEach(b=>b.rows.forEach(r=>{const cl=classOf(r[1]);if(cl==='Day'||cl==='Night')o[r[0]]=cl}));days[d]=o});
+    parent.postMessage({type:'fitl-attendance-days',days},'*')}catch(_){}
+}
+function publish(){publishAtt();publishEmp();publishDays()}
 
 /* ---------- views ---------- */
 const dates=()=>Object.keys(AGGS).sort();
