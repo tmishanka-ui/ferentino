@@ -538,7 +538,27 @@ function load(){
   return st;
 }
 var saveT=null;
-function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},200);}
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}publishWmm();},200);}
+/* raise a requirement in the Weekly Management Meeting (the Management Agenda) for every PESTEL and SWOT
+   entry, resent whenever the board changes — a stable key per entry means the meeting only treats it as
+   new the first time, so editing or scoring an entry again does not raise it twice. */
+function publishWmm(){
+  if(window.parent===window)return;
+  try{
+    var items=[];
+    S.items.forEach(function(it){
+      if((it.type!=='pestel'&&it.type!=='swot')||!valid(it))return;
+      var c=calc(it),group=it.type==='pestel'?PESTEL_CATS:SWOT_QUADS,g=group.filter(function(x){return x.id===it.cat;})[0];
+      items.push({key:'board:'+it.type+':'+it.id,date:it.date,manual:true,department:'STRATEGY',
+        topicCategory:it.type==='pestel'?'PESTEL':'SWOT',issueType:'05. Other',
+        issueDescription:(g?g.label:it.type.toUpperCase())+' — '+it.text+(it.pol?' (marked '+it.pol+')':''),
+        impact:'Risk rating '+c.rating+' — '+(LEVEL_NAME[c.level]||c.level)+'.',
+        actionRequired:'Agree whether this needs a control action, an owner and a date.',
+        name:'Strategy Board',responsibility:''});
+    });
+    window.parent.postMessage({type:'fitl-wmm-requirements',source:'Strategy Board',items:items},'*');
+  }catch(e){}
+}
 function byId(id){return S.items.filter(function(i){return i.id===id;})[0];}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){t.style.display='none';},2600);}
 
