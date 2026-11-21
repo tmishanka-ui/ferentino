@@ -320,7 +320,7 @@
       <button data-f="unchecked">Not reviewed</button>
     </div>
   </div>
-  <p class="hint">Review every item — tap <b>Accept</b> if the control is in order, or <b>Flag</b> if it's unacceptable. Once every item in a stage has a decision, scan that stage's QR code (posted at the station) to sign it off for this round. Flagged items appear in the shift summary and end-of-shift report.</p>
+  <p class="hint">Review every item — tap <b>Accept</b> if the control is in order, or <b>Flag</b> if it's unacceptable. Once every item in a stage has a decision, tap <b>Sign off this stage</b> to confirm it for this round. Flagged items appear in the shift summary and end-of-shift report.</p>
   <div id="risk-content"></div>
 
   <div class="end-shift-panel">
@@ -407,7 +407,7 @@ let riskQuery = '';
 function blankRound(){
   const readings = {};
   PRESSES.forEach(p => { readings[p] = { pressure: '', temps: [''] }; });
-  return { savedAt: null, readings, riskChecks: {}, stageScans: {}, bankScans: {} };
+  return { liveSavedAt: null, riskSavedAt: null, readings, riskChecks: {}, stageScans: {}, bankScans: {} };
 }
 function blankShift(){
   return {
@@ -459,6 +459,12 @@ function migrateRound(r){
   if (!r.riskChecks) r.riskChecks = {};
   if (!r.stageScans) r.stageScans = {};
   if (!r.bankScans) r.bankScans = {};
+  // legacy format: one shared "savedAt" for both Live and Risk monitoring — carry it into both,
+  // now that each is saved (and timestamped) separately
+  if (r.savedAt && !r.liveSavedAt) r.liveSavedAt = r.savedAt;
+  if (r.savedAt && !r.riskSavedAt) r.riskSavedAt = r.savedAt;
+  if (r.liveSavedAt === undefined) r.liveSavedAt = null;
+  if (r.riskSavedAt === undefined) r.riskSavedAt = null;
   // legacy format: riskChecks[id] === true meant "flagged unacceptable"
   Object.keys(r.riskChecks).forEach(k => {
     if (r.riskChecks[k] === true) r.riskChecks[k] = 'flagged';
@@ -600,7 +606,8 @@ function buildRoundRail(){
     btn.className = 'round-btn' + (i === activeRound ? ' active' : '') + (st === 'done' ? ' done' : st === 'partial' ? ' partial' : '');
     btn.innerHTML =
       '<div class="rt"><span class="dot"></span>Round ' + (i+1) + '</div>' +
-      '<div class="rs">' + (round.savedAt ? 'Saved ' + fmtDateTime(round.savedAt) : 'Not recorded') + '</div>';
+      '<div class="rs">Live: ' + (round.liveSavedAt ? fmtDateTime(round.liveSavedAt) : 'not recorded') + '</div>' +
+      '<div class="rs">Risk: ' + (round.riskSavedAt ? fmtDateTime(round.riskSavedAt) : 'not recorded') + '</div>';
     btn.onclick = () => { activeRound = i; renderRoundContent(); renderRiskContent(); buildRoundRail(); };
     rail.appendChild(btn);
   });
@@ -773,7 +780,7 @@ function renderRoundContent(){
   container.appendChild(saveRow);
 
   document.getElementById('btn-save-round').addEventListener('click', () => {
-    round.savedAt = new Date().toISOString();
+    round.liveSavedAt = new Date().toISOString();
     saveState();
     buildRoundRail();
     const flash = document.getElementById('save-flash');
@@ -968,7 +975,7 @@ function renderRiskContent(){
       const setStatus = (val) => {
         if (round.riskChecks[id] === val) delete round.riskChecks[id];
         else round.riskChecks[id] = val;
-        round.savedAt = new Date().toISOString();
+        round.riskSavedAt = new Date().toISOString();
         saveState();
         renderRiskContent();
         buildRoundRail();
@@ -1093,20 +1100,20 @@ function renderRiskContent(){
   if (scan){
     panel.innerHTML =
       '<div class="ss-title">Stage signed off ✓</div>' +
-      '<p>Scanned ' + fmtDateTime(scan.scannedAt) + ' &nbsp;·&nbsp; code ' + escapeHtml(scan.code) + '</p>' +
-      '<button class="secondary-btn" id="btn-rescan">Re-scan</button>';
-    panel.querySelector('#btn-rescan').addEventListener('click', () => openQrScanner(riskStage, round));
+      '<p>Confirmed ' + fmtDateTime(scan.scannedAt) + '</p>' +
+      '<button class="secondary-btn" id="btn-rescan">Re-confirm</button>';
+    panel.querySelector('#btn-rescan').addEventListener('click', () => signOffStage(riskStage, round));
   } else if (progress.reviewed < progress.total){
     panel.innerHTML =
       '<div class="ss-title">Stage sign-off locked</div>' +
-      '<p>Give every item in this stage a decision (' + progress.reviewed + ' / ' + progress.total + ' reviewed) to unlock the QR scan.</p>' +
-      '<button class="secondary-btn" disabled>Scan QR to finish this stage</button>';
+      '<p>Give every item in this stage a decision (' + progress.reviewed + ' / ' + progress.total + ' reviewed) to sign off.</p>' +
+      '<button class="secondary-btn" disabled>Sign off this stage</button>';
   } else {
     panel.innerHTML =
       '<div class="ss-title">Ready to sign off</div>' +
-      '<p>All ' + progress.total + ' items reviewed. Scan the QR code posted at this stage to confirm.</p>' +
-      '<button class="primary-btn" id="btn-scan">Scan QR to finish this stage</button>';
-    panel.querySelector('#btn-scan').addEventListener('click', () => openQrScanner(riskStage, round));
+      '<p>All ' + progress.total + ' items reviewed.</p>' +
+      '<button class="primary-btn" id="btn-signoff">Sign off this stage</button>';
+    panel.querySelector('#btn-signoff').addEventListener('click', () => signOffStage(riskStage, round));
   }
   container.appendChild(panel);
 
@@ -1117,7 +1124,7 @@ function renderRiskContent(){
     '<span class="save-flash" id="risk-save-flash">Saved.</span>';
   container.appendChild(saveRow);
   document.getElementById('btn-save-round-risk').addEventListener('click', () => {
-    round.savedAt = new Date().toISOString();
+    round.riskSavedAt = new Date().toISOString();
     saveState();
     buildRoundRail();
     const flash = document.getElementById('risk-save-flash');
@@ -1244,14 +1251,12 @@ function scanQr(expected, label, onSuccess){
   }
 }
 
-function openQrScanner(stageIdx, round){
-  const expected = stageCode(stageIdx);
-  scanQr(expected, activeStages()[stageIdx].title, () => {
-    round.stageScans[stageIdx] = { scannedAt: new Date().toISOString(), code: expected };
-    saveState();
-    renderRiskContent();
-    buildRoundRail();
-  });
+function signOffStage(stageIdx, round){
+  round.stageScans[stageIdx] = { scannedAt: new Date().toISOString(), code: stageCode(stageIdx) };
+  round.riskSavedAt = new Date().toISOString();
+  saveState();
+  renderRiskContent();
+  buildRoundRail();
 }
 
 function bankCode(bankId){ return 'FITL-BANK-' + bankId; }
@@ -1287,7 +1292,7 @@ function flaggedItemsForShift(shift){
         ss.items.forEach((it, ii) => {
           const id = si+'-'+ssi+'-'+ii;
           if (round.riskChecks[id] === 'flagged'){
-            out.push({ round: i+1, savedAt: round.savedAt, stage: stage.title, substep: ss.title, mode: it.mode, cause: it.cause, ap: it.ap });
+            out.push({ round: i+1, riskSavedAt: round.riskSavedAt, stage: stage.title, substep: ss.title, mode: it.mode, cause: it.cause, ap: it.ap });
           }
         });
       });
@@ -1312,8 +1317,8 @@ function shiftToCsv(shift){
     PRESSES.forEach(code => {
       const r = round.readings[code];
       const tempsJoined = (r.temps || []).filter(t => t !== '').join('; ');
-      if (r.pressure === '' && !tempsJoined && !round.savedAt) return;
-      lines.push([i+1, round.savedAt ? fmtDateTime(round.savedAt) : 'not saved', code, r.pressure, tempsJoined].map(csvEscape).join(','));
+      if (r.pressure === '' && !tempsJoined && !round.liveSavedAt) return;
+      lines.push([i+1, round.liveSavedAt ? fmtDateTime(round.liveSavedAt) : 'not saved', code, r.pressure, tempsJoined].map(csvEscape).join(','));
     });
   });
   lines.push('');
@@ -1324,11 +1329,11 @@ function shiftToCsv(shift){
     lines.push(['—','No unacceptable risks flagged this shift','','','','',''].map(csvEscape).join(','));
   } else {
     flagged.forEach(f => {
-      lines.push([f.round, f.savedAt ? fmtDateTime(f.savedAt) : 'not saved', f.stage, f.substep, f.mode, f.cause, f.ap].map(csvEscape).join(','));
+      lines.push([f.round, f.riskSavedAt ? fmtDateTime(f.riskSavedAt) : 'not saved', f.stage, f.substep, f.mode, f.cause, f.ap].map(csvEscape).join(','));
     });
   }
   lines.push('');
-  lines.push(['RISK MONITORING - STAGE SIGN-OFFS (QR scanned)'].map(csvEscape).join(','));
+  lines.push(['RISK MONITORING - STAGE SIGN-OFFS'].map(csvEscape).join(','));
   lines.push(['Round','Stage','Signed off at','Code'].map(csvEscape).join(','));
   let anySignoff = false;
   shift.rounds.forEach((round, i) => {
@@ -1402,12 +1407,12 @@ function buildPressDashboardRecord(shift){
         round: i + 1, press: code, pressure: converted.value, pressureUnitOriginal: converted.originalUnit,
         temperature: temperatures.reduce((s,n) => s + n, 0) / temperatures.length,
         temperatures, temperatureRaw: (r.temps || []).filter(t => t !== '').join('; '),
-        recordedAt: round.savedAt ? fmtDateTime(round.savedAt) : 'not saved',
+        recordedAt: round.liveSavedAt ? fmtDateTime(round.liveSavedAt) : 'not saved',
       });
     });
   });
   const riskFlags = flaggedItemsForShift(shift).map(f => ({
-    round: f.round, recordedAt: f.savedAt ? fmtDateTime(f.savedAt) : 'not saved',
+    round: f.round, recordedAt: f.riskSavedAt ? fmtDateTime(f.riskSavedAt) : 'not saved',
     stage: f.stage, subStep: f.substep, failureMode: f.mode, cause: f.cause, ap: f.ap,
   }));
   const stageSignoffs = [];
@@ -1486,7 +1491,7 @@ function openShiftSummary(shift){
 
   const liveRows = shift.rounds.map((round, i) => {
     const filled = PRESSES.filter(code => pressFilled(round.readings[code])).length;
-    return '<tr><td>Round ' + (i+1) + '</td><td>' + (round.savedAt ? fmtDateTime(round.savedAt) : 'Not recorded') + '</td><td>' + filled + ' / ' + PRESSES.length + '</td></tr>';
+    return '<tr><td>Round ' + (i+1) + '</td><td>' + (round.liveSavedAt ? fmtDateTime(round.liveSavedAt) : 'Not recorded') + '</td><td>' + filled + ' / ' + PRESSES.length + '</td></tr>';
   }).join('');
 
   const riskRows = flagged.length
@@ -1502,7 +1507,7 @@ function openShiftSummary(shift){
   });
   const signoffRows = signoffs.length
     ? signoffs.map(s => '<tr><td>R' + s.round + '</td><td>' + escapeHtml(s.stage) + '</td><td>' + fmtDateTime(s.scannedAt) + '</td></tr>').join('')
-    : '<tr><td colspan="3" style="color:var(--muted);">No stages signed off (QR scanned) this shift.</td></tr>';
+    : '<tr><td colspan="3" style="color:var(--muted);">No stages signed off this shift.</td></tr>';
 
   const bankScans = [];
   shift.rounds.forEach((round, i) => {
@@ -1532,7 +1537,7 @@ function openShiftSummary(shift){
         '<table><thead><tr><th>Press</th><th>Pressure (bar)</th><th>Temperature (°C)</th><th>Recorded at</th></tr></thead><tbody>' + moldRows + '</tbody></table>' +
         '<h4>Risk monitoring — flagged as unacceptable</h4>' +
         '<table><thead><tr><th>Round</th><th>Stage / sub-step</th><th>Failure mode / cause</th><th>AP</th></tr></thead><tbody>' + riskRows + '</tbody></table>' +
-        '<h4>Stage sign-offs (QR scanned)</h4>' +
+        '<h4>Stage sign-offs</h4>' +
         '<table><thead><tr><th>Round</th><th>Stage</th><th>Signed off at</th></tr></thead><tbody>' + signoffRows + '</tbody></table>' +
         '<div class="modal-actions">' +
           '<button class="secondary-btn" id="modal-close">Close</button>' +
