@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultrasonic test record</title>
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --panel-2:#f6f8fa; --ink:#14202b; --ink-soft:#586a7a;
+  --line:#d3dce5; --accent:#17669c; --accent-ink:#ffffff; --ok:#1f7a45; --ok-bg:#e3f3ea;
+  --bad:#b0332c; --bad-bg:#fbe9e7; --warn:#7a5600; --warn-bg:#fdf3d8;
+  --lcd:#143e66; --lcd-edge:#0c2a47; --lcd-ink:#eaf3fb; --lcd-label:#e8d24a; --lcd-dim:#8fb1cf;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161c; --panel:#1a2229; --panel-2:#141b21; --ink:#e7edf3; --ink-soft:#9db0c0;
+    --line:#2b3844; --accent:#4aa3d8; --accent-ink:#06151f; --ok:#63c48e; --ok-bg:#12291d;
+    --bad:#f08a82; --bad-bg:#2c1614; --warn:#e0b24a; --warn-bg:#2d2410;
+    --lcd:#143e66; --lcd-edge:#0a2036;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:12px}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI",Roboto,-apple-system,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45}
+.wrap{max-width:1100px;margin:0 auto;padding:14px}
+.banner{border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:14px;border:1px solid var(--line)}
+.banner.bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+header.top{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+h1{font-size:18px;margin:0}
+.meta{font-size:12.5px;color:var(--ink-soft)}
+.meta b{color:var(--ink);font-weight:600}
+nav.tabs{display:flex;gap:6px;margin:12px 0;flex-wrap:wrap}
+nav.tabs button{background:var(--panel);border:1px solid var(--line);color:var(--ink);
+  padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 12px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px}
+input,select,textarea{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel-2);color:var(--ink);font:inherit;font-size:14px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+textarea{min-height:64px;resize:vertical}
+button.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);
+  padding:9px 16px;border-radius:7px;font-size:14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.danger{background:transparent;color:var(--bad);border:1px solid var(--line)}
+button.small{padding:5px 9px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:middle}
+th{color:var(--ink-soft);font-size:12.5px;font-weight:600}
+.scroll{overflow-x:auto}
+.pts input{padding:6px 7px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.na{background:var(--panel-2);color:var(--ink-soft);border:1px solid var(--line)}
+.stats{display:flex;gap:18px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:8px;padding:10px 12px;margin-top:12px;font-size:14px}
+.stats div span{display:block;font-size:12px;color:var(--ink-soft)}
+.note{font-size:12.5px;color:var(--ink-soft)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.bar>div{flex:1 1 150px}
+.row-click{cursor:pointer}
+.row-click:hover{background:var(--panel-2)}
+
+/* live panel: styled like the BP-700's own LCD */
+.lcd{background:var(--lcd);border:3px solid var(--lcd-edge);border-radius:10px;padding:14px 18px;color:var(--lcd-ink)}
+.lcd-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.lcd-title{font-weight:600;color:#8fe08f;font-size:15px}
+.lcd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 24px}
+.lcd-cell .k{font-size:13px;color:var(--lcd-label)}
+.lcd-cell .v{font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.lcd-cell .u{font-size:15px;font-weight:400;color:var(--lcd-dim);margin-left:5px}
+.lcd-cell.small .v{font-size:22px}
+.lcd-foot{margin-top:8px;font-size:12.5px;color:var(--lcd-dim)}
+.lcd.stale .v{opacity:.35}
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;font-size:13px}
+.sig div{border-top:1px solid var(--line);padding-top:6px;color:var(--ink-soft)}
+.src{font-size:11px;color:var(--ok);margin-left:4px}
+.src.man{color:var(--ink-soft)}
+.src.sim{color:var(--warn)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;font-size:13.5px}
+.kv div span{display:block;font-size:12px;color:var(--ink-soft)}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);max-width:800px;width:94%;padding:0}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-body{padding:18px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50}
+#toast.show{opacity:1}
+details summary{cursor:pointer;color:var(--accent);font-size:13.5px;margin-top:10px}
+@media print{
+  body{background:#fff;color:#000}
+  .wrap,#toast,.no-print{display:none !important}
+  dialog{position:static;display:block;border:none;width:100%;max-width:none}
+  dialog::backdrop{display:none}
+  .dlg-body{padding:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="offline" class="banner bad" hidden>The bridge program is not reachable. Start bridge.py (or start_bridge.bat) on this PC, then reload this page. Nothing can be saved until it is running.</div>
+  <div id="simbanner" class="banner warn" hidden>Simulated readings: no instrument is connected. Do not save these as real test records.</div>
+
+  <header class="top">
+    <h1 id="ttl">Ultrasonic test record</h1>
+    <div class="meta" id="hdrMeta"></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="entry">New test</button>
+    <button role="tab" aria-selected="false" data-tab="records">Saved records</button>
+    <button role="tab" aria-selected="false" data-tab="setup">Setup</button>
+  </nav>
+
+  <!-- ===================== NEW TEST ===================== -->
+  <div id="tab-entry">
+
+    <section class="card">
+      <h2>Live reading from the BP-700 Pro</h2>
+      <div class="lcd" id="lcd">
+        <div class="lcd-top">
+          <span class="lcd-title">BP-700</span>
+          <span id="liveState" class="pill na">Waiting</span>
+        </div>
+        <div class="lcd-grid">
+          <div class="lcd-cell"><div class="k">runtime</div><div class="v"><span id="lv_rt">-</span><span class="u">µs</span></div></div>
+          <div class="lcd-cell"><div class="k">velocity</div><div class="v"><span id="lv_v">-</span><span class="u">m/s</span></div></div>
+          <div class="lcd-cell small"><div class="k">distance</div><div class="v"><span id="lv_d">-</span><span class="u">mm</span></div></div>
+          <div class="lcd-cell small"><div class="k">temperature</div><div class="v"><span id="lv_t">-</span><span class="u">°C</span></div></div>
+        </div>
+        <div class="lcd-foot" id="liveMeta">No reading yet.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="capBtn" type="button">Capture into next position</button>
+        <span class="note">Shortcut: press Space when no box is selected.</span>
+      </div>
+      <details id="recent">
+        <summary>Recent readings stored by the bridge</summary>
+        <div class="scroll" style="margin-top:8px">
+          <table>
+            <thead><tr><th>Time</th><th>Runtime µs</th><th>Velocity m/s</th><th>Distance mm</th><th>Source</th><th></th></tr></thead>
+            <tbody id="recentBody"></tbody>
+          </table>
+        </div>
+        <div class="actions"><button class="btn ghost small" id="fillBtn" type="button">Fill empty positions with the latest readings</button></div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Test identification</h2>
+      <div class="grid">
+        <div><label for="f_date">Date</label><input type="date" id="f_date"></div>
+        <div><label for="f_time">Time</label><input type="time" id="f_time"></div>
+        <div><label for="f_shift">Shift</label>
+          <select id="f_shift"><option>A</option><option>B</option><option>C</option><option>General</option></select></div>
+        <div><label for="f_operator">Tested by</label><input id="f_operator" placeholder="Name / EPF no"></div>
+        <div><label for="f_product">Product / tyre type</label><input id="f_product"></div>
+        <div><label for="f_size">Size</label><input id="f_size" placeholder="e.g. 8.15-15"></div>
+        <div><label for="f_batch">Batch / lot no</label><input id="f_batch"></div>
+        <div><label for="f_serial">Item / serial no</label><input id="f_serial"></div>
+        <div><label for="f_stage">Process stage</label>
+          <select id="f_stage"><option>After curing</option><option>Before dispatch</option><option>In-process</option>
+            <option>Customer complaint / return</option><option>Re-test</option></select></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Instrument check before testing</h2>
+      <div class="grid">
+        <div><label for="f_pair">Probe pair on the instrument</label>
+          <select id="f_pair"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+        <div><label for="f_ptype">Probe type</label>
+          <select id="f_ptype">
+            <option value="20">Standard or Extra (calibration bar 20 µs)</option>
+            <option value="10">Exponential (calibration bar 10 µs)</option>
+            <option value="">Other</option>
+          </select></div>
+        <div><label for="f_probe">Probe description</label><input id="f_probe" placeholder="e.g. S-70"></div>
+        <div><label for="f_coup">Couplant</label><input id="f_coup"></div>
+        <div><label for="f_calexp">Calibration bar runtime (µs)</label><input type="number" id="f_calexp" step="0.1"></div>
+        <div><label for="f_calmeas">Measured on the bar (µs)</label>
+          <div style="display:flex;gap:6px"><input type="number" id="f_calmeas" step="0.01">
+          <button class="btn ghost small" id="capCal" type="button" title="Take the live runtime">Capture</button></div></div>
+        <div><label>Result</label><div id="calResult" style="padding-top:6px"></div></div>
+      </div>
+      <div id="calWarn" class="banner bad" style="margin:12px 0 0" hidden>The bar reading is outside tolerance. Recalibrate on the instrument (config, pair, start calibr.) before relying on these results.</div>
+      <p class="note" style="margin:10px 0 0">Press both probes against the calibration bar. The manual expects 10 µs or 20 µs within the tolerance set in Setup.</p>
+    </section>
+
+    <section class="card">
+      <h2>Readings</h2>
+      <div class="bar">
+        <div><label for="f_dist">Probe distance (mm)</label><input type="number" id="f_dist" step="0.1"></div>
+        <div><label for="f_param">Spec applies to</label>
+          <select id="f_param"><option value="velocity">Velocity</option><option value="runtime">Runtime</option></select></div>
+        <div><label for="f_smin" id="lbl_smin">Spec minimum (m/s)</label><input type="number" id="f_smin" step="any"></div>
+        <div><label for="f_smax" id="lbl_smax">Spec maximum (m/s)</label><input type="number" id="f_smax" step="any"></div>
+      </div>
+      <div class="scroll">
+        <table class="pts">
+          <thead><tr><th style="width:44px">#</th><th>Position</th><th style="width:130px">Runtime (µs)</th>
+            <th style="width:130px">Velocity (m/s)</th><th style="width:120px">Distance (mm)</th><th style="width:70px"></th><th style="width:44px"></th></tr></thead>
+          <tbody id="ptBody"></tbody>
+        </table>
+      </div>
+      <div class="actions"><button class="btn ghost" id="addPt" type="button">Add position</button></div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="card">
+      <h2>Result</h2>
+      <div class="grid">
+        <div><label for="f_result">Disposition</label>
+          <select id="f_result">
+            <option value="auto">Automatic, from the spec limits</option>
+            <option>Accepted</option><option>Rejected</option>
+            <option>Accepted under concession</option><option>Rework</option>
+          </select></div>
+        <div><label for="f_checked">Verified by</label><input id="f_checked" placeholder="QA officer"></div>
+      </div>
+      <div style="margin-top:12px"><label for="f_remarks">Observations</label>
+        <textarea id="f_remarks" placeholder="e.g. runtime jumps at position 3, possible separation"></textarea></div>
+      <div class="actions">
+        <button class="btn" id="saveBtn" type="button">Save record</button>
+        <button class="btn ghost" id="clearBtn" type="button">Clear form</button>
+        <span class="note" id="editNote"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== RECORDS ===================== -->
+  <div id="tab-records" hidden>
+    <section class="card">
+      <h2>Saved records</h2>
+      <div class="bar">
+        <div><label for="q_from">From</label><input type="date" id="q_from"></div>
+        <div><label for="q_to">To</label><input type="date" id="q_to"></div>
+        <div><label for="q_text">Search batch, size, item, tester</label><input id="q_text"></div>
+        <div><label for="q_res">Result</label>
+          <select id="q_res"><option value="">All</option><option>Accepted</option><option>Rejected</option>
+            <option>Accepted under concession</option><option>Rework</option><option>Hold: bar check failed</option></select></div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Date</th><th>Batch</th><th>Size</th><th>Item</th><th>Positions</th><th>Velocity min / max (m/s)</th><th>Result</th><th>Tested by</th></tr></thead>
+          <tbody id="recBody"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="csvBtn" type="button">Export CSV</button>
+        <span class="note" id="countNote"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== SETUP ===================== -->
+  <div id="tab-setup" hidden>
+    <section class="card">
+      <h2>Document control</h2>
+      <div class="grid">
+        <div><label for="s_doc">Document no</label><input id="s_doc"></div>
+        <div><label for="s_rev">Revision</label><input id="s_rev"></div>
+        <div><label for="s_title">Record title</label><input id="s_title"></div>
+      </div>
+      <p class="note" style="margin:10px 0 0">The default document number is a placeholder. Replace it with the number allocated in your master document list.</p>
+    </section>
+    <section class="card">
+      <h2>Equipment</h2>
+      <div class="grid">
+        <div><label for="s_eq">Equipment ID</label><input id="s_eq"></div>
+        <div><label for="s_model">Make and model</label><input id="s_model"></div>
+        <div><label for="s_sn">Serial no</label><input id="s_sn"></div>
+        <div><label for="s_caldue">Next calibration due</label><input type="date" id="s_caldue"></div>
+        <div><label for="s_tol">Bar check tolerance (± µs)</label><input type="number" id="s_tol" step="0.05"></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Form defaults</h2>
+      <div class="grid">
+        <div><label for="s_probe">Probe description</label><input id="s_probe"></div>
+        <div><label for="s_coup">Couplant</label><input id="s_coup"></div>
+        <div><label for="s_dist">Probe distance (mm)</label><input type="number" id="s_dist" step="0.1"></div>
+        <div><label for="s_param">Spec applies to</label>
+          <select id="s_param"><option value="velocity">Velocity</option><option value="runtime">Runtime</option></select></div>
+        <div><label for="s_smin">Spec minimum</label><input type="number" id="s_smin" step="any"></div>
+        <div><label for="s_smax">Spec maximum</label><input type="number" id="s_smax" step="any"></div>
+      </div>
+      <div style="margin-top:12px"><label for="s_pts">Standard measuring positions, one per line</label>
+        <textarea id="s_pts" style="min-height:110px"></textarea></div>
+      <div class="actions"><button class="btn" id="saveCfg" type="button">Save setup</button></div>
+    </section>
+  </div>
+</div>
+
+<dialog id="dlg"><div class="dlg-body" id="dlgBody"></div></dialog>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+var DEF = {
+  docNo:"FIT/Q/RG-QA-01", rev:"00", title:"Ultrasonic test record",
+  eqId:"MITL", model:"UltraTest BP-700 Pro", sn:"13121", calDue:"", calTol:"0.3",
+  probe:"", couplant:"Gel", distance:"", param:"velocity", specMin:"", specMax:"",
+  positions:"Position 1\nPosition 2\nPosition 3\nPosition 4\nPosition 5"
+};
+var cfg = Object.assign({}, DEF);
+var records = [];
+var editingId = null;
+var ST = {latest:null, live:false, state:"", message:"", source:"none", now:0};
+var skew = 0;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+function num(v){ if(v===""||v==null) return null; var n=parseFloat(v); return isFinite(n)?n:null; }
+function fx(n,d){ return (n==null||!isFinite(n))?"-":Number(n).toFixed(d); }
+function toast(m){ var t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove("show");},2600); }
+function api(method,url,body){
+  return fetch(url,{method:method,headers:{"Content-Type":"application/json"},cache:"no-store",
+    body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
+}
+function nowSec(){ return Date.now()/1000 + skew; }
+
+/* ---------------- tabs ---------------- */
+Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){
+  b.addEventListener("click",function(){
+    Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(x){ x.setAttribute("aria-selected",x===b?"true":"false"); });
+    ["entry","records","setup"].forEach(function(t){ $("tab-"+t).hidden = (t!==b.dataset.tab); });
+    if(b.dataset.tab==="records") loadRecords();
+  });
+});
+
+/* ---------------- header ---------------- */
+function paintHeader(){
+  $("ttl").textContent = cfg.title || DEF.title;
+  $("hdrMeta").innerHTML = "Document <b>"+esc(cfg.docNo)+"</b>, revision <b>"+esc(cfg.rev)+"</b>. Equipment <b>"+esc(cfg.eqId)+
+    "</b> ("+esc(cfg.model)+", serial "+esc(cfg.sn)+")"+(cfg.calDue?". Calibration due <b>"+esc(cfg.calDue)+"</b>":"");
+}
+
+/* ---------------- live panel ---------------- */
+function age(){ return ST.latest ? nowSec() - ST.latest.ts : null; }
+function paintLive(){
+  var L = ST.latest, a = age();
+  $("lv_rt").textContent = L ? fx(L.runtime_us,2) : "-";
+  $("lv_v").textContent  = L ? fx(L.velocity_ms,1) : "-";
+  $("lv_d").textContent  = L ? fx(L.distance_mm,1) : "-";
+  $("lv_t").textContent  = L ? fx(L.temp_c,1) : "-";
+  var stale = ST.live && (a==null || a>5);
+  $("lcd").classList.toggle("stale", !!(stale && L));
+  var pill=$("liveState"), cls="na", txt="Waiting";
+  if(ST.state==="connected"){ cls = stale?"bad":"ok"; txt = stale?"No data":"Connected"; }
+  else if(ST.state==="simulated"){ cls="warn"; txt="Simulated"; }
+  else if(ST.state==="watching"){ cls="ok"; txt="Watching export folder"; }
+  else if(ST.state==="error"){ cls="bad"; txt="Problem"; }
+  else if(ST.state==="none"){ cls="na"; txt="No instrument source"; }
+  pill.className="pill "+cls; pill.textContent=txt;
+  var meta = ST.message || "";
+  if(L){
+    meta += (meta?". ":"") + (a!=null ? ("Last reading "+(a<2?"just now":Math.round(a)+" s ago")) : "") + " (source: "+L.source+")";
+  } else if(!meta){ meta="No reading yet."; }
+  $("liveMeta").textContent = meta;
+  $("simbanner").hidden = ST.state!=="simulated";
+}
+function poll(){
+  api("GET","/api/status").then(function(s){
+    ST=s; skew = s.now - Date.now()/1000; $("offline").hidden=true; paintLive();
+  }).catch(function(){ $("offline").hidden=false; $("liveState").className="pill bad"; $("liveState").textContent="Bridge offline"; });
+}
+setInterval(poll,1000);
+
+function fresh(){
+  var L=ST.latest;
+  if(!L){ toast("No reading has arrived from the instrument yet."); return null; }
+  if(ST.live){ var a=age(); if(a>5){ toast("The last reading is "+Math.round(a)+" s old. Check the probes and the USB cable."); return null; } }
+  return L;
+}
+
+/* ---------------- position rows ---------------- */
+function addRow(loc,p){
+  p=p||{};
+  var tr=document.createElement("tr");
+  tr.innerHTML='<td class="idx"></td>'+
+    '<td><input class="loc" value="'+esc(loc||"")+'"></td>'+
+    '<td><input class="rt" type="number" step="0.01" inputmode="decimal"></td>'+
+    '<td><input class="vel" type="number" step="0.1" inputmode="decimal"></td>'+
+    '<td><input class="dist" type="number" step="0.1" inputmode="decimal"></td>'+
+    '<td><button type="button" class="btn ghost small cap" title="Capture the live reading into this row">Capture</button></td>'+
+    '<td><button type="button" class="btn danger small rm" title="Remove this row">x</button></td>';
+  tr.dataset.src = p.src || "manual"; tr.dataset.ts = p.ts || "";
+  tr.dataset.velAuto = "1";
+  $("ptBody").appendChild(tr);
+  setRow(tr,p,true);
+  var rt=tr.querySelector(".rt"), vel=tr.querySelector(".vel"), dist=tr.querySelector(".dist");
+  function manual(){ tr.dataset.src="manual"; tr.dataset.ts=""; mark(tr); }
+  rt.addEventListener("input",function(){ manual(); autoVel(tr); calc(); });
+  dist.addEventListener("input",function(){ manual(); autoVel(tr); calc(); });
+  vel.addEventListener("input",function(){ manual(); tr.dataset.velAuto = vel.value===""?"1":"0"; calc(); });
+  tr.querySelector(".cap").addEventListener("click",function(){ capture(tr); });
+  tr.querySelector(".rm").addEventListener("click",function(){ tr.remove(); reindex(); calc(); });
+  reindex();
+  return tr;
+}
+function setRow(tr,p,silent){
+  if(p.rt!=null) tr.querySelector(".rt").value = p.rt;
+  if(p.dist!=null) tr.querySelector(".dist").value = p.dist;
+  if(p.vel!=null){ tr.querySelector(".vel").value = p.vel; tr.dataset.velAuto = "0"; }
+  if(p.src){ tr.dataset.src=p.src; tr.dataset.ts=p.ts||""; }
+  if(!silent){ autoVel(tr); calc(); }
+  mark(tr);
+}
+function autoVel(tr){
+  if(tr.dataset.velAuto!=="1") return;
+  var rt=num(tr.querySelector(".rt").value), d=num(tr.querySelector(".dist").value);
+  tr.querySelector(".vel").value = (rt&&d) ? (d/rt*1000).toFixed(1) : "";
+}
+function mark(tr){
+  var s=tr.dataset.src, c=tr.querySelector(".idx"), i=Array.prototype.indexOf.call($("ptBody").rows,tr)+1;
+  var tag = s==="device" ? '<span class="src" title="Captured from the instrument">auto</span>'
+          : s==="sim" ? '<span class="src sim" title="Simulated reading">sim</span>' : "";
+  c.innerHTML = i + tag;
+}
+function reindex(){ Array.prototype.forEach.call($("ptBody").rows,function(r){ mark(r); }); }
+function rowEmpty(tr){ return !tr.querySelector(".rt").value && !tr.querySelector(".vel").value; }
+function nextEmptyRow(){
+  var rows=$("ptBody").rows;
+  for(var i=0;i<rows.length;i++) if(rowEmpty(rows[i])) return rows[i];
+  return null;
+}
+function readPoints(){
+  return Array.prototype.map.call($("ptBody").rows,function(r){
+    return { loc:r.querySelector(".loc").value.trim(), rt:num(r.querySelector(".rt").value),
+             vel:num(r.querySelector(".vel").value), dist:num(r.querySelector(".dist").value),
+             src:r.dataset.src, ts:r.dataset.ts?parseFloat(r.dataset.ts):null };
+  });
+}
+
+/* ---------------- capture ---------------- */
+function fromReading(L){
+  var dist = L.distance_mm!=null ? L.distance_mm : num($("f_dist").value);
+  var vel = L.velocity_ms;
+  if(vel==null && L.runtime_us && dist) vel = Math.round(dist/L.runtime_us*10000)/10;
+  return { rt:L.runtime_us, vel:vel, dist:dist, src:(L.source==="sim"?"sim":"device"), ts:L.ts };
+}
+function capture(row){
+  var L=fresh(); if(!L) return;
+  row = row || nextEmptyRow() || addRow("",{});
+  var p=fromReading(L);
+  row.dataset.velAuto = p.vel==null ? "1" : "0";
+  setRow(row,p);
+  toast("Captured "+fx(L.runtime_us,2)+" µs");
+  var nx=nextEmptyRow(); if(nx) nx.scrollIntoView({block:"nearest"});
+}
+$("capBtn").addEventListener("click",function(){ capture(null); });
+$("capCal").addEventListener("click",function(){ var L=fresh(); if(!L) return; $("f_calmeas").value=fx(L.runtime_us,2); calCheck(); });
+document.addEventListener("keydown",function(e){
+  if(e.code==="Space" && !/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test((document.activeElement||{}).tagName||"") && !$("tab-entry").hidden){
+    e.preventDefault(); capture(null);
+  }
+});
+
+/* recent readings */
+function loadRecent(){
+  api("GET","/api/readings?limit=30").then(function(rows){
+    var tb=$("recentBody"); tb.innerHTML = rows.length ? "" : '<tr><td colspan="6" class="note">Nothing stored yet.</td></tr>';
+    rows.forEach(function(r){
+      var tr=document.createElement("tr"), t=new Date(r.ts*1000);
+      tr.innerHTML="<td>"+t.toLocaleString()+"</td><td>"+fx(r.runtime_us,2)+"</td><td>"+fx(r.velocity_ms,1)+"</td><td>"+fx(r.distance_mm,1)+
+        "</td><td>"+esc(r.source||"")+'</td><td><button type="button" class="btn ghost small">Use</button></td>';
+      tr.querySelector("button").addEventListener("click",function(){
+        var row=nextEmptyRow()||addRow("",{});
+        var p=fromReading({runtime_us:r.runtime_us,velocity_ms:r.velocity_ms,distance_mm:r.distance_mm,source:(r.source==="sim"?"sim":"device"),ts:r.ts});
+        row.dataset.velAuto = p.vel==null?"1":"0"; setRow(row,p);
+      });
+      tb.appendChild(tr);
+    });
+    $("recent")._rows = rows;
+  }).catch(function(){});
+}
+$("recent").addEventListener("toggle",function(){ if($("recent").open) loadRecent(); });
+$("fillBtn").addEventListener("click",function(){
+  var rows=($("recent")._rows||[]).slice().reverse();   // oldest first
+  var empties=Array.prototype.filter.call($("ptBody").rows,rowEmpty).length || rows.length;
+  rows=rows.slice(-empties);
+  rows.forEach(function(r){
+    var row=nextEmptyRow()||addRow("",{});
+    var p=fromReading({runtime_us:r.runtime_us,velocity_ms:r.velocity_ms,distance_mm:r.distance_mm,source:(r.source==="sim"?"sim":"device"),ts:r.ts});
+    row.dataset.velAuto = p.vel==null?"1":"0"; setRow(row,p,true); autoVel(row); mark(row);
+  });
+  calc(); toast("Filled "+rows.length+" position(s)");
+});
+
+/* ---------------- calibration-bar check ---------------- */
+function calCheck(){
+  var exp=num($("f_calexp").value), meas=num($("f_calmeas").value), tol=num(cfg.calTol)||0.3, out="", ok=null;
+  if(exp!=null && meas!=null){
+    ok = Math.abs(meas-exp) <= tol + 1e-9;
+    out = ok ? '<span class="pill ok">Within tolerance</span> <span class="note">difference '+fx(meas-exp,2)+' µs, limit ±'+tol+'</span>'
+             : '<span class="pill bad">Outside tolerance</span> <span class="note">difference '+fx(meas-exp,2)+' µs, limit ±'+tol+'</span>';
+  } else out='<span class="pill na">Not checked</span>';
+  $("calResult").innerHTML = out;
+  $("calWarn").hidden = ok!==false;
+  return ok;
+}
+$("f_ptype").addEventListener("change",function(){ if($("f_ptype").value) $("f_calexp").value=$("f_ptype").value; calCheck(); calc(); });
+["f_calexp","f_calmeas"].forEach(function(id){ $(id).addEventListener("input",function(){ calCheck(); calc(); }); });
+
+/* ---------------- statistics ---------------- */
+function paramUnit(){ return $("f_param").value==="runtime" ? "µs" : "m/s"; }
+function paintSpecLabels(){
+  var u=paramUnit();
+  $("lbl_smin").textContent="Spec minimum ("+u+")"; $("lbl_smax").textContent="Spec maximum ("+u+")";
+}
+function autoVerdict(vals,sMin,sMax){
+  if(!vals.length) return "";
+  var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+  if(sMin==null && sMax==null) return "Limits not set";
+  if(sMin!=null && mn<sMin) return "Rejected";
+  if(sMax!=null && mx>sMax) return "Rejected";
+  return "Accepted";
+}
+function pill(v){
+  if(v==="Accepted") return '<span class="pill ok">Accepted</span>';
+  if(v==="Rejected") return '<span class="pill bad">Rejected</span>';
+  if(/^Hold/.test(v||"")) return '<span class="pill bad">'+esc(v)+'</span>';
+  if(!v) return '<span class="pill na">-</span>';
+  return '<span class="pill na">'+esc(v)+'</span>';
+}
+function stat(arr){
+  if(!arr.length) return {n:0,min:null,max:null,avg:null};
+  var s=arr.reduce(function(a,b){return a+b;},0);
+  return {n:arr.length,min:Math.min.apply(null,arr),max:Math.max.apply(null,arr),avg:s/arr.length};
+}
+function calc(){
+  var pts=readPoints(), isRt=$("f_param").value==="runtime";
+  var rts=pts.map(function(p){return p.rt;}).filter(function(v){return v!=null;});
+  var vels=pts.map(function(p){return p.vel;}).filter(function(v){return v!=null;});
+  var main=stat(isRt?rts:vels), d=isRt?2:1;
+  var verdict=autoVerdict(isRt?rts:vels, num($("f_smin").value), num($("f_smax").value));
+  var cal=calCheck();
+  if(cal===false && verdict) verdict="Hold: bar check failed";
+  $("stats").innerHTML =
+    '<div><span>Positions measured</span>'+main.n+'</div>'+
+    '<div><span>Lowest '+(isRt?"runtime":"velocity")+'</span>'+fx(main.min,d)+' '+paramUnit()+'</div>'+
+    '<div><span>Highest</span>'+fx(main.max,d)+' '+paramUnit()+'</div>'+
+    '<div><span>Average</span>'+fx(main.avg,d)+' '+paramUnit()+'</div>'+
+    '<div><span>Spread</span>'+(main.n?fx(main.max-main.min,d):"-")+' '+paramUnit()+'</div>'+
+    '<div><span>Against the limits</span>'+pill(verdict)+'</div>';
+  return {rt:stat(rts),vel:stat(vels),verdict:verdict,cal:cal};
+}
+["f_param","f_smin","f_smax"].forEach(function(id){ $(id).addEventListener("input",function(){ paintSpecLabels(); calc(); }); });
+$("addPt").addEventListener("click",function(){ addRow("",{}); });
+
+/* ---------------- form ---------------- */
+function blankForm(){
+  var now=new Date();
+  $("f_date").value = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+  $("f_time").value = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  ["f_operator","f_product","f_size","f_batch","f_serial","f_calmeas","f_checked","f_remarks"].forEach(function(id){ $(id).value=""; });
+  $("f_shift").value="A"; $("f_stage").selectedIndex=0; $("f_pair").value="1"; $("f_ptype").value="20"; $("f_calexp").value="20";
+  $("f_result").value="auto";
+  $("f_probe").value=cfg.probe||""; $("f_coup").value=cfg.couplant||""; $("f_dist").value=cfg.distance||"";
+  $("f_param").value=cfg.param||"velocity"; $("f_smin").value=cfg.specMin||""; $("f_smax").value=cfg.specMax||"";
+  paintSpecLabels();
+  $("ptBody").innerHTML="";
+  (cfg.positions||"").split(/\n/).map(function(s){return s.trim();}).filter(Boolean).forEach(function(p){ addRow(p,{}); });
+  if(!$("ptBody").rows.length) addRow("",{});
+  editingId=null; $("editNote").textContent=""; $("saveBtn").textContent="Save record";
+  calc();
+}
+function collect(){
+  var c=calc(), pts=readPoints().filter(function(p){ return p.rt!=null || p.vel!=null; });
+  var chosen=$("f_result").value;
+  var isRt=$("f_param").value==="runtime", m=isRt?c.rt:c.vel;
+  return {
+    id:editingId||undefined,
+    date:$("f_date").value, time:$("f_time").value, shift:$("f_shift").value,
+    operator:$("f_operator").value.trim(), product:$("f_product").value.trim(), size:$("f_size").value.trim(),
+    batch:$("f_batch").value.trim(), serial:$("f_serial").value.trim(), stage:$("f_stage").value,
+    pair:$("f_pair").value, probeType:$("f_ptype").value, probe:$("f_probe").value.trim(), couplant:$("f_coup").value.trim(),
+    calExpected:$("f_calexp").value, calMeasured:$("f_calmeas").value, calTol:cfg.calTol,
+    calOk: c.cal===null ? null : c.cal,
+    distance:$("f_dist").value, param:$("f_param").value, specMin:$("f_smin").value, specMax:$("f_smax").value,
+    points:pts,
+    rtMin:c.rt.min, rtMax:c.rt.max, rtAvg:c.rt.avg, velMin:c.vel.min, velMax:c.vel.max, velAvg:c.vel.avg,
+    autoResult:c.verdict, result: chosen==="auto" ? (c.verdict||"Limits not set") : chosen,
+    checkedBy:$("f_checked").value.trim(), remarks:$("f_remarks").value.trim(),
+    docNo:cfg.docNo, rev:cfg.rev, equipment:cfg.eqId+", "+cfg.model+", serial "+cfg.sn, calDue:cfg.calDue
+  };
+}
+function fill(r){
+  $("f_date").value=r.date||""; $("f_time").value=r.time||""; $("f_shift").value=r.shift||"A";
+  $("f_operator").value=r.operator||""; $("f_product").value=r.product||""; $("f_size").value=r.size||"";
+  $("f_batch").value=r.batch||""; $("f_serial").value=r.serial||""; if(r.stage) $("f_stage").value=r.stage;
+  $("f_pair").value=r.pair||"1"; $("f_ptype").value=r.probeType==null?"20":r.probeType; $("f_probe").value=r.probe||"";
+  $("f_coup").value=r.couplant||""; $("f_calexp").value=r.calExpected||""; $("f_calmeas").value=r.calMeasured||"";
+  $("f_dist").value=r.distance||""; $("f_param").value=r.param||"velocity"; $("f_smin").value=r.specMin||""; $("f_smax").value=r.specMax||"";
+  $("f_checked").value=r.checkedBy||""; $("f_remarks").value=r.remarks||"";
+  $("f_result").value = ["Accepted","Rejected","Accepted under concession","Rework"].indexOf(r.result)>=0 ? r.result : "auto";
+  paintSpecLabels();
+  $("ptBody").innerHTML="";
+  (r.points||[]).forEach(function(p){ addRow(p.loc,p); });
+  if(!$("ptBody").rows.length) addRow("",{});
+  editingId=r.id; $("editNote").textContent="Editing a saved record. Save to update it."; $("saveBtn").textContent="Update record";
+  calc();
+  document.querySelector('nav.tabs button[data-tab="entry"]').click(); window.scrollTo(0,0);
+}
+function saveRecord(){
+  var r=collect();
+  if(!r.date){ toast("Enter the date."); return; }
+  if(!r.points.length){ toast("Enter or capture at least one reading."); return; }
+  if(!r.calMeasured && !confirm("No calibration bar check has been entered. Save the record anyway?")) return;
+  if(r.points.some(function(p){return p.src==="sim";}) && !confirm("This record contains simulated readings. Save anyway?")) return;
+  api("POST","/api/records",r).then(function(){
+    toast(editingId?"Record updated":"Record saved"); blankForm(); loadRecords();
+  }).catch(function(){ toast("Could not save. Is the bridge running?"); });
+}
+$("saveBtn").addEventListener("click",saveRecord);
+$("clearBtn").addEventListener("click",function(){ blankForm(); toast("Form cleared"); });
+
+/* ---------------- records ---------------- */
+function loadRecords(){
+  api("GET","/api/records").then(function(rows){ records=rows; renderRecords(); }).catch(function(){});
+}
+function filtered(){
+  var f=$("q_from").value, t=$("q_to").value, q=$("q_text").value.toLowerCase().trim(), res=$("q_res").value;
+  return records.filter(function(r){
+    if(f && (r.date||"")<f) return false;
+    if(t && (r.date||"")>t) return false;
+    if(res && r.result!==res) return false;
+    if(q && [r.batch,r.size,r.serial,r.operator,r.product,r.remarks].join(" ").toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+}
+function renderRecords(){
+  var list=filtered(), tb=$("recBody");
+  tb.innerHTML = list.length ? "" : '<tr><td colspan="8" class="note">No records match.</td></tr>';
+  list.forEach(function(r){
+    var tr=document.createElement("tr"); tr.className="row-click";
+    tr.innerHTML="<td>"+esc(r.date||"")+"<div class='note'>"+esc(r.time||"")+"</div></td><td>"+esc(r.batch||"-")+"</td><td>"+esc(r.size||"-")+
+      "</td><td>"+esc(r.serial||"-")+"</td><td>"+((r.points||[]).length)+"</td><td>"+fx(r.velMin,1)+" / "+fx(r.velMax,1)+
+      "</td><td>"+pill(r.result)+"</td><td>"+esc(r.operator||"-")+"</td>";
+    tr.addEventListener("click",function(){ openDetail(r); });
+    tb.appendChild(tr);
+  });
+  $("countNote").textContent=list.length+" of "+records.length+" record"+(records.length===1?"":"s")+" shown";
+}
+["q_from","q_to","q_text","q_res"].forEach(function(id){ $(id).addEventListener("input",renderRecords); });
+
+function kv(k,v){ return "<div><span>"+esc(k)+"</span>"+esc(v==null||v===""?"-":v)+"</div>"; }
+function openDetail(r){
+  var rows=(r.points||[]).map(function(p,i){
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(p.loc||"")+"</td><td>"+fx(p.rt,2)+"</td><td>"+fx(p.vel,1)+"</td><td>"+fx(p.dist,1)+
+      "</td><td>"+(p.src==="device"?"instrument":p.src==="sim"?"simulated":"typed")+"</td></tr>"; }).join("");
+  var simmed=(r.points||[]).some(function(p){return p.src==="sim";});
+  var u=r.param==="runtime"?"µs":"m/s";
+  $("dlgBody").innerHTML =
+    "<h2 style='margin-bottom:4px'>"+esc(cfg.title)+"</h2>"+
+    "<div class='note'>"+esc(r.docNo||cfg.docNo)+", revision "+esc(r.rev||cfg.rev)+". "+esc(r.equipment||"")+"</div>"+
+    (simmed?"<div class='banner warn' style='margin-top:10px'>This record contains simulated readings.</div>":"")+
+    "<div class='kv' style='margin-top:14px'>"+
+      kv("Date",(r.date||"")+" "+(r.time||""))+kv("Shift",r.shift)+kv("Tested by",r.operator)+kv("Product",r.product)+kv("Size",r.size)+
+      kv("Batch / lot",r.batch)+kv("Item / serial",r.serial)+kv("Stage",r.stage)+kv("Probe pair",r.pair)+kv("Probe",r.probe)+kv("Couplant",r.couplant)+
+      kv("Bar runtime (µs)",r.calExpected)+kv("Measured on bar (µs)",r.calMeasured)+
+      kv("Bar check",r.calOk===true?"Within tolerance":r.calOk===false?"OUTSIDE tolerance":"Not checked")+
+      kv("Probe distance (mm)",r.distance)+kv("Spec applies to",r.param)+kv("Spec min / max ("+u+")",(r.specMin||"-")+" / "+(r.specMax||"-"))+
+    "</div>"+
+    "<div class='scroll' style='margin-top:14px'><table><thead><tr><th>#</th><th>Position</th><th>Runtime (µs)</th><th>Velocity (m/s)</th><th>Distance (mm)</th><th>Entered</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+    "<div class='stats'><div><span>Velocity min</span>"+fx(r.velMin,1)+"</div><div><span>Velocity max</span>"+fx(r.velMax,1)+"</div><div><span>Velocity average</span>"+fx(r.velAvg,1)+
+      "</div><div><span>Runtime min / max (µs)</span>"+fx(r.rtMin,2)+" / "+fx(r.rtMax,2)+"</div><div><span>Result</span>"+pill(r.result)+"</div></div>"+
+    (r.remarks?"<p style='margin-top:12px'><b>Observations:</b> "+esc(r.remarks)+"</p>":"")+
+    "<div class='sig'><div>Tested by: "+esc(r.operator||"")+"</div><div>Verified by: "+esc(r.checkedBy||"")+"</div></div>"+
+    "<div class='actions no-print'><button class='btn' id='d_print' type='button'>Print</button><button class='btn ghost' id='d_edit' type='button'>Edit</button>"+
+      "<button class='btn danger' id='d_del' type='button'>Delete</button><button class='btn ghost' id='d_close' type='button'>Close</button></div>";
+  $("d_print").onclick=function(){ window.print(); };
+  $("d_edit").onclick=function(){ $("dlg").close(); fill(r); };
+  $("d_del").onclick=function(){
+    if(confirm("Delete this record permanently?")){ $("dlg").close();
+      api("DELETE","/api/records/"+encodeURIComponent(r.id)).then(function(){ toast("Deleted"); loadRecords(); }).catch(function(){ toast("Could not delete"); }); }
+  };
+  $("d_close").onclick=function(){ $("dlg").close(); };
+  $("dlg").showModal();
+}
+
+/* CSV export */
+function csvCell(v){ v=(v==null?"":String(v)); return '"'+v.replace(/"/g,'""')+'"'; }
+$("csvBtn").addEventListener("click",function(){
+  var head=["Date","Time","Shift","Product","Size","Batch","Item/Serial","Stage","Probe pair","Probe","Bar runtime us","Bar measured us","Bar check",
+    "Probe distance mm","Spec applies to","Spec min","Spec max","Position","Runtime us","Velocity m/s","Distance mm","Entered","Result","Tested by","Verified by","Remarks","Document no"];
+  var lines=[head.map(csvCell).join(",")];
+  filtered().slice().reverse().forEach(function(r){
+    (r.points&&r.points.length?r.points:[{}]).forEach(function(p){
+      lines.push([r.date,r.time,r.shift,r.product,r.size,r.batch,r.serial,r.stage,r.pair,r.probe,r.calExpected,r.calMeasured,
+        r.calOk===true?"within":r.calOk===false?"outside":"not checked",r.distance,r.param,r.specMin,r.specMax,
+        p.loc,p.rt,p.vel,p.dist,p.src,r.result,r.operator,r.checkedBy,r.remarks,r.docNo].map(csvCell).join(","));
+    });
+  });
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}));
+  a.download="US-test-records-"+new Date().toISOString().slice(0,10)+".csv"; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+});
+
+/* ---------------- setup ---------------- */
+function paintCfg(){
+  $("s_doc").value=cfg.docNo||""; $("s_rev").value=cfg.rev||""; $("s_title").value=cfg.title||"";
+  $("s_eq").value=cfg.eqId||""; $("s_model").value=cfg.model||""; $("s_sn").value=cfg.sn||""; $("s_caldue").value=cfg.calDue||"";
+  $("s_tol").value=cfg.calTol||""; $("s_probe").value=cfg.probe||""; $("s_coup").value=cfg.couplant||"";
+  $("s_dist").value=cfg.distance||""; $("s_param").value=cfg.param||"velocity"; $("s_smin").value=cfg.specMin||""; $("s_smax").value=cfg.specMax||"";
+  $("s_pts").value=cfg.positions||""; paintHeader();
+}
+$("saveCfg").addEventListener("click",function(){
+  cfg={docNo:$("s_doc").value.trim(),rev:$("s_rev").value.trim(),title:$("s_title").value.trim(),eqId:$("s_eq").value.trim(),
+    model:$("s_model").value.trim(),sn:$("s_sn").value.trim(),calDue:$("s_caldue").value,calTol:$("s_tol").value||"0.3",
+    probe:$("s_probe").value.trim(),couplant:$("s_coup").value.trim(),distance:$("s_dist").value,param:$("s_param").value,
+    specMin:$("s_smin").value,specMax:$("s_smax").value,positions:$("s_pts").value};
+  paintHeader();
+  api("POST","/api/config",cfg).then(function(){ toast("Setup saved"); }).catch(function(){ toast("Could not save. Is the bridge running?"); });
+});
+
+/* ---------------- start ---------------- */
+paintCfg(); blankForm(); poll();
+api("GET","/api/config").then(function(c){
+  cfg=Object.assign({},DEF,c||{}); paintCfg();
+  if(!editingId && !$("f_batch").value && !$("f_operator").value) blankForm();
+}).catch(function(){});
+loadRecords();
+})();
+</script>
+</body>
+</html>
