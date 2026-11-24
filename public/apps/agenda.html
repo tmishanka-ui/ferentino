@@ -16,6 +16,7 @@
     --red:#B23A2E;
     --red-bg:#FBEAE8;
     --slate:#6B7A88;
+    --slate-bg:#EDEFF2;
   }
   *{box-sizing:border-box;}
   body{margin:0;}
@@ -195,6 +196,7 @@
   .pill.pending{background:var(--amber-bg);color:var(--amber);}
   .pill.overdue{background:var(--red-bg);color:var(--red);}
   .pill.escalate{background:var(--red-bg);color:var(--red);}
+  .pill.decline{background:var(--slate-bg);color:var(--slate);}
 
   .steps{display:flex;align-items:center;gap:5px;margin-top:8px;}
   .steps .step{
@@ -207,6 +209,7 @@
   .steps .step.solved{background:var(--green);border-color:var(--green);color:#fff;}
   .steps .step.pending{background:var(--amber);border-color:var(--amber);color:#fff;}
   .steps .step.overdue{background:var(--red);border-color:var(--red);color:#fff;}
+  .steps .step.decline{background:var(--slate);border-color:var(--slate);color:#fff;}
   .steps .step.empty{color:#C3CBD2;}
   .steps .step-label{font-size:11px;color:var(--slate);margin-left:4px;}
   .steps .more{font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--red);font-weight:600;margin-left:4px;}
@@ -754,6 +757,7 @@
   function stepClass(f){
     if(!f) return 'empty';
     if(f.status && f.status.toUpperCase()==='SOLVED') return 'solved';
+    if(f.status && f.status.toUpperCase()==='DECLINE') return 'decline';
     if(f.followUpDate && f.followUpDate < todayStr()) return 'overdue';
     return 'pending';
   }
@@ -770,19 +774,36 @@
     return !!(f && f.status && f.status.toUpperCase()==='SOLVED');
   }
 
+  function isDeclined(issueId){
+    const f = latestFollowup(issueId);
+    return !!(f && f.status && f.status.toUpperCase()==='DECLINE');
+  }
+
   function openRequirements(){
-    return state.requirements.filter(r=>!isSolved(r.issueId));
+    return state.requirements.filter(r=>!isSolved(r.issueId) && !isDeclined(r.issueId));
   }
 
   function solvedRequirements(){
     return state.requirements.filter(r=>isSolved(r.issueId));
   }
 
+  function declinedRequirements(){
+    return state.requirements.filter(r=>isDeclined(r.issueId));
+  }
+
+  function isProjectDeclined(p){
+    const last = latestProjectFollowup(p);
+    return !!(last && last.status && last.status.toUpperCase()==='DECLINE');
+  }
+
   function activeProjects(){
-    return state.projects.filter(p=>p.status!=='FINISHED');
+    return state.projects.filter(p=>p.status!=='FINISHED' && !isProjectDeclined(p));
   }
   function finishedProjects(){
     return state.projects.filter(p=>p.status==='FINISHED');
+  }
+  function declinedProjects(){
+    return state.projects.filter(p=>p.status!=='FINISHED' && isProjectDeclined(p));
   }
   // Every follow-up status entry logged for a project, oldest first.
   function projectFollowupLog(p){
@@ -808,10 +829,19 @@
     return 'upcoming';
   }
 
+  // What the follow-up form auto-selects for "Action required" when a status is chosen.
+  function defaultActionFor(status){
+    const s = (status||'').toUpperCase();
+    if(s==='DECLINE') return 'NEED TO DISCUSS AGAIN';
+    if(s==='SOLVED') return 'NO ACTION REQUIRED';
+    return 'NEED TO FOLLOW UP';
+  }
+
   function statusPill(f, issueId){
     if(issueId!==undefined && isEscalated(issueId)) return '<span class="pill escalate">ESCALATE — 5 STEPS, UNRESOLVED</span>';
     if(!f) return '<span class="pill pending">NO FOLLOW-UP YET</span>';
     if(f.status && f.status.toUpperCase()==='SOLVED') return `<span class="pill solved">SOLVED</span>`;
+    if(f.status && f.status.toUpperCase()==='DECLINE') return `<span class="pill decline">DECLINE</span>`;
     if(f.followUpDate && f.followUpDate < todayStr()) return `<span class="pill overdue">OVERDUE</span>`;
     return `<span class="pill pending">${esc(f.status||'PENDING')}</span>`;
   }
@@ -819,7 +849,7 @@
   // A small "next follow-up due" readout shown on each requirement ticket.
   function nextFollowupBadge(issueId){
     const f = latestFollowup(issueId);
-    if(!f || (f.status && f.status.toUpperCase()==='SOLVED')) return '';
+    if(!f || (f.status && (f.status.toUpperCase()==='SOLVED' || f.status.toUpperCase()==='DECLINE'))) return '';
     const date = f.followUpDate;
     if(!date) return `<div class="next-due unset">Next follow-up: not scheduled</div>`;
     const today = todayStr();
@@ -926,8 +956,9 @@
         ${tabBtn('projects','Projects', activeProjects().length)}
         ${tabBtn('finishedProjects','Finished projects', finishedProjects().length)}
         ${tabBtn('solved','Solved', solvedRequirements().length)}
+        ${tabBtn('declined','Declined', declinedRequirements().length + declinedProjects().length)}
       </div>
-      <main>${state.tab==='requirements'?renderRequirements():state.tab==='solved'?renderSolved():state.tab==='finishedProjects'?renderFinishedProjects():renderProjects()}</main>
+      <main>${state.tab==='requirements'?renderRequirements():state.tab==='solved'?renderSolved():state.tab==='declined'?renderDeclined():state.tab==='finishedProjects'?renderFinishedProjects():renderProjects()}</main>
       ${state.modal ? renderModal() : ''}
       ${state.lightbox ? renderLightbox() : ''}
     `;
@@ -981,6 +1012,20 @@
     `;
   }
 
+  function renderDeclined(){
+    const reqRows = declinedRequirements().sort((a,b)=>(b.issueId||0)-(a.issueId||0));
+    const projRows = declinedProjects().sort((a,b)=>(b.id||0)-(a.id||0));
+    return `
+      <div class="panel-head">
+        <div>
+          <h2>Declined</h2>
+          <p>Requirements and projects whose most recent follow-up was marked Decline.</p>
+        </div>
+      </div>
+      ${(reqRows.length+projRows.length)===0 ? emptyState('Nothing here yet','Declined requirements and projects will show up here automatically.') : reqRows.map(renderRequirementTicket).join('')+projRows.map(renderProjectTicket).join('')}
+    `;
+  }
+
   function renderProjects(){
     const active = activeProjects().sort((a,b)=>projectDueSortValue(a).localeCompare(projectDueSortValue(b)) || ((b.id||0)-(a.id||0)));
     return `
@@ -1010,6 +1055,7 @@
 
   function renderProjectTicket(p){
     const isFinished = p.status === 'FINISHED';
+    const declined = !isFinished && isProjectDeclined(p);
     const dueCls = projectDueClass(p);
     const last = latestProjectFollowup(p);
     const due = last && last.nextFollowupDate;
@@ -1032,7 +1078,7 @@
           ${expanded ? `<div class="history-panel">${renderProjectHistoryTable(p)}</div>` : ''}
         </div>
         <div class="actions">
-          ${isFinished ? '<span class="pill solved">FINISHED</span>' : `<div class="next-due ${dueCls}">${esc(dueLabel)}</div>`}
+          ${isFinished ? '<span class="pill solved">FINISHED</span>' : declined ? '<span class="pill decline">DECLINE</span>' : `<div class="next-due ${dueCls}">${esc(dueLabel)}</div>`}
           <button class="linklike" data-action="edit-project" data-id="${p.id}">Edit</button>
           ${isFinished
             ? `<button class="linklike" data-action="reopen-project" data-id="${p.id}">Reopen</button>`
@@ -1151,7 +1197,7 @@
         </div>
       </div>`;
     } else if(m.type==='followup'){
-      const f = m.editing || {followupId:nextFollowupId(),issueId:m.presetIssueId||'',department:'',issue:'',discussedDate:todayStr(),status:'NOT SOLVED',actionRequired:'',followUpDate:''};
+      const f = m.editing || {followupId:nextFollowupId(),issueId:m.presetIssueId||'',department:'',issue:'',discussedDate:todayStr(),status:'NOT SOLVED',actionRequired:defaultActionFor('NOT SOLVED'),followUpDate:''};
       const reqOptions = state.requirements.slice().sort((a,b)=>(a.issueId||0)-(b.issueId||0))
         .map(r=>`<option value="${r.issueId}" ${String(f.issueId)===String(r.issueId)?'selected':''}>#${r.issueId} — ${esc(r.issueDescription).slice(0,40)}</option>`).join('');
       return `<div class="overlay" data-action="close-modal">
@@ -1172,7 +1218,7 @@
           <div class="form-grid">
             <div class="form-row"><label>Status</label>
               <select id="f-status">
-                ${['NOT SOLVED','SOLVED'].map(s=>`<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
+                ${['NOT SOLVED','SOLVED','DECLINE'].map(s=>`<option ${f.status===s?'selected':''}>${s}</option>`).join('')}
               </select>
             </div>
             <div class="form-row"><label>Action required</label>
@@ -1214,7 +1260,11 @@
             <div class="form-row"><label>Follow-up date</label><input type="date" id="f-followupDate" value="${esc(todayStr())}"></div>
             <div class="form-row"><label>Next follow-up date</label><input type="date" id="f-nextFollowupDate" value=""></div>
           </div>
-          <div class="form-row"><label>Follow-up status</label><textarea id="f-followupStatus"></textarea></div>
+          <div class="form-row"><label>Follow-up status</label>
+            <select id="f-followupStatus">
+              ${['NOT SOLVED','SOLVED','DECLINE'].map(s=>`<option>${s}</option>`).join('')}
+            </select>
+          </div>
           <div class="modal-actions">
             <button class="ghost" data-action="close-modal">Cancel</button>
             <button class="primary" data-action="save-project-followup" data-id="${p.id}">Save</button>
@@ -1245,6 +1295,12 @@
       };
       issueSelect.onchange = updatePreview;
       updatePreview();
+    }
+
+    const statusSelect = document.getElementById('f-status');
+    const actionSelect = document.getElementById('f-actionRequired');
+    if(statusSelect && actionSelect){
+      statusSelect.onchange = ()=>{ actionSelect.value = defaultActionFor(statusSelect.value); };
     }
 
     document.querySelectorAll('[data-action]').forEach(el=>{
