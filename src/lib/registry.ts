@@ -27,7 +27,6 @@ export const APP_TITLES: Record<string, string> = {
   dailycheck: 'Machine Daily Check Lists', qcemployees: 'QC Department Employees', maintemployees: 'Maintenance Department Employees',
   techemployees: 'Technical Department Employees', planningemployees: 'Planning Department Employees', hremployees: 'HR Department Employees',
   prodemployees: 'Production Department Employees',
-  ultrasonic: 'Ultrasonic Test Record',
 };
 
 export const APP_KEYS = Object.keys(APP_TITLES);
@@ -37,8 +36,8 @@ export const SECTIONS: Section[] = [
     blurb: 'Press monitoring, tyre QC, defect analyser, process FMEA control, employees',
     tabs: [['press', 'Press Monitoring'], ['qc', 'Tyre QC — Scrap & Repair'], ['defect', 'Defect Analyser'], ['qckpi', 'KPI Dashboard'], ['processcontrol', 'Process Control — FMEA'], ['qcemployees', 'Employees']] },
   { id: 'apps', title: 'Working Apps', color: '#2563EB', icon: 'cog',
-    blurb: 'Live monitoring, loading, pallet labels, press trace, gauge calibration, ultrasonic test record',
-    tabs: [['live', 'Live & Tyre Production Monitoring'], ['loading', 'Loading Report'], ['pallet', 'Pallet Label Generator'], ['trace', 'Press Trace'], ['calib', 'Temperature Gauge Calibration'], ['ultrasonic', 'Ultrasonic Test Record']] },
+    blurb: 'Live monitoring, loading, pallet labels, press trace, gauge calibration',
+    tabs: [['live', 'Live & Tyre Production Monitoring'], ['loading', 'Loading Report'], ['pallet', 'Pallet Label Generator'], ['trace', 'Press Trace'], ['calib', 'Temperature Gauge Calibration']] },
   { id: 'maint', title: 'Maintenance Department', color: '#D97706', icon: 'wrench',
     blurb: 'Maintenance dashboard, KPI, waste removing records, machine daily check lists, employees',
     tabs: [['maintdash', 'Maintenance Dashboard'], ['mkpi', 'KPI'], ['waste', 'Waste Removing'], ['dailycheck', 'Machine Daily Check Lists'], ['maintemployees', 'Employees']] },
