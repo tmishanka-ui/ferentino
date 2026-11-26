@@ -42,6 +42,7 @@ let lastWorkbook: Msg | null = null, lastQcWorkbook: Msg | null = null, qcReady 
   lastAccidents: Msg | null = null, mixReady = false, lastAttendance: Msg | null = null, lastEmployees: Msg | null = null, lastAttendanceDays: Msg | null = null, lastGroups: Msg | null = null, attReady = false, sgReady = false,
   hrkpiReady = false, qcEmpReady = false, maintEmpReady = false, techEmpReady = false, planningEmpReady = false, hrEmpReady = false, prodEmpReady = false;
 let lastHrPlacements: Record<string, unknown[]> = {};
+let lastHrPlacementsMsg: Msg | null = null;   // the raw fitl-hr-placements message, replayed to Attendance for its OT tab (Executives, by Title)
 const deptEmployeeAdds: Msg[] = [];   // a new hire reported by a department, waiting for HR's Employees tab to open
 function sendMix() {
   if (!mixReady || !win('mixingdash')) return;
@@ -61,7 +62,11 @@ const sendHrEmp = () => {
   if (lastEmployees) post('hremployees', lastEmployees);
   if (lastAttendanceDays) post('hremployees', lastAttendanceDays);
 };
-const sendAtt = () => { if (attReady && lastGroups && win('attendance')) post('attendance', lastGroups); };         // Shift Groups -> Attendance (who is in which group)
+const sendAtt = () => {
+  if (!attReady || !win('attendance')) return;
+  if (lastGroups) post('attendance', lastGroups);         // Shift Groups -> Attendance (who is in which group)
+  if (lastHrPlacementsMsg) post('attendance', lastHrPlacementsMsg); // HR's placements -> Attendance's OT tab (each employee's Title, for the Executive exclusion)
+};
 function sendPs() {
   if (!psReady || !win('prodsum')) return;
   if (lastWorkbook) post('prodsum', lastWorkbook);
@@ -199,11 +204,13 @@ function onApp(ev: MessageEvent) {
   } else if (m.type === 'fitl-hr-placements' && from === 'hremployees') {
     // HR's Employees tab is the placement authority: push each department's slice down to its own (now read-only) Employees tab
     lastHrPlacements = (m.byDept as Record<string, unknown[]>) || {};
+    lastHrPlacementsMsg = m;
     if (qcEmpReady) sendQcEmp(); else ensureLoaded('qcemployees');
     if (maintEmpReady) sendMaintEmp(); else ensureLoaded('maintemployees');
     if (techEmpReady) sendTechEmp(); else ensureLoaded('techemployees');
     if (planningEmpReady) sendPlanningEmp(); else ensureLoaded('planningemployees');
     if (prodEmpReady) sendProdEmp(); else ensureLoaded('prodemployees');
+    if (attReady && win('attendance')) post('attendance', m);  // Attendance's OT tab needs every employee's Title (for the Executive exclusion), not just one department
   } else if (m.type === 'fitl-dept-employee-add' && (from === 'qcemployees' || from === 'maintemployees' || from === 'techemployees' || from === 'planningemployees' || from === 'prodemployees')) {
     // a department spotted a new hire first: it flows up to HR, who places them from there
     if (hrEmpReady && win('hremployees')) post('hremployees', m); else { deptEmployeeAdds.push(m); ensureLoaded('hremployees'); }

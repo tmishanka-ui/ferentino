@@ -49,7 +49,7 @@
 <main>
 <p class="status" id="st">Upload one or more “Daily Attendance Report” PDFs (one per day). Each upload replaces that day’s figures for the locations it contains.</p>
 <div id="app" hidden>
- <div class="tabs"><button class="tab on" data-v="day">Daily</button><button class="tab" data-v="week">Weekly</button><button class="tab" data-v="month">Monthly</button><button class="tab" data-v="people">People</button></div>
+ <div class="tabs"><button class="tab on" data-v="day">Daily</button><button class="tab" data-v="week">Weekly</button><button class="tab" data-v="month">Monthly</button><button class="tab" data-v="people">People</button><button class="tab" data-v="ot">OT</button></div>
  <div id="v"></div>
  <details class="card"><summary>Shift codes — which kind of shift each code is</summary><div class="note">Used for the Day / Night / General / Office split. Change a code here and the recent days are recounted.</div><div class="codes" id="codes"></div></details>
 </div>
@@ -72,8 +72,8 @@ const hm=m=>m==null?'–':pad(Math.floor(m/60)%24)+':'+pad(m%60);
 const weekStart=iso=>fromU(U(iso)-new Date(U(iso)).getUTCDay()*864e5);
 
 const GN={A:'Group A',B:'Group B',C:'Group C',MIX:'Mixing',BASE:'Base Building'};
-let DAYS={},AGGS={},NAMES={},EMPLOC={},ASSIGN={},GRPD={},G43={},CLS={PDS:'Day',PNS:'Night','M-2ND':'Night',GS:'General',MGS8:'General',OS:'Office',OFF20:'Off shift'};
-const V={view:'day',date:null,week:null,month:null,loc:'',q:''};let CH=[];
+let DAYS={},AGGS={},NAMES={},EMPLOC={},ASSIGN={},GRPD={},G43={},TITLES={},CLS={PDS:'Day',PNS:'Night','M-2ND':'Night',GS:'General',MGS8:'General',OS:'Office',OFF20:'Off shift'};
+const V={view:'day',date:null,week:null,month:null,loc:'',q:'',otMonth:null,otLoc:'',otQ:''};let CH=[];
 const classOf=c=>CLS[c]||(/^OFF/i.test(c)?'Off shift':'Other');
 
 /* ---------- reading the crViewer PDF ---------- */
@@ -120,6 +120,51 @@ function addBlocks(blocks){
     (AGGS[b.date]=AGGS[b.date]||{})[key]=aggOf(b.date,day[key]);
     b.rows.forEach(r=>{NAMES[r.no]=r.name;const e=EMPLOC[r.no];if(!e||e.last<=b.date)EMPLOC[r.no]={loc:b.loc,dept:b.dept,last:b.date}})});
 }
+/* ---------- overtime (OT) ----------
+   The standard shift is fixed 07:00–07:00 (Day 07:00–19:00, Night 19:00–07:00) — one 12-hour slot.
+   Consecutive slots for the same employee with no gap between them (a double, a triple, worked
+   without a day off) form one continuous duty spell: 1 slot = 12h, 2 = 24h, 3 = 36h, each with its
+   own fixed OT allowance, plus any hours actually worked beyond that nominal length. A spell is
+   only paid if the employee clocked in within 5 minutes of 07:00/19:00; Executives (from their
+   Title on the HR Department · Employees tab) are never eligible. */
+const OT_BASE={1:3.5,2:15.5,3:23.5};
+const isExecutive=no=>/exec/i.test(TITLES[no]||'');
+const dayIdx=iso=>Math.round(U(iso)/864e5);
+function otSlots(){
+  const byEmp={};
+  Object.keys(DAYS).forEach(d=>{const di=dayIdx(d);
+    Object.values(DAYS[d]).forEach(b=>b.rows.forEach(r=>{
+      const cl=classOf(r[1]);if(cl!=='Day'&&cl!=='Night')return;
+      const slot=di*2+(cl==='Day'?0:1);
+      (byEmp[r[0]]=byEmp[r[0]]||[]).push({slot,date:d,cls:cl,tin:r[2],hr:hoursOf(d,r),loc:b.loc});
+    }))});
+  return byEmp;
+}
+function otSpells(){
+  const byEmp=otSlots(),out=[];
+  Object.keys(byEmp).forEach(no=>{
+    const recs=byEmp[no].slice().sort((a,b)=>a.slot-b.slot);
+    let i=0;
+    while(i<recs.length){
+      let j=i;while(j+1<recs.length&&recs[j+1].slot===recs[j].slot+1)j++;
+      const spell=recs.slice(i,j+1);i=j+1;
+      const first=spell[0],last=spell[spell.length-1],numSlots=spell.length,nominal=numSlots*12;
+      const expected=first.cls==='Day'?7*60:19*60;
+      const late=first.tin==null||first.tin>expected+5;
+      const incomplete=spell.some(s=>s.hr==null);
+      const actual=spell.reduce((s,x)=>s+(x.hr||0),0);
+      const exec=isExecutive(no),base=OT_BASE[numSlots];
+      let ot=null,reason='';
+      if(exec){ot=0;reason='Executive — not eligible for OT'}
+      else if(late){ot=0;reason='Late — clocked in '+hm(first.tin)+' (after '+hm(expected+5)+')'}
+      else if(incomplete){reason='Missing an out-time — cannot verify hours worked'}
+      else if(base==null){reason='Unusual duty length ('+nominal+'h over '+numSlots+' shifts) — review manually'}
+      else{ot=base+Math.max(0,actual-nominal);if(actual>nominal+0.05)reason='+'+(actual-nominal).toFixed(1)+'h over the '+nominal+'h shift'}
+      out.push({no,name:NAMES[no]||'',loc:first.loc,startDate:first.date,endDate:last.date,cls:spell.map(s=>s.cls),numSlots,nominal,actual,ot,reason});
+    }});
+  return out;
+}
+
 /* how many of the people assigned to each group (Shift Groups tab) were present, day by day */
 const inBucket=m=>m==null||(m>=300&&m<780)?'Day':'Night';
 function computeGroups(){Object.keys(DAYS).forEach(d=>{const c={},o={};Object.values(DAYS[d]).forEach(b=>b.rows.forEach(r=>{const g=(ASSIGN[r[0]]||{}).g;if(!g)return;c[g]=(c[g]||0)+1;
@@ -127,9 +172,9 @@ function computeGroups(){Object.keys(DAYS).forEach(d=>{const c={},o={};Object.va
   const x=((o[g]=o[g]||{})[st]=o[g][st]||{reg:0,off:0});x[off?'off':'reg']++}));GRPD[d]=c;G43[d]=o})}
 function rebuild(){Object.keys(DAYS).forEach(d=>Object.keys(DAYS[d]).forEach(k=>{AGGS[d][k]=aggOf(d,DAYS[d][k])}))}
 function prune(){const ds=Object.keys(DAYS).sort().reverse();ds.slice(KEEP).forEach(d=>delete DAYS[d])}
-function persist(){prune();try{localStorage.setItem(KEY,JSON.stringify({DAYS,AGGS,NAMES,EMPLOC,CLS,GRPD,G43}))}catch(_){$('st').textContent='Could not save — browser storage is full. Download a backup.'}}
+function persist(){prune();try{localStorage.setItem(KEY,JSON.stringify({DAYS,AGGS,NAMES,EMPLOC,CLS,GRPD,G43,TITLES}))}catch(_){$('st').textContent='Could not save — browser storage is full. Download a backup.'}}
 function save(){persist();publish()}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){DAYS=s.DAYS||{};AGGS=s.AGGS||{};NAMES=s.NAMES||{};EMPLOC=s.EMPLOC||{};GRPD=s.GRPD||{};G43=s.G43||{};CLS=Object.assign(CLS,s.CLS||{})}}catch(_){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){DAYS=s.DAYS||{};AGGS=s.AGGS||{};NAMES=s.NAMES||{};EMPLOC=s.EMPLOC||{};GRPD=s.GRPD||{};G43=s.G43||{};TITLES=s.TITLES||{};CLS=Object.assign(CLS,s.CLS||{})}}catch(_){}}
 function publishAtt(){
   if(parent===window)return;
   try{const days={};Object.keys(AGGS).forEach(d=>{const o={};Object.values(AGGS[d]).forEach(a=>{const x=o[a.loc]||(o[a.loc]={n:0,Day:0,Night:0,General:0,Office:0,Other:0,'Off shift':0});x.n+=a.n;CLASSES.forEach(c=>x[c]+=a.cls[c]||0)});days[d]=o});
@@ -207,9 +252,32 @@ function viewPeople(){
   return{h:'<div class="bar"><select id="p_date">'+ds.map(d=>'<option value="'+d+'"'+(d===V.date?' selected':'')+'>'+lab(d)+'</option>').join('')+'</select><select id="p_loc"><option value="">All locations</option>'+locs.map(l=>'<option'+(l===V.loc?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select><input id="p_q" placeholder="Search name or employee number" value="'+esc(V.q)+'" style="min-width:260px"><span class="note">'+rows.length+' people</span></div>'+
    '<div class="card tw"><table><thead><tr><th>Emp. no</th><th class="l">Name</th><th class="l">Location</th><th class="l">Section</th><th>Shift</th><th>Type</th><th>In</th><th>Out</th><th>Hours</th><th>Group</th></tr></thead><tbody>'+rows.slice(0,600).map(r=>'<tr><td>'+r.no+'</td><td class="l">'+esc(r.name)+'</td><td class="l">'+esc(r.loc)+'</td><td class="l">'+esc(r.dept)+'</td><td>'+esc(r.sh)+'</td><td><i class="dot" style="background:'+COL[r.cls]+'"></i>'+r.cls+'</td><td>'+hm(r.tin)+'</td><td>'+hm(r.tout)+'</td><td>'+(r.hr==null?'–':r.hr.toFixed(1))+'</td><td>'+(GN[r.g]||r.g||'–')+'</td></tr>').join('')+'</tbody></table></div>',after:()=>{}};
 }
+function viewOT(){
+  const spells=otSpells();
+  if(!spells.length)return{h:'<div class="card empty">No Day/Night shift data yet — upload attendance reports to calculate OT.</div>',after:()=>{}};
+  const months=[...new Set(spells.map(s=>s.startDate.slice(0,7)))].sort().reverse();
+  if(!months.includes(V.otMonth))V.otMonth=months[0];
+  let rows=spells.filter(s=>s.startDate.slice(0,7)===V.otMonth);
+  const locs=[...new Set(rows.map(s=>s.loc))].sort();
+  if(V.otLoc)rows=rows.filter(s=>s.loc===V.otLoc);
+  const q=V.otQ.trim().toLowerCase();
+  if(q)rows=rows.filter(s=>(s.no+' '+s.name).toLowerCase().includes(q));
+  rows=rows.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.name.localeCompare(b.name));
+  const totalOT=rows.reduce((s,r)=>s+(r.ot||0),0);
+  const period=s=>(s.startDate===s.endDate?lab(s.startDate):lab(s.startDate)+' → '+lab(s.endDate))+' ('+s.cls.join('+')+')';
+  let h='<div class="bar"><select id="ot_month">'+months.map(x=>'<option value="'+x+'"'+(x===V.otMonth?' selected':'')+'>'+MONS[+x.slice(5)-1]+' '+x.slice(0,4)+'</option>').join('')+'</select>'+
+    '<select id="ot_loc"><option value="">All locations</option>'+locs.map(l=>'<option value="'+esc(l)+'"'+(l===V.otLoc?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select>'+
+    '<input id="ot_q" placeholder="Search name or employee number" value="'+esc(V.otQ)+'" style="min-width:260px">'+
+    '<span class="note">'+rows.length+' spell'+(rows.length===1?'':'s')+' · '+totalOT.toFixed(1)+' h total OT</span></div>';
+  h+='<div class="card tw"><table><thead><tr><th>Emp. no</th><th class="l">Name</th><th class="l">Location</th><th class="l">Duty period</th><th>Length</th><th>Worked (h)</th><th>OT (h)</th><th class="l">Note</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td>'+r.no+'</td><td class="l">'+esc(r.name)+'</td><td class="l">'+esc(r.loc)+'</td><td class="l">'+period(r)+'</td><td>'+r.nominal+'h</td><td>'+r.actual.toFixed(1)+'</td><td>'+(r.ot==null?'–':r.ot.toFixed(1))+'</td><td class="l">'+esc(r.reason)+'</td></tr>').join('')+
+    (rows.length?'<tr class="tot"><td colspan="6" class="l">Total OT this month</td><td>'+totalOT.toFixed(1)+'</td><td></td></tr>':'')+'</tbody></table></div>'+
+    '<p class="note">Fixed 07:00–07:00 shifts: 1 linked 12-hour shift = 3.5 h OT, 2 linked (24 h) = 15.5 h, 3 linked (36 h) = 23.5 h, plus any hours worked beyond that length. A shift only qualifies if clocked in within 5 minutes of 07:00/19:00. Executives (by Title on the HR Department · Employees tab) are not eligible.</p>';
+  return{h,after:()=>{}};
+}
 function render(){
   destroy();const has=dates().length;$('app').hidden=!has;$('em').hidden=!!has;$('xl').disabled=$('bk').disabled=!has;if(!has)return;
-  const v={day:viewDay,week:viewWeek,month:viewMonth,people:viewPeople}[V.view]();$('v').innerHTML=v.h;v.after();
+  const v={day:viewDay,week:viewWeek,month:viewMonth,people:viewPeople,ot:viewOT}[V.view]();$('v').innerHTML=v.h;v.after();
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.v===V.view));
   const codes=new Set(Object.keys(CLS));Object.values(DAYS).forEach(d=>Object.values(d).forEach(b=>b.rows.forEach(r=>codes.add(r[1]))));
   $('codes').innerHTML=[...codes].sort().map(c=>'<label><b style="min-width:62px">'+esc(c)+'</b><select data-code="'+esc(c)+'">'+CLASSES.map(k=>'<option'+(classOf(c)===k?' selected':'')+'>'+k+'</option>').join('')+'</select></label>').join('');
@@ -220,8 +288,10 @@ document.addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){V.v
 document.addEventListener('change',e=>{const i=e.target.id;
   if(i==='d_date'||i==='p_date'){V.date=e.target.value;render()}else if(i==='w_week'){V.week=e.target.value;render()}else if(i==='m_month'){V.month=e.target.value;render()}
   else if(i==='p_loc'){V.loc=e.target.value;render()}
+  else if(i==='ot_month'){V.otMonth=e.target.value;render()}else if(i==='ot_loc'){V.otLoc=e.target.value;render()}
   else if(e.target.dataset&&e.target.dataset.code){CLS[e.target.dataset.code]=e.target.value;rebuild();save();render()}});
-document.addEventListener('input',e=>{if(e.target.id==='p_q'){V.q=e.target.value;const p=e.target.selectionStart;render();const n=$('p_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
+document.addEventListener('input',e=>{if(e.target.id==='p_q'){V.q=e.target.value;const p=e.target.selectionStart;render();const n=$('p_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}
+  else if(e.target.id==='ot_q'){V.otQ=e.target.value;const p=e.target.selectionStart;render();const n=$('ot_q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
 $('f').onchange=async e=>{const files=[...e.target.files];e.target.value='';if(!files.length)return;const notes=[],warn=[];let added=0;
   for(const f of files){$('st').textContent='Reading '+f.name+' …';
     try{const r=await parsePdf(f);if(!r.blocks.length){warn.push(f.name+': no attendance rows found — is it a Daily Attendance Report?');continue}
@@ -237,11 +307,18 @@ $('xl').onclick=()=>{const wb=XLSX.utils.book_new(),ds=dates();let sheets=0;
   const mat=(name,days)=>{const locs=allLocs();const rows=locs.map(l=>{const o={Location:l};let s=0,n=0;days.forEach(d=>{const x=AGGS[d]?count(d,l):null;o[d]=x==null?'':x;if(x!=null){s+=x;n++}});o['Man-days']=s;o['Days reported']=n;o['Average per day']=n?+(s/n).toFixed(1):'';return o}).filter(o=>o['Man-days']);XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),name)};
   if(V.view==='week'&&V.week){mat('Week '+V.week,[0,1,2,3,4,5,6].map(i=>fromU(U(V.week)+i*864e5)))}
   else if(V.view==='month'&&V.month){const [y,m]=V.month.split('-').map(Number);mat(MONS[m-1]+' '+y,Array.from({length:new Date(Date.UTC(y,m,0)).getUTCDate()},(_,i)=>V.month+'-'+pad(i+1)))}
+  else if(V.view==='ot'&&V.otMonth){
+    const q=V.otQ.trim().toLowerCase();
+    let rows=otSpells().filter(s=>s.startDate.slice(0,7)===V.otMonth&&(!V.otLoc||s.loc===V.otLoc)&&(!q||(s.no+' '+s.name).toLowerCase().includes(q)));
+    rows=rows.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.name.localeCompare(b.name));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({'Emp. no':r.no,Name:r.name,Location:r.loc,'Start date':r.startDate,'End date':r.endDate,Shifts:r.cls.join('+'),'Length (h)':r.nominal,'Worked (h)':+r.actual.toFixed(2),'OT (h)':r.ot==null?'':+r.ot.toFixed(2),Note:r.reason}))),'OT '+V.otMonth);
+  }
   else{const d=V.date||ds[ds.length-1];XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(byLoc(d).map(x=>Object.assign({Location:x.loc,Present:x.n},x.cls,{'Average hours':x.nh?+(x.hrs/x.nh).toFixed(1):'','No out-time':x.noOut}))),'Locations '+d);
     if(DAYS[d])XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(Object.values(DAYS[d]).flatMap(b=>b.rows.map(r=>({Date:d,'Emp. no':r[0],Name:NAMES[r[0]]||'',Location:b.loc,Section:b.dept,Shift:r[1],Type:classOf(r[1]),In:hm(r[2]),Out:hm(r[3]),'Out date':r[4],Hours:hoursOf(d,r)==null?'':+hoursOf(d,r).toFixed(2),Group:GN[(ASSIGN[r[0]]||{}).g]||''})))),'People '+d)}
-  XLSX.writeFile(wb,'Attendance_'+(V.view==='week'?V.week:V.view==='month'?V.month:(V.date||ds[ds.length-1]))+'.xlsx')};
+  XLSX.writeFile(wb,'Attendance_'+(V.view==='week'?V.week:V.view==='month'?V.month:V.view==='ot'?V.otMonth:(V.date||ds[ds.length-1]))+'.xlsx')};
 addEventListener('message',ev=>{if(ev.source!==parent)return;const m=ev.data;
-  if(m&&m.type==='fitl-shiftgroups'&&m.assign){ASSIGN=m.assign;try{localStorage.setItem('fitl_attendance_groups',JSON.stringify(ASSIGN))}catch(_){}computeGroups();persist();publishAtt();render()}});
+  if(m&&m.type==='fitl-shiftgroups'&&m.assign){ASSIGN=m.assign;try{localStorage.setItem('fitl_attendance_groups',JSON.stringify(ASSIGN))}catch(_){}computeGroups();persist();publishAtt();render()}
+  else if(m&&m.type==='fitl-hr-placements'&&m.byDept){TITLES={};Object.keys(m.byDept).forEach(dept=>(m.byDept[dept]||[]).forEach(p=>{if(p&&p.no)TITLES[p.no]=p.title||''}));persist();render()}});
 try{ASSIGN=JSON.parse(localStorage.getItem('fitl_attendance_groups')||'{}')}catch(_){}
 load();if(CLS.OFF20==='Other')CLS.OFF20='Off shift';rebuild();computeGroups();render();publish();
 try{parent.postMessage({type:'fitl-attendance-ready'},'*')}catch(_){}
