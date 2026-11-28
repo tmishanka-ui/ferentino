@@ -124,9 +124,8 @@ function addBlocks(blocks){
    The standard shift is fixed 07:00–07:00 (Day 07:00–19:00, Night 19:00–07:00) — one 12-hour slot.
    Consecutive slots for the same employee with no gap between them (a double, a triple, worked
    without a day off) form one continuous duty spell: 1 slot = 12h, 2 = 24h, 3 = 36h, each with its
-   own fixed OT allowance, plus any hours actually worked beyond that nominal length. A spell is
-   only paid if the employee clocked in within 5 minutes of 07:00/19:00; Executives (from their
-   Title on the HR Department · Employees tab) are never eligible. */
+   own fixed OT allowance, plus any hours actually worked beyond that nominal length. Executives
+   (from their Title on the HR Department · Employees tab) are never eligible. */
 const OT_BASE={1:3.5,2:15.5,3:23.5};
 const isExecutive=no=>/exec/i.test(TITLES[no]||'');
 const dayIdx=iso=>Math.round(U(iso)/864e5);
@@ -149,14 +148,11 @@ function otSpells(){
       let j=i;while(j+1<recs.length&&recs[j+1].slot===recs[j].slot+1)j++;
       const spell=recs.slice(i,j+1);i=j+1;
       const first=spell[0],last=spell[spell.length-1],numSlots=spell.length,nominal=numSlots*12;
-      const expected=first.cls==='Day'?7*60:19*60;
-      const late=first.tin==null||first.tin>expected+5;
       const incomplete=spell.some(s=>s.hr==null);
       const actual=spell.reduce((s,x)=>s+(x.hr||0),0);
       const exec=isExecutive(no),base=OT_BASE[numSlots];
       let ot=null,reason='';
       if(exec){ot=0;reason='Executive — not eligible for OT'}
-      else if(late){ot=0;reason='Late — clocked in '+hm(first.tin)+' (after '+hm(expected+5)+')'}
       else if(incomplete){reason='Missing an out-time — cannot verify hours worked'}
       else if(base==null){reason='Unusual duty length ('+nominal+'h over '+numSlots+' shifts) — review manually'}
       else{ot=base+Math.max(0,actual-nominal);if(actual>nominal+0.05)reason='+'+(actual-nominal).toFixed(1)+'h over the '+nominal+'h shift'}
@@ -272,7 +268,7 @@ function viewOT(){
   h+='<div class="card tw"><table><thead><tr><th>Emp. no</th><th class="l">Name</th><th class="l">Location</th><th class="l">Duty period</th><th>Length</th><th>Worked (h)</th><th>OT (h)</th><th class="l">Note</th></tr></thead><tbody>'+
     rows.map(r=>'<tr><td>'+r.no+'</td><td class="l">'+esc(r.name)+'</td><td class="l">'+esc(r.loc)+'</td><td class="l">'+period(r)+'</td><td>'+r.nominal+'h</td><td>'+r.actual.toFixed(1)+'</td><td>'+(r.ot==null?'–':r.ot.toFixed(1))+'</td><td class="l">'+esc(r.reason)+'</td></tr>').join('')+
     (rows.length?'<tr class="tot"><td colspan="6" class="l">Total OT this month</td><td>'+totalOT.toFixed(1)+'</td><td></td></tr>':'')+'</tbody></table></div>'+
-    '<p class="note">Fixed 07:00–07:00 shifts: 1 linked 12-hour shift = 3.5 h OT, 2 linked (24 h) = 15.5 h, 3 linked (36 h) = 23.5 h, plus any hours worked beyond that length. A shift only qualifies if clocked in within 5 minutes of 07:00/19:00. Executives (by Title on the HR Department · Employees tab) are not eligible.</p>';
+    '<p class="note">Fixed 07:00–07:00 shifts: 1 linked 12-hour shift = 3.5 h OT, 2 linked (24 h) = 15.5 h, 3 linked (36 h) = 23.5 h, plus any hours worked beyond that length. Executives (by Title on the HR Department · Employees tab) are not eligible.</p>';
   return{h,after:()=>{}};
 }
 function render(){
